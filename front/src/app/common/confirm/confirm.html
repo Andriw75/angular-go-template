@@ -1,0 +1,12 @@
+@if (confirm.state().visible) {
+  <div class="overlay" (click)="confirm.cancel()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <h3>{{ confirm.state().title }}</h3>
+      <p>{{ confirm.state().message }}</p>
+      <div class="actions">
+        <button class="btn btn--secondary" (click)="confirm.cancel()">Cancelar</button>
+        <button class="btn btn--danger" (click)="confirm.confirmAction()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+}
