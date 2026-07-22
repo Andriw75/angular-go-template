@@ -74,14 +74,9 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var input inputs.UserInput
+	var input inputs.UserUpdateInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-
-	if input.Username == "" || input.Email == "" {
-		writeJSONError(w, http.StatusBadRequest, "username and email are required")
 		return
 	}
 

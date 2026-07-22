@@ -31,15 +31,17 @@
       }
       <div class="permisos-grid">
         @for (p of permisosDisponibles(); track p.id) {
-          <label class="checkbox-label" [class.disabled]="isSelf">
+          <label class="checkbox-label" [class.checked]="selectedPermisos.includes(p.nombre)" [class.disabled]="isSelf">
             <input
               type="checkbox"
               [checked]="selectedPermisos.includes(p.nombre)"
               [disabled]="isSelf"
               (change)="togglePermiso(p.nombre)"
             />
-            <span class="permiso-name">{{ p.nombre }}</span>
-            <span class="permiso-desc">{{ p.descripcion }}</span>
+            <div class="permiso-text">
+              <span class="permiso-name">{{ p.nombre }}</span>
+              <span class="permiso-desc">{{ p.descripcion }}</span>
+            </div>
           </label>
         }
       </div>

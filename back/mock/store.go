@@ -20,6 +20,10 @@ func NewMockStore[T any](validate func(*T) error) *MockStore[T] {
 	}
 }
 
+type Identifiable interface {
+	SetID(int64)
+}
+
 func (s *MockStore[T]) Create(entity T) (T, error) {
 	if s.validate != nil {
 		if err := s.validate(&entity); err != nil {
@@ -29,6 +33,9 @@ func (s *MockStore[T]) Create(entity T) (T, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	id := s.nextID.Add(1)
+	if setter, ok := any(&entity).(Identifiable); ok {
+		setter.SetID(id)
+	}
 	s.data[id] = entity
 	return entity, nil
 }
