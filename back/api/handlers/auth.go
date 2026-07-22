@@ -31,7 +31,7 @@ func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.deps.JWTManager.Generate(user.ID, user.Username, user.Permisos)
+	token, err := h.deps.JWTManager.Generate(user.ID, user.Username, user.Email, user.Activo, user.Permisos)
 	if err != nil {
 		slog.Error("failed to generate token", "error", err)
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
@@ -72,13 +72,13 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.deps.UserStore.FindByID(claims.UserID)
-	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "user not found")
-		return
-	}
-
-	writeJSON(w, http.StatusOK, outputs.ToUserResponse(user))
+	writeJSON(w, http.StatusOK, outputs.UserResponse{
+		ID:       claims.UserID,
+		Username: claims.Username,
+		Email:    claims.Email,
+		Activo:   claims.Activo,
+		Permisos: claims.Permisos,
+	})
 }
 
 func (h *AuthHandler) AuthMiddleware(requiredPermission ...string) func(http.Handler) http.Handler {
@@ -106,7 +106,7 @@ func (h *AuthHandler) AuthMiddleware(requiredPermission ...string) func(http.Han
 			}
 
 			if h.deps.JWTManager.ShouldRenew(claims) {
-				newToken, err := h.deps.JWTManager.Generate(claims.UserID, claims.Username, claims.Permisos)
+				newToken, err := h.deps.JWTManager.Generate(claims.UserID, claims.Username, claims.Email, claims.Activo, claims.Permisos)
 				if err == nil {
 					http.SetCookie(w, &http.Cookie{
 						Name:     h.deps.Config.CookieName,

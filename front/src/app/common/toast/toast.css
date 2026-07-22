@@ -18,18 +18,18 @@
 .toast {
   pointer-events: auto;
   padding: 12px 20px;
-  border-radius: var(--radius);
+  border-radius: var(--radius, 8px);
   color: white;
   font-weight: 500;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   animation: slideIn 0.3s ease;
   min-width: 280px;
 }
 
-.toast--success { background: var(--color-success); }
-.toast--error { background: var(--color-danger); }
-.toast--info { background: var(--color-primary); }
+.toast--success { background: #16a34a; }
+.toast--error { background: #dc2626; }
+.toast--info { background: #2563eb; }
 
 @keyframes slideIn {
   from { transform: translateX(100%); opacity: 0; }

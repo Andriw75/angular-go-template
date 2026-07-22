@@ -16,6 +16,8 @@ type JWTManager struct {
 type Claims struct {
 	UserID   int64    `json:"user_id"`
 	Username string   `json:"username"`
+	Email    string   `json:"email"`
+	Activo   bool     `json:"activo"`
 	Permisos []string `json:"permisos"`
 	jwt.RegisteredClaims
 }
@@ -28,11 +30,13 @@ func NewJWTManager(secret string, expirationMinutes int) *JWTManager {
 	}
 }
 
-func (m *JWTManager) Generate(userID int64, username string, permisos []string) (string, error) {
+func (m *JWTManager) Generate(userID int64, username, email string, activo bool, permisos []string) (string, error) {
 	now := time.Now()
 	claims := &Claims{
 		UserID:   userID,
 		Username: username,
+		Email:    email,
+		Activo:   activo,
 		Permisos: permisos,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(m.duration)),
