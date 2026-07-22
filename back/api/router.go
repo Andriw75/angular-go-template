@@ -31,14 +31,14 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/token", authHandler.Token)
 		r.Group(func(r chi.Router) {
-			r.Use(authHandler.RenewMiddleware)
+			r.Use(authHandler.AuthMiddleware())
 			r.Post("/logout", authHandler.Logout)
 			r.Get("/me", authHandler.Me)
 		})
 	})
 
 	r.Route("/users", func(r chi.Router) {
-		r.Use(authHandler.RenewMiddleware)
+		r.Use(authHandler.AuthMiddleware("usuarios"))
 		r.Get("/", userHandler.List)
 		r.Post("/", userHandler.Create)
 		r.Get("/{id}", userHandler.GetByID)
@@ -47,12 +47,12 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	})
 
 	r.Route("/permisos", func(r chi.Router) {
-		r.Use(authHandler.RenewMiddleware)
+		r.Use(authHandler.AuthMiddleware("usuarios"))
 		r.Get("/", permisoHandler.List)
 	})
 
 	r.Route("/buses", func(r chi.Router) {
-		r.Use(authHandler.RenewMiddleware)
+		r.Use(authHandler.AuthMiddleware("buses"))
 		r.Get("/count", busHandler.Count)
 		r.Get("/", busHandler.List)
 		r.Post("/", busHandler.Create)

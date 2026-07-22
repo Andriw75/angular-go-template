@@ -81,45 +81,63 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, outputs.ToUserResponse(user))
 }
 
-func (h *AuthHandler) RenewMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie(h.deps.Config.CookieName)
-		if err != nil {
-			writeJSONError(w, http.StatusUnauthorized, "not authenticated")
-			return
-		}
+func (h *AuthHandler) AuthMiddleware(requiredPermission ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			cookie, err := r.Cookie(h.deps.Config.CookieName)
+			if err != nil {
+				writeJSONError(w, http.StatusUnauthorized, "not authenticated")
+				return
+			}
 
-		claims, err := h.deps.JWTManager.Validate(cookie.Value)
-		if err != nil {
-			http.SetCookie(w, &http.Cookie{
-				Name:     h.deps.Config.CookieName,
-				Value:    "",
-				Path:     "/",
-				HttpOnly: true,
-				Secure:   h.deps.Config.CookieSecure,
-				SameSite: http.SameSiteStrictMode,
-				MaxAge:   -1,
-			})
-			writeJSONError(w, http.StatusUnauthorized, "invalid token")
-			return
-		}
-
-		if h.deps.JWTManager.ShouldRenew(claims) {
-			newToken, err := h.deps.JWTManager.Generate(claims.UserID, claims.Username, claims.Permisos)
-			if err == nil {
+			claims, err := h.deps.JWTManager.Validate(cookie.Value)
+			if err != nil {
 				http.SetCookie(w, &http.Cookie{
 					Name:     h.deps.Config.CookieName,
-					Value:    newToken,
+					Value:    "",
 					Path:     "/",
 					HttpOnly: true,
 					Secure:   h.deps.Config.CookieSecure,
 					SameSite: http.SameSiteStrictMode,
-					Expires:  time.Now().Add(time.Duration(h.deps.Config.JWTExpirationMin) * time.Minute),
+					MaxAge:   -1,
 				})
+				writeJSONError(w, http.StatusUnauthorized, "invalid token")
+				return
 			}
-		}
 
-		ctx := WithClaims(r.Context(), claims)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+			if h.deps.JWTManager.ShouldRenew(claims) {
+				newToken, err := h.deps.JWTManager.Generate(claims.UserID, claims.Username, claims.Permisos)
+				if err == nil {
+					http.SetCookie(w, &http.Cookie{
+						Name:     h.deps.Config.CookieName,
+						Value:    newToken,
+						Path:     "/",
+						HttpOnly: true,
+						Secure:   h.deps.Config.CookieSecure,
+						SameSite: http.SameSiteStrictMode,
+						Expires:  time.Now().Add(time.Duration(h.deps.Config.JWTExpirationMin) * time.Minute),
+					})
+				}
+			}
+
+			if len(requiredPermission) > 0 {
+				if !tienePermiso(claims.Permisos, requiredPermission[0]) {
+					writeJSONError(w, http.StatusForbidden, "forbidden")
+					return
+				}
+			}
+
+			ctx := WithClaims(r.Context(), claims)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+func tienePermiso(permisos []string, required string) bool {
+	for _, p := range permisos {
+		if p == required {
+			return true
+		}
+	}
+	return false
 }
