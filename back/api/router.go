@@ -43,6 +43,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 
 	r.Route("/buses", func(r chi.Router) {
 		r.Use(authHandler.RenewMiddleware)
+		r.Get("/count", busHandler.Count)
 		r.Get("/", busHandler.List)
 		r.Post("/", busHandler.Create)
 		r.Get("/{id}", busHandler.GetByID)

@@ -1,6 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { BusesService } from '../../../services/buses.service';
 import { ToastService } from '../../../services/toast.service';
 import { ConfirmService } from '../../../services/confirm.service';
@@ -36,24 +37,46 @@ export class BusesListComponent {
   tipos = ['', 'BUS', 'VAN', 'MINIBUS', 'MICROBUS'];
 
   constructor() {
-    this.load();
+    this.loadWithCount();
+  }
+
+  private getFilters() {
+    return {
+      q: this.searchQuery() || undefined,
+      tipo: this.filterTipo() || undefined,
+      activo: this.filterActivo() ? this.filterActivo() === 'true' : undefined,
+    };
+  }
+
+  loadWithCount(): void {
+    this.loading.set(true);
+    const filters = this.getFilters();
+    const offset = (this.page() - 1) * this.limit;
+
+    forkJoin({
+      count: this.service.count(filters),
+      data: this.service.list({ ...filters, offset, limit: this.limit }),
+    }).subscribe({
+      next: (res) => {
+        this.total.set(res.count);
+        this.buses.set(res.data.data);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.toast.error('Error al cargar buses');
+      },
+    });
   }
 
   load(): void {
     this.loading.set(true);
+    const filters = this.getFilters();
     const offset = (this.page() - 1) * this.limit;
 
-    this.service.list({
-      offset,
-      limit: this.limit,
-      q: this.searchQuery() || undefined,
-      tipo: this.filterTipo() || undefined,
-      activo: this.filterActivo() ? this.filterActivo() === 'true' : undefined,
-    }).subscribe({
+    this.service.list({ ...filters, offset, limit: this.limit }).subscribe({
       next: (res) => {
         this.buses.set(res.data);
-        this.total.set(res.total);
-        this.offset.set(res.offset);
         this.loading.set(false);
       },
       error: () => {
@@ -70,7 +93,7 @@ export class BusesListComponent {
 
   search(): void {
     this.page.set(1);
-    this.load();
+    this.loadWithCount();
   }
 
   resetFilters(): void {
@@ -78,7 +101,7 @@ export class BusesListComponent {
     this.filterTipo.set('');
     this.filterActivo.set('');
     this.page.set(1);
-    this.load();
+    this.loadWithCount();
   }
 
   openCreate(): void {
@@ -92,7 +115,7 @@ export class BusesListComponent {
   }
 
   onModalSaved(): void {
-    this.load();
+    this.loadWithCount();
   }
 
   async confirmDelete(bus: Bus): Promise<void> {
@@ -105,7 +128,7 @@ export class BusesListComponent {
     this.service.delete(bus.id).subscribe({
       next: () => {
         this.toast.success('Bus eliminado');
-        this.load();
+        this.loadWithCount();
       },
       error: () => this.toast.error('Error al eliminar bus'),
     });

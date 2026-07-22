@@ -80,6 +80,17 @@ func (s *BusStore) seed() {
 	}
 }
 
+func (s *BusStore) Count(filters BusFilters) int64 {
+	all := s.store.FindAll()
+	var count int64
+	for _, b := range all {
+		if s.matchFilters(&b, filters) {
+			count++
+		}
+	}
+	return count
+}
+
 func (s *BusStore) List(offset, limit int, filters BusFilters) outputs.PaginatedResponse[outputs.BusResponse] {
 	all := s.store.FindAll()
 
