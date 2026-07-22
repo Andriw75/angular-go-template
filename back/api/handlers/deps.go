@@ -12,4 +12,5 @@ type Dependencies struct {
 	CryptManager *auth.CryptManager
 	UserStore    *mock.UserStore
 	PermisoStore *mock.PermisoStore
+	BusStore     *mock.BusStore
 }

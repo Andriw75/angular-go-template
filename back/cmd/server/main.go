@@ -38,12 +38,14 @@ func main() {
 		slog.Info("using mock data store")
 		deps.UserStore = mock.NewUserStore(cryptManager)
 		deps.PermisoStore = mock.NewPermisoStore()
+		deps.BusStore = mock.NewBusStore()
 	} else {
 		slog.Info("connecting to database", "type", cfg.DBType)
 		// TODO: Initialize real database repositories when USE_MOCK=false
 		// See infrastructure/database/ for implementations
 		deps.UserStore = mock.NewUserStore(cryptManager)
 		deps.PermisoStore = mock.NewPermisoStore()
+		deps.BusStore = mock.NewBusStore()
 	}
 
 	router := api.NewRouter(deps)

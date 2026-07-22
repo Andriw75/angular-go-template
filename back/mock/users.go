@@ -14,14 +14,14 @@ type UserStore struct {
 func NewUserStore(crypt *auth.CryptManager) *UserStore {
 	s := &UserStore{store: NewMockStore[domain.User](nil)}
 
-	hash, err := crypt.Hash("Admin1234!")
+	hash, err := crypt.Hash("abc123zyx")
 	if err != nil {
 		panic(err)
 	}
 
 	s.store.Insert(1, domain.User{
 		ID:       1,
-		Username: "admin",
+		Username: "andriwdv",
 		Email:    "admin@example.com",
 		Password: hash,
 		Activo:   true,

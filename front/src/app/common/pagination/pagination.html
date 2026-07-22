@@ -1,0 +1,25 @@
+@if (totalPages() > 1) {
+  <div class="pagination-bar">
+    <button class="page-btn" (click)="jump(-5)" [disabled]="page() <= 1" title="-5">&laquo;</button>
+    <button class="page-btn" (click)="jump(-1)" [disabled]="page() <= 1">&lsaquo;</button>
+
+    <div class="page-input-group">
+      <input
+        class="page-input"
+        type="text"
+        inputmode="numeric"
+        [value]="inputValue()"
+        (input)="inputValue.set($any($event.target).value)"
+        (keydown)="onInputKeydown($event)"
+        (blur)="onInputBlur()"
+        [title]="'Pagina ' + page() + ' de ' + totalPages()"
+      />
+      <span class="page-of">de {{ totalPages() }}</span>
+    </div>
+
+    <button class="page-btn" (click)="jump(1)" [disabled]="page() >= totalPages()">&rsaquo;</button>
+    <button class="page-btn" (click)="jump(5)" [disabled]="page() >= totalPages()" title="+5">&raquo;</button>
+
+    <span class="page-count">{{ from }}-{{ to }} de {{ total() }}</span>
+  </div>
+}

@@ -1,0 +1,100 @@
+<div class="page-header">
+  <h1>Buses</h1>
+  <button class="btn btn--primary" (click)="openCreate()">+ Nuevo Bus</button>
+</div>
+
+<div class="filters">
+  <input
+    class="filter-input"
+    type="text"
+    placeholder="Buscar placa, nombre, marca..."
+    [(ngModel)]="searchQuery"
+    (keydown.enter)="search()"
+  />
+  <select class="filter-select" [(ngModel)]="filterTipo" (change)="search()">
+    <option value="">Todos los tipos</option>
+    @for (t of tipos; track t) {
+      @if (t) {
+        <option [value]="t">{{ t }}</option>
+      }
+    }
+  </select>
+  <select class="filter-select" [(ngModel)]="filterActivo" (change)="search()">
+    <option value="">Todos (activo)</option>
+    <option value="true">Solo activos</option>
+    <option value="false">Solo inactivos</option>
+  </select>
+  <button class="btn btn--secondary" (click)="search()">Buscar</button>
+  <button class="btn btn--ghost" (click)="resetFilters()">Limpiar</button>
+</div>
+
+@if (loading()) {
+  <div class="loading">Cargando...</div>
+} @else {
+  <div class="table-wrapper">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Placa</th>
+          <th>Nombre</th>
+          <th>Marca</th>
+          <th>Modelo</th>
+          <th>Año</th>
+          <th>Tipo</th>
+          <th>Capacidad</th>
+          <th>Precio</th>
+          <th>Color</th>
+          <th>Activo</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (bus of buses(); track bus.id) {
+          <tr>
+            <td><strong>{{ bus.placa }}</strong></td>
+            <td>{{ bus.nombre }}</td>
+            <td>{{ bus.marca }}</td>
+            <td>{{ bus.modelo }}</td>
+            <td>{{ bus.anio }}</td>
+            <td><span class="badge badge--tipo">{{ bus.tipo }}</span></td>
+            <td>{{ bus.capacidad }}</td>
+            <td>{{ bus.precio | number:'1.2-2' }}</td>
+            <td>{{ bus.color }}</td>
+            <td>
+              @if (bus.activo) {
+                <span class="badge badge--activo">Sí</span>
+              } @else {
+                <span class="badge badge--inactivo">No</span>
+              }
+            </td>
+            <td>
+              <button class="btn-icon btn-icon--edit" title="Editar" (click)="openEdit(bus)">✏️</button>
+              <button class="btn-icon btn-icon--delete" title="Eliminar" (click)="confirmDelete(bus)">🗑️</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="11" class="empty">No hay buses registrados</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination-wrapper">
+    <app-pagination
+      [page]="page()"
+      [totalPages]="totalPages"
+      [total]="total()"
+      (pageChange)="onPageChange($event)"
+    />
+  </div>
+}
+
+@if (showModal()) {
+  <app-bus-modal
+    [bus]="selectedBus()"
+    (onClose)="showModal.set(false)"
+    (onSaved)="onModalSaved()"
+  />
+}
