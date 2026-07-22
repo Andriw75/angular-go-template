@@ -28,6 +28,7 @@ export const MENU: MenuItem[] = [
     label: 'Buses',
     key: 'buses',
     path: '/dashboard/buses',
+    requiredPermission: 'buses',
     icon: { component: BusIcon, inputs: { size: '20' } },
   },
   {
