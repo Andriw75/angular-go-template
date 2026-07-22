@@ -1,0 +1,8 @@
+.home h1 {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.home p {
+  color: var(--color-text-secondary);
+}

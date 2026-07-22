@@ -1,0 +1,42 @@
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-header">
+      <h1>Iniciar Sesión</h1>
+      <p>Ingrese sus credenciales para acceder</p>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="login-form">
+      <div class="field">
+        <label for="username">Usuario</label>
+        <input
+          id="username"
+          type="text"
+          [ngModel]="username()"
+          (ngModelChange)="username.set($event)"
+          name="username"
+          placeholder="Ingrese su usuario"
+          autocomplete="username"
+          required
+        />
+      </div>
+
+      <div class="field">
+        <label for="password">Contraseña</label>
+        <input
+          id="password"
+          type="password"
+          [ngModel]="password()"
+          (ngModelChange)="password.set($event)"
+          name="password"
+          placeholder="Ingrese su contraseña"
+          autocomplete="current-password"
+          required
+        />
+      </div>
+
+      <button type="submit" class="btn-submit" [disabled]="loading()">
+        {{ loading() ? 'Ingresando...' : 'Ingresar' }}
+      </button>
+    </form>
+  </div>
+</div>

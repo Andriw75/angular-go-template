@@ -1,0 +1,62 @@
+package api
+
+import (
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+
+	"back/api/handlers"
+)
+
+func NewRouter(deps *handlers.Dependencies) chi.Router {
+	r := chi.NewRouter()
+
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(corsMiddleware(deps.Config.CORSOrigin))
+
+	authHandler := handlers.NewAuthHandler(deps)
+	userHandler := handlers.NewUserHandler(deps)
+
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	})
+
+	r.Route("/auth", func(r chi.Router) {
+		r.Post("/token", authHandler.Token)
+		r.Group(func(r chi.Router) {
+			r.Use(authHandler.RenewMiddleware)
+			r.Post("/logout", authHandler.Logout)
+			r.Get("/me", authHandler.Me)
+		})
+	})
+
+	r.Route("/users", func(r chi.Router) {
+		r.Use(authHandler.RenewMiddleware)
+		r.Get("/", userHandler.List)
+	})
+
+	return r
+}
+
+func corsMiddleware(origin string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}

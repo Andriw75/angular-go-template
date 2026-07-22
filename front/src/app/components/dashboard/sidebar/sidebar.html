@@ -1,0 +1,36 @@
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h2>Template</h2>
+  </div>
+
+  <nav class="sidebar-nav">
+    @for (item of getMenuItems(); track item.path) {
+      @if (item.children) {
+        <div class="menu-group">
+          <span class="menu-group-label">{{ item.label }}</span>
+          @for (child of item.children; track child.path) {
+            @if (!child.permission || auth.hasPermission(child.permission)) {
+              <a
+                class="menu-item"
+                routerLink="{{ child.path }}"
+                routerLinkActive="menu-item--active"
+              >{{ child.label }}</a>
+            }
+          }
+        </div>
+      } @else {
+        <a
+          class="menu-item"
+          routerLink="{{ item.path }}"
+          routerLinkActive="menu-item--active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >{{ item.label }}</a>
+      }
+    }
+  </nav>
+
+  <div class="sidebar-footer">
+    <span>{{ auth.user()?.username }}</span>
+    <button class="btn-logout" (click)="onLogout()">Cerrar sesión</button>
+  </div>
+</aside>
