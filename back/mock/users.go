@@ -14,7 +14,7 @@ type UserStore struct {
 func NewUserStore(crypt *auth.CryptManager) *UserStore {
 	s := &UserStore{store: NewMockStore[domain.User](nil)}
 
-	hash, err := crypt.Hash("Admin1234!")
+	hash, err := crypt.Hash("REDACTED_DEFAULT_ADMIN_PASSWORD")
 	if err != nil {
 		panic(err)
 	}

@@ -3,6 +3,7 @@ import { HomeIcon } from '../../../common/icons/home.icon';
 import { UsersIcon } from '../../../common/icons/users.icon';
 import { SettingsIcon } from '../../../common/icons/settings.icon';
 import { DatabaseIcon } from '../../../common/icons/database.icon';
+import { BusIcon } from '../../../common/icons/bus.icon';
 
 export interface IconConfig {
   component: Type<any>;
@@ -24,6 +25,12 @@ export const MENU: MenuItem[] = [
     key: 'home',
     path: '/dashboard',
     icon: { component: HomeIcon, inputs: { size: '20' } },
+  },
+  {
+    label: 'Buses',
+    key: 'buses',
+    path: '/dashboard/buses',
+    icon: { component: BusIcon, inputs: { size: '20' } },
   },
   {
     label: 'Admin',

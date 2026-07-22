@@ -1,0 +1,70 @@
+:host {
+  display: flex;
+  justify-content: center;
+}
+
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.page-btn {
+  min-width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: var(--bg);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.page-input {
+  width: 48px;
+  height: 36px;
+  text-align: center;
+  border: 2px solid var(--primary);
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary);
+  background: white;
+  outline: none;
+  padding: 0 4px;
+}
+
+.page-of {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.page-count {
+  margin-left: 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
