@@ -55,26 +55,33 @@ func (s *UserStore) Create(input inputs.UserInput) (domain.User, error) {
 	return s.store.Create(user)
 }
 
-func (s *UserStore) Update(id int64, input inputs.UserInput) error {
+func (s *UserStore) Update(id int64, input inputs.UserUpdateInput) error {
 	existing, err := s.store.FindByID(id)
 	if err != nil {
 		return err
 	}
 
-	existing.Username = input.Username
-	existing.Email = input.Email
-	existing.Activo = input.Activo
-	existing.Permisos = input.Permisos
-	existing.ActualizadoEn = time.Now()
-
-	if input.Password != "" {
-		hash, err := s.crypt.Hash(input.Password)
+	if input.Username != nil {
+		existing.Username = *input.Username
+	}
+	if input.Email != nil {
+		existing.Email = *input.Email
+	}
+	if input.Activo != nil {
+		existing.Activo = *input.Activo
+	}
+	if input.Permisos != nil {
+		existing.Permisos = *input.Permisos
+	}
+	if input.Password != nil && *input.Password != "" {
+		hash, err := s.crypt.Hash(*input.Password)
 		if err != nil {
 			return err
 		}
 		existing.Password = hash
 	}
 
+	existing.ActualizadoEn = time.Now()
 	return s.store.Update(id, existing)
 }
 

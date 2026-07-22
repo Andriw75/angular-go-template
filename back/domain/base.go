@@ -13,6 +13,8 @@ type User struct {
 	ActualizadoEn  time.Time `json:"actualizado_en"`
 }
 
+func (u *User) SetID(id int64) { u.ID = id }
+
 type Bus struct {
 	ID                  int64      `json:"id"`
 	Placa               string     `json:"placa"`
@@ -32,6 +34,8 @@ type Bus struct {
 	CreadoEn            time.Time  `json:"creado_en"`
 	ActualizadoEn       time.Time  `json:"actualizado_en"`
 }
+
+func (b *Bus) SetID(id int64) { b.ID = id }
 
 type Permission struct {
 	ID          int64  `json:"id"`

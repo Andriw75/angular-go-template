@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { UsersService, type UserInput } from '../../../services/users.service';
+import { UsersService, type UserInput, type UserUpdateInput } from '../../../services/users.service';
 import { ToastService } from '../../../services/toast.service';
 import { AuthService } from '../../../services/auth.service';
 import type { UserResponse, Permission } from '../../../models/auth';
@@ -29,6 +29,11 @@ export class UserModalComponent implements OnInit {
   activo = true;
   selectedPermisos: string[] = [];
 
+  private originalUsername = '';
+  private originalEmail = '';
+  private originalActivo = true;
+  private originalPermisos: string[] = [];
+
   get isEditing(): boolean {
     return this.user !== null;
   }
@@ -49,6 +54,11 @@ export class UserModalComponent implements OnInit {
       this.email = this.user.email;
       this.activo = this.user.activo;
       this.selectedPermisos = [...this.user.permisos];
+
+      this.originalUsername = this.user.username;
+      this.originalEmail = this.user.email;
+      this.originalActivo = this.user.activo;
+      this.originalPermisos = [...this.user.permisos];
     }
   }
 
@@ -73,6 +83,29 @@ export class UserModalComponent implements OnInit {
     }
 
     this.saving.set(true);
+
+    if (this.isEditing) {
+      const changes: UserUpdateInput = {};
+      if (this.username !== this.originalUsername) changes.username = this.username;
+      if (this.email !== this.originalEmail) changes.email = this.email;
+      if (this.password) changes.password = this.password;
+      if (this.activo !== this.originalActivo) changes.activo = this.activo;
+      if (!this.arraysEqual(this.selectedPermisos, this.originalPermisos)) changes.permisos = this.selectedPermisos;
+
+      this.service.update(this.user!.id, changes).subscribe({
+        next: () => {
+          this.saving.set(false);
+          this.toast.success('Usuario actualizado');
+          this.onSaved.emit();
+        },
+        error: () => {
+          this.saving.set(false);
+          this.toast.error('Error al guardar usuario');
+        },
+      });
+      return;
+    }
+
     const input: UserInput = {
       username: this.username,
       email: this.email,
@@ -81,14 +114,10 @@ export class UserModalComponent implements OnInit {
       permisos: this.selectedPermisos,
     };
 
-    const obs = this.isEditing
-      ? this.service.update(this.user!.id, input)
-      : this.service.create(input);
-
-    obs.subscribe({
+    this.service.create(input).subscribe({
       next: () => {
         this.saving.set(false);
-        this.toast.success(this.isEditing ? 'Usuario actualizado' : 'Usuario creado');
+        this.toast.success('Usuario creado');
         this.onSaved.emit();
       },
       error: () => {
@@ -100,5 +129,12 @@ export class UserModalComponent implements OnInit {
 
   cancel(): void {
     this.onClose.emit();
+  }
+
+  private arraysEqual(a: string[], b: string[]): boolean {
+    if (a.length !== b.length) return false;
+    const sortedA = [...a].sort();
+    const sortedB = [...b].sort();
+    return sortedA.every((v, i) => v === sortedB[i]);
   }
 }

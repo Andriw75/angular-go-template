@@ -12,6 +12,14 @@ export interface UserInput {
   permisos: string[];
 }
 
+export interface UserUpdateInput {
+  username?: string;
+  email?: string;
+  password?: string;
+  activo?: boolean;
+  permisos?: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class UsersService {
   private readonly api = environment.API_URL;
@@ -29,7 +37,7 @@ export class UsersService {
     return this.http.post<UserResponse>(`${this.api}/users`, input);
   }
 
-  update(id: number, input: UserInput): Observable<UserResponse> {
+  update(id: number, input: UserUpdateInput): Observable<UserResponse> {
     return this.http.put<UserResponse>(`${this.api}/users/${id}`, input);
   }
 
