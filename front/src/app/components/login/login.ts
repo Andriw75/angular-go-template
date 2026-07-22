@@ -1,38 +1,49 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
-import { ToastService } from '../../services/toast.service';
+import { SpinnerIcon } from '../../common/icons/spinner.icon';
 
 @Component({
   selector: 'app-login',
   templateUrl: './login.html',
   styleUrl: './login.css',
-  imports: [FormsModule],
+  imports: [SpinnerIcon],
 })
 export class LoginComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
-  private toast = inject(ToastService);
 
   username = signal('');
   password = signal('');
-  loading = signal(false);
+  error = signal('');
+  isLoading = signal(false);
 
-  async onSubmit(): Promise<void> {
-    if (!this.username() || !this.password()) {
-      this.toast.error('Ingrese usuario y contraseña');
+  handleSubmit(e: Event): void {
+    e.preventDefault();
+
+    const user = this.username().trim();
+    const pass = this.password().trim();
+
+    if (!user || !pass) {
+      const missing: string[] = [];
+      if (!user) missing.push('Usuario');
+      if (!pass) missing.push('Contraseña');
+      this.error.set(`Complete los campos: ${missing.join(', ')}`);
       return;
     }
 
-    this.loading.set(true);
-    try {
-      await this.auth.login(this.username(), this.password());
-      this.router.navigate(['/dashboard']);
-    } catch {
-      this.toast.error('Credenciales inválidas');
-    } finally {
-      this.loading.set(false);
-    }
+    this.isLoading.set(true);
+    this.error.set('');
+
+    this.auth.login(user, pass).subscribe({
+      next: (u) => {
+        this.auth.user.set(u);
+        this.router.navigate(['/dashboard']);
+      },
+      error: () => {
+        this.isLoading.set(false);
+        this.error.set('Usuario o contraseña incorrectos');
+      },
+    });
   }
 }

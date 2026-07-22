@@ -1,25 +1,63 @@
-export interface MenuItem {
-  label: string;
-  path: string;
-  icon?: string;
-  permission?: string;
-  children?: MenuItem[];
+import { type Type } from '@angular/core';
+import { HomeIcon } from '../../../common/icons/home.icon';
+import { UsersIcon } from '../../../common/icons/users.icon';
+import { SettingsIcon } from '../../../common/icons/settings.icon';
+import { DatabaseIcon } from '../../../common/icons/database.icon';
+
+export interface IconConfig {
+  component: Type<any>;
+  inputs?: Record<string, any>;
 }
 
-export const MENU_ITEMS: MenuItem[] = [
+export interface MenuItem {
+  label: string;
+  key: string;
+  path?: string;
+  icon?: IconConfig;
+  requiredPermission?: string;
+  submenu?: MenuItem[];
+}
+
+export const MENU: MenuItem[] = [
   {
     label: 'Inicio',
+    key: 'home',
     path: '/dashboard',
-    icon: 'home',
+    icon: { component: HomeIcon, inputs: { size: '20' } },
   },
   {
-    label: 'Usuarios',
-    path: '/dashboard/usuarios',
-    icon: 'users',
-    permission: 'admin',
-    children: [
-      { label: 'Personal', path: '/dashboard/usuarios/personal', permission: 'admin' },
-      { label: 'Permisos', path: '/dashboard/usuarios/permisos', permission: 'admin' },
+    label: 'Admin',
+    key: 'admin',
+    requiredPermission: 'admin',
+    icon: { component: UsersIcon, inputs: { size: '20' } },
+    submenu: [
+      {
+        label: 'Personal',
+        key: 'personal',
+        path: '/dashboard/usuarios/personal',
+        icon: { component: UsersIcon, inputs: { size: '16' } },
+        requiredPermission: 'admin',
+      },
+      {
+        label: 'Permisos',
+        key: 'permisos',
+        path: '/dashboard/usuarios/permisos',
+        icon: { component: SettingsIcon, inputs: { size: '16' } },
+        requiredPermission: 'admin',
+      },
+    ],
+  },
+  {
+    label: 'Datos',
+    key: 'datos',
+    icon: { component: DatabaseIcon, inputs: { size: '20' } },
+    submenu: [
+      {
+        label: 'Reportes',
+        key: 'reportes',
+        path: '/dashboard/datos/reportes',
+        icon: { component: DatabaseIcon, inputs: { size: '16' } },
+      },
     ],
   },
 ];
