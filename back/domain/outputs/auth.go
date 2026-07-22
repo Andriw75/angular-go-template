@@ -6,6 +6,7 @@ type UserResponse struct {
 	ID       int64    `json:"id"`
 	Username string   `json:"username"`
 	Email    string   `json:"email"`
+	Activo   bool     `json:"activo"`
 	Permisos []string `json:"permisos"`
 }
 
@@ -17,6 +18,7 @@ func ToUserResponse(u *domain.User) UserResponse {
 		ID:       u.ID,
 		Username: u.Username,
 		Email:    u.Email,
+		Activo:   u.Activo,
 		Permisos: u.Permisos,
 	}
 }

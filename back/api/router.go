@@ -20,6 +20,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 
 	authHandler := handlers.NewAuthHandler(deps)
 	userHandler := handlers.NewUserHandler(deps)
+	permisoHandler := handlers.NewPermisoHandler(deps)
 	busHandler := handlers.NewBusHandler(deps)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -39,6 +40,15 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	r.Route("/users", func(r chi.Router) {
 		r.Use(authHandler.RenewMiddleware)
 		r.Get("/", userHandler.List)
+		r.Post("/", userHandler.Create)
+		r.Get("/{id}", userHandler.GetByID)
+		r.Put("/{id}", userHandler.Update)
+		r.Delete("/{id}", userHandler.Delete)
+	})
+
+	r.Route("/permisos", func(r chi.Router) {
+		r.Use(authHandler.RenewMiddleware)
+		r.Get("/", permisoHandler.List)
 	})
 
 	r.Route("/buses", func(r chi.Router) {
