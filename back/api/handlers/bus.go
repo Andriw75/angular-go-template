@@ -24,6 +24,27 @@ func NewBusHandler(deps *Dependencies) *BusHandler {
 	return &BusHandler{deps: deps}
 }
 
+func parseBusFilters(r *http.Request) mock.BusFilters {
+	q := r.URL.Query()
+	f := mock.BusFilters{
+		Q:    strings.TrimSpace(q.Get("q")),
+		Tipo: strings.TrimSpace(q.Get("tipo")),
+	}
+	if s := q.Get("activo"); s != "" {
+		v, err := strconv.ParseBool(s)
+		if err == nil {
+			f.Activo = &v
+		}
+	}
+	return f
+}
+
+func (h *BusHandler) Count(w http.ResponseWriter, r *http.Request) {
+	filters := parseBusFilters(r)
+	count := h.deps.BusStore.Count(filters)
+	writeJSON(w, http.StatusOK, count)
+}
+
 func (h *BusHandler) List(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	offset, _ := strconv.Atoi(q.Get("offset"))
@@ -32,18 +53,7 @@ func (h *BusHandler) List(w http.ResponseWriter, r *http.Request) {
 		limit = 10
 	}
 
-	filters := mock.BusFilters{
-		Q:    strings.TrimSpace(q.Get("q")),
-		Tipo: strings.TrimSpace(q.Get("tipo")),
-	}
-	if s := q.Get("activo"); s != "" {
-		v, err := strconv.ParseBool(s)
-		if err == nil {
-			filters.Activo = &v
-		}
-	}
-
-	result := h.deps.BusStore.List(offset, limit, filters)
+	result := h.deps.BusStore.List(offset, limit, parseBusFilters(r))
 	writeJSON(w, http.StatusOK, result)
 }
 

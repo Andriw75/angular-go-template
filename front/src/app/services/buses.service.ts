@@ -12,10 +12,25 @@ export interface BusListParams {
   activo?: boolean;
 }
 
+export interface BusCountParams {
+  q?: string;
+  tipo?: string;
+  activo?: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class BusesService {
   private readonly api = environment.API_URL;
   private http = inject(HttpClient);
+
+  count(params: BusCountParams): Observable<number> {
+    const p: Record<string, string> = {};
+    if (params.q) p['q'] = params.q;
+    if (params.tipo) p['tipo'] = params.tipo;
+    if (params.activo != null) p['activo'] = String(params.activo);
+    const qs = new URLSearchParams(p).toString();
+    return this.http.get<number>(`${this.api}/buses/count?${qs}`);
+  }
 
   list(params: BusListParams): Observable<PaginatedResponse<Bus>> {
     const p: Record<string, string> = {};
