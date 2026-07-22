@@ -1,0 +1,60 @@
+<div class="page-header">
+  <h1>Usuarios</h1>
+  <button class="btn btn--primary" (click)="openCreate()">+ Nuevo Usuario</button>
+</div>
+
+@if (loading()) {
+  <div class="loading">Cargando...</div>
+} @else {
+  <div class="table-wrapper">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Email</th>
+          <th>Permisos</th>
+          <th>Activo</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (user of users(); track user.id) {
+          <tr>
+            <td><strong>{{ user.username }}</strong></td>
+            <td>{{ user.email }}</td>
+            <td>
+              <div class="permisos-list">
+                @for (p of user.permisos; track p) {
+                  <span class="badge badge--permiso">{{ p }}</span>
+                }
+              </div>
+            </td>
+            <td>
+              @if (user.activo) {
+                <span class="badge badge--activo">Sí</span>
+              } @else {
+                <span class="badge badge--inactivo">No</span>
+              }
+            </td>
+            <td>
+              <button class="btn-icon btn-icon--edit" title="Editar" (click)="openEdit(user)">✏️</button>
+              <button class="btn-icon btn-icon--delete" title="Eliminar" (click)="confirmDelete(user)">🗑️</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="5" class="empty">No hay usuarios registrados</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+@if (showModal()) {
+  <app-user-modal
+    [user]="selectedUser()"
+    (onClose)="showModal.set(false)"
+    (onSaved)="onModalSaved()"
+  />
+}

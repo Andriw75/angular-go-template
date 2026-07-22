@@ -19,7 +19,18 @@ export const routes: Routes = [
       },
       {
         path: 'buses',
-        loadComponent: () => import('./components/dashboard/buses/list').then((m) => m.BusesListComponent),
+        loadComponent: () =>
+          import('./components/dashboard/buses/list').then((m) => m.BusesListComponent),
+      },
+      {
+        path: 'usuarios',
+        loadComponent: () =>
+          import('./components/dashboard/usuarios/list').then((m) => m.UsersListComponent),
+      },
+      {
+        path: '**',
+        loadComponent: () =>
+          import('./components/dashboard/home/home').then((m) => m.HomeComponent),
       },
       {
         path: '**',
