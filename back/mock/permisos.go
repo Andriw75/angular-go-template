@@ -11,6 +11,7 @@ func NewPermisoStore() *PermisoStore {
 
 	s.store.Insert(1, domain.Permission{ID: 1, Nombre: "buses", Descripcion: "Acceso a buses"})
 	s.store.Insert(2, domain.Permission{ID: 2, Nombre: "usuarios", Descripcion: "Gestion de usuarios"})
+	s.store.Insert(3, domain.Permission{ID: 3, Nombre: "mensajes_pendientes", Descripcion: "Mensajes pendientes"})
 
 	return s
 }

@@ -39,13 +39,19 @@ func main() {
 		deps.UserStore = mock.NewUserStore(cryptManager)
 		deps.PermisoStore = mock.NewPermisoStore()
 		deps.BusStore = mock.NewBusStore()
+		deps.MensajeStore = mock.NewMensajeStore()
+		deps.ActivosStore = mock.NewActivosStore()
+		deps.SSEHub = handlers.NewSSEHub()
+		seedActivos(deps.MensajeStore, deps.ActivosStore)
 	} else {
 		slog.Info("connecting to database", "type", cfg.DBType)
-		// TODO: Initialize real database repositories when USE_MOCK=false
-		// See infrastructure/database/ for implementations
 		deps.UserStore = mock.NewUserStore(cryptManager)
 		deps.PermisoStore = mock.NewPermisoStore()
 		deps.BusStore = mock.NewBusStore()
+		deps.MensajeStore = mock.NewMensajeStore()
+		deps.ActivosStore = mock.NewActivosStore()
+		deps.SSEHub = handlers.NewSSEHub()
+		seedActivos(deps.MensajeStore, deps.ActivosStore)
 	}
 
 	router := api.NewRouter(deps)
@@ -76,4 +82,12 @@ func main() {
 	}
 
 	slog.Info("server stopped")
+}
+
+func seedActivos(store *mock.MensajeStore, activos *mock.ActivosStore) {
+	for _, m := range store.FindAll() {
+		if m.Estado != "finalizado" {
+			activos.Set(m)
+		}
+	}
 }

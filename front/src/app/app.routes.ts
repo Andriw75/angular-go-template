@@ -28,6 +28,11 @@ export const routes: Routes = [
           import('./components/dashboard/usuarios/list').then((m) => m.UsersListComponent),
       },
       {
+        path: 'mensajes',
+        loadComponent: () =>
+          import('./components/dashboard/mensajes/list').then((m) => m.MensajesListComponent),
+      },
+      {
         path: '**',
         loadComponent: () =>
           import('./components/dashboard/home/home').then((m) => m.HomeComponent),
