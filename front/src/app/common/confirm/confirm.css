@@ -51,7 +51,7 @@
 
 .actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 10px;
 }
 
@@ -79,6 +79,17 @@
   background: #e5e7eb;
 }
 
+.btn--primary {
+  background: var(--primary, #1e3a5f);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(30, 58, 95, 0.25);
+}
+
+.btn--primary:hover {
+  background: var(--primaryFocus, #162d4a);
+  box-shadow: 0 4px 12px rgba(30, 58, 95, 0.35);
+}
+
 .btn--danger {
   background: var(--color-danger, #ef4444);
   color: #fff;
@@ -88,4 +99,15 @@
 .btn--danger:hover {
   background: #dc2626;
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
+
+.btn--warning {
+  background: #f59e0b;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+}
+
+.btn--warning:hover {
+  background: #d97706;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
 }
