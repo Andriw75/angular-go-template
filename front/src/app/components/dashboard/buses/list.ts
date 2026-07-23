@@ -118,19 +118,27 @@ export class BusesListComponent {
     this.loadWithCount();
   }
 
+  deleting = signal<number | null>(null);
+
   async confirmDelete(bus: Bus): Promise<void> {
     const ok = await this.confirm.confirm(
       'Eliminar Bus',
       `¿Seguro de eliminar el bus "${bus.nombre}" (${bus.placa})?`,
+      'danger',
     );
     if (!ok) return;
+    this.deleting.set(bus.id);
 
     this.service.delete(bus.id).subscribe({
       next: () => {
         this.toast.success('Bus eliminado');
+        this.deleting.set(null);
         this.loadWithCount();
       },
-      error: () => this.toast.error('Error al eliminar bus'),
+      error: () => {
+        this.toast.error('Error al eliminar bus');
+        this.deleting.set(null);
+      },
     });
   }
 

@@ -52,10 +52,10 @@
             <td>{{ m.usuario_acargo || '-' }}</td>
             <td>
               @if (m.estado === 'pendiente') {
-                <button class="btn btn--xs btn--primary" (click)="asignarse(m)">Asignarme</button>
-                <button class="btn btn--xs btn--danger" (click)="deleteMensaje(m)">🗑️</button>
+                <button class="btn btn--xs btn--primary" (click)="asignarse(m)" [disabled]="saving() !== null">Asignarme</button>
+                <button class="btn btn--xs btn--danger" (click)="deleteMensaje(m)" [disabled]="saving() !== null">🗑️</button>
               } @else if (m.estado === 'asignado' && m.usuario_acargo === auth.user()?.username) {
-                <button class="btn btn--xs btn--success" (click)="finalizar(m)">Finalizar</button>
+                <button class="btn btn--xs btn--success" (click)="finalizar(m)" [disabled]="saving() !== null">Finalizar</button>
               } @else {
                 <span class="text-muted">—</span>
               }
@@ -131,8 +131,8 @@
         <input class="form-input" type="datetime-local" [(ngModel)]="createHoraDesactivacion" />
       </div>
       <div class="modal-actions">
-        <button class="btn btn--secondary" (click)="showCreate.set(false)">Cancelar</button>
-        <button class="btn btn--primary" (click)="createMensaje()">Crear</button>
+        <button class="btn btn--secondary" (click)="showCreate.set(false)" [disabled]="creating()">Cancelar</button>
+        <button class="btn btn--primary" (click)="createMensaje()" [disabled]="creating()">{{ creating() ? 'Creando...' : 'Crear' }}</button>
       </div>
     </div>
   </div>

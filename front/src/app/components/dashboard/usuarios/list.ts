@@ -56,6 +56,8 @@ export class UsersListComponent {
     this.load();
   }
 
+  deleting = signal<number | null>(null);
+
   async confirmDelete(user: UserResponse): Promise<void> {
     if (user.id === this.auth.user()?.id) {
       this.toast.error('No puedes eliminarte a ti mismo');
@@ -64,15 +66,21 @@ export class UsersListComponent {
     const ok = await this.confirm.confirm(
       'Eliminar Usuario',
       `¿Seguro de eliminar al usuario "${user.username}"?`,
+      'danger',
     );
     if (!ok) return;
+    this.deleting.set(user.id);
 
     this.service.delete(user.id).subscribe({
       next: () => {
         this.toast.success('Usuario eliminado');
+        this.deleting.set(null);
         this.load();
       },
-      error: () => this.toast.error('Error al eliminar usuario'),
+      error: () => {
+        this.toast.error('Error al eliminar usuario');
+        this.deleting.set(null);
+      },
     });
   }
 }
