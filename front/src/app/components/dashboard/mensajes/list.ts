@@ -95,44 +95,74 @@ export class MensajesListComponent implements OnInit {
     this.createHoraDesactivacion = '';
   }
 
+  creating = signal(false);
+
   createMensaje(): void {
     if (!this.createTelefono || !this.createHoraDesactivacion) {
       this.toast.error('Teléfono y hora de desactivación son requeridos');
       return;
     }
+    this.creating.set(true);
     this.service.create({ telefono: this.createTelefono, hora_desactivacion: this.createHoraDesactivacion }).subscribe({
       next: () => {
         this.toast.success('Mensaje creado');
+        this.creating.set(false);
         this.showCreate.set(false);
       },
-      error: () => this.toast.error('Error al crear mensaje'),
+      error: () => {
+        this.toast.error('Error al crear mensaje');
+        this.creating.set(false);
+      },
     });
   }
 
+  saving = signal<string | null>(null);
+
   async asignarse(m: MensajePendiente): Promise<void> {
-    const ok = await this.confirm.confirm('Asignarse', `¿Asignarte el mensaje de ${m.telefono}?`);
+    const ok = await this.confirm.confirm('Asignarse', `¿Asignarte el mensaje de ${m.telefono}?`, 'warning');
     if (!ok) return;
+    this.saving.set(`asignar-${m.id}`);
     this.service.update(m.id, { usuario_acargo: this.auth.user()?.username }).subscribe({
-      next: () => this.toast.success('Mensaje asignado'),
-      error: () => this.toast.error('Error al asignar'),
+      next: () => {
+        this.toast.success('Mensaje asignado');
+        this.saving.set(null);
+      },
+      error: () => {
+        this.toast.error('Error al asignar');
+        this.saving.set(null);
+      },
     });
   }
 
   async finalizar(m: MensajePendiente): Promise<void> {
-    const ok = await this.confirm.confirm('Finalizar', `¿Finalizar el mensaje de ${m.telefono}?`);
+    const ok = await this.confirm.confirm('Finalizar', `¿Finalizar el mensaje de ${m.telefono}?`, 'warning');
     if (!ok) return;
+    this.saving.set(`finalizar-${m.id}`);
     this.service.update(m.id, { finalizar: true }).subscribe({
-      next: () => this.toast.success('Mensaje finalizado'),
-      error: () => this.toast.error('Error al finalizar'),
+      next: () => {
+        this.toast.success('Mensaje finalizado');
+        this.saving.set(null);
+      },
+      error: () => {
+        this.toast.error('Error al finalizar');
+        this.saving.set(null);
+      },
     });
   }
 
   async deleteMensaje(m: MensajePendiente): Promise<void> {
-    const ok = await this.confirm.confirm('Eliminar', `¿Eliminar el mensaje de ${m.telefono}?`);
+    const ok = await this.confirm.confirm('Eliminar', `¿Eliminar el mensaje de ${m.telefono}?`, 'danger');
     if (!ok) return;
+    this.saving.set(`delete-${m.id}`);
     this.service.delete(m.id).subscribe({
-      next: () => this.toast.success('Mensaje eliminado'),
-      error: () => this.toast.error('Error al eliminar'),
+      next: () => {
+        this.toast.success('Mensaje eliminado');
+        this.saving.set(null);
+      },
+      error: () => {
+        this.toast.error('Error al eliminar');
+        this.saving.set(null);
+      },
     });
   }
 }

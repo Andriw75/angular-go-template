@@ -38,7 +38,7 @@
             </td>
             <td>
               <button class="btn-icon btn-icon--edit" title="Editar" (click)="openEdit(user)">✏️</button>
-              <button class="btn-icon btn-icon--delete" title="Eliminar" (click)="confirmDelete(user)">🗑️</button>
+              <button class="btn-icon btn-icon--delete" title="Eliminar" (click)="confirmDelete(user)" [disabled]="deleting() === user.id">🗑️</button>
             </td>
           </tr>
         } @empty {
