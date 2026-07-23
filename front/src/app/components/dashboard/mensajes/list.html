@@ -1,0 +1,139 @@
+<div class="page-header">
+  <h1>Mensajes Pendientes</h1>
+  @if (activeTab() === 'activas') {
+    <button class="btn btn--primary" (click)="openCreate()">+ Nuevo Mensaje</button>
+  }
+</div>
+
+<div class="tabs">
+  <button class="tab" [class.tab--active]="activeTab() === 'activas'" (click)="onTabChange('activas')">
+    Activas ({{ store.activos().length }})
+  </button>
+  <button class="tab" [class.tab--active]="activeTab() === 'pasadas'" (click)="onTabChange('pasadas')">
+    Pasadas
+  </button>
+</div>
+
+@if (activeTab() === 'activas') {
+  <div class="filters">
+    <select class="filter-select" [(ngModel)]="filterEstado" (change)="activasPage.set(1)">
+      <option value="">Todos los estados</option>
+      <option value="pendiente">Pendiente</option>
+      <option value="asignado">Asignado</option>
+    </select>
+    <input class="filter-input" type="text" placeholder="Buscar teléfono..." [(ngModel)]="filterTelefono" (input)="activasPage.set(1)" />
+  </div>
+
+  <div class="table-wrapper">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Teléfono</th>
+          <th>Solicitado</th>
+          <th>Desactivación</th>
+          <th>Estado</th>
+          <th>Asignado a</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (m of visibleActivas(); track m.id) {
+          <tr>
+            <td><strong>{{ m.telefono }}</strong></td>
+            <td>{{ m.hora_solicitada | date:'dd/MM HH:mm' }}</td>
+            <td>{{ m.hora_desactivacion | date:'dd/MM HH:mm' }}</td>
+            <td>
+              @if (m.estado === 'pendiente') {
+                <span class="badge badge--pendiente">Pendiente</span>
+              } @else if (m.estado === 'asignado') {
+                <span class="badge badge--asignado">Asignado</span>
+              }
+            </td>
+            <td>{{ m.usuario_acargo || '-' }}</td>
+            <td>
+              @if (m.estado === 'pendiente') {
+                <button class="btn btn--xs btn--primary" (click)="asignarse(m)">Asignarme</button>
+                <button class="btn btn--xs btn--danger" (click)="deleteMensaje(m)">🗑️</button>
+              } @else if (m.estado === 'asignado' && m.usuario_acargo === auth.user()?.username) {
+                <button class="btn btn--xs btn--success" (click)="finalizar(m)">Finalizar</button>
+              } @else {
+                <span class="text-muted">—</span>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="empty">No hay mensajes activos</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination-wrapper">
+    <app-pagination
+      [page]="activasPage()"
+      [totalPages]="totalActivasPages()"
+      [total]="filteredActivas().length"
+      (pageChange)="onActivasPageChange($event)"
+    />
+  </div>
+} @else {
+  <div class="table-wrapper">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Teléfono</th>
+          <th>Solicitado</th>
+          <th>Desactivación</th>
+          <th>Asignado a</th>
+          <th>Finalizado</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (m of pasadas(); track m.id) {
+          <tr>
+            <td><strong>{{ m.telefono }}</strong></td>
+            <td>{{ m.hora_solicitada | date:'dd/MM HH:mm' }}</td>
+            <td>{{ m.hora_desactivacion | date:'dd/MM HH:mm' }}</td>
+            <td>{{ m.usuario_acargo || '-' }}</td>
+            <td><span class="badge badge--finalizado">Finalizado</span></td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="5" class="empty">No hay mensajes pasados</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination-wrapper">
+    <app-pagination
+      [page]="pasadasPage()"
+      [totalPages]="totalPasadasPages()"
+      [total]="pasadasTotal()"
+      (pageChange)="onPasadasPageChange($event)"
+    />
+  </div>
+}
+
+@if (showCreate()) {
+  <div class="modal" (click)="showCreate.set(false)">
+    <div class="modal-body" (click)="$event.stopPropagation()">
+      <h3>Nuevo Mensaje</h3>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input class="form-input" type="text" [(ngModel)]="createTelefono" placeholder="999888777" />
+      </div>
+      <div class="form-group">
+        <label>Hora de desactivación</label>
+        <input class="form-input" type="datetime-local" [(ngModel)]="createHoraDesactivacion" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn--secondary" (click)="showCreate.set(false)">Cancelar</button>
+        <button class="btn btn--primary" (click)="createMensaje()">Crear</button>
+      </div>
+    </div>
+  </div>
+}

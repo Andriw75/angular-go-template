@@ -48,3 +48,17 @@ type UserPermission struct {
 	PermissionID int64  `json:"permiso_id"`
 	Permission   string `json:"permiso"`
 }
+
+type MensajePendiente struct {
+	ID                  int64      `json:"id"`
+	Telefono            string     `json:"telefono"`
+	HoraSolicitada      time.Time  `json:"hora_solicitada"`
+	HoraDesactivacion   time.Time  `json:"hora_desactivacion"`
+	UsuarioAcargo       *string    `json:"usuario_acargo"`
+	HoraUsuarioAsignado *time.Time `json:"hora_usuario_asignado"`
+	Estado              string     `json:"estado"`
+	CreadoEn            time.Time  `json:"creado_en"`
+	ActualizadoEn       time.Time  `json:"actualizado_en"`
+}
+
+func (m *MensajePendiente) SetID(id int64) { m.ID = id }

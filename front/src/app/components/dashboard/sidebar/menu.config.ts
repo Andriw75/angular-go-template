@@ -2,6 +2,7 @@ import { type Type } from '@angular/core';
 import { HomeIcon } from '../../../common/icons/home.icon';
 import { UsersIcon } from '../../../common/icons/users.icon';
 import { BusIcon } from '../../../common/icons/bus.icon';
+import { SettingsIcon } from '../../../common/icons/settings.icon';
 
 export interface IconConfig {
   component: Type<any>;
@@ -30,6 +31,13 @@ export const MENU: MenuItem[] = [
     path: '/dashboard/buses',
     requiredPermission: 'buses',
     icon: { component: BusIcon, inputs: { size: '20' } },
+  },
+  {
+    label: 'Mensajes',
+    key: 'mensajes',
+    path: '/dashboard/mensajes',
+    requiredPermission: 'mensajes_pendientes',
+    icon: { component: SettingsIcon, inputs: { size: '20' } },
   },
   {
     label: 'Usuarios',

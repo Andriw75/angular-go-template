@@ -22,6 +22,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	userHandler := handlers.NewUserHandler(deps)
 	permisoHandler := handlers.NewPermisoHandler(deps)
 	busHandler := handlers.NewBusHandler(deps)
+	mensajeHandler := handlers.NewMensajeHandler(deps)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -59,6 +60,18 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 		r.Get("/{id}", busHandler.GetByID)
 		r.Put("/{id}", busHandler.Update)
 		r.Delete("/{id}", busHandler.Delete)
+	})
+
+	r.Route("/mensajes_pendientes", func(r chi.Router) {
+		r.Use(authHandler.AuthMiddleware("mensajes_pendientes"))
+		r.Get("/events", mensajeHandler.Events)
+		r.Get("/", mensajeHandler.List)
+		r.Post("/", mensajeHandler.Create)
+		r.Get("/pasadas", mensajeHandler.ListPasadas)
+		r.Get("/pasadas/count", mensajeHandler.CountPasadas)
+		r.Get("/{id}", mensajeHandler.GetByID)
+		r.Put("/{id}", mensajeHandler.Update)
+		r.Delete("/{id}", mensajeHandler.Delete)
 	})
 
 	return r
