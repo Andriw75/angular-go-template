@@ -86,6 +86,10 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.deps.Config.JWTStoreEnabled && (input.Permisos != nil || input.Activo != nil) {
+		h.deps.JWTStore.RemoveUserTokens(id)
+	}
+
 	updated, _ := h.deps.UserStore.FindByID(id)
 	writeJSON(w, http.StatusOK, outputs.ToUserResponse(updated))
 }

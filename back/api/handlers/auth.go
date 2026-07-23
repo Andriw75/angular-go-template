@@ -52,6 +52,11 @@ func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	claims := GetClaims(r.Context())
+	if h.deps.Config.JWTStoreEnabled && claims != nil && claims.ID != "" {
+		h.deps.JWTStore.Remove(claims.ID)
+	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     h.deps.Config.CookieName,
 		Value:    "",
@@ -105,18 +110,74 @@ func (h *AuthHandler) AuthMiddleware(requiredPermission ...string) func(http.Han
 				return
 			}
 
-			if h.deps.JWTManager.ShouldRenew(claims) {
-				newToken, err := h.deps.JWTManager.Generate(claims.UserID, claims.Username, claims.Email, claims.Activo, claims.Permisos)
-				if err == nil {
+			renewed := false
+
+			if h.deps.Config.JWTStoreEnabled && claims.ID != "" && !h.deps.JWTStore.Exists(claims.ID) {
+				if h.deps.Config.JWTLoadUserOnRenew {
+					user, uerr := h.deps.UserStore.FindByID(claims.UserID)
+					if uerr == nil && user.Activo {
+						newToken, terr := h.deps.JWTManager.Generate(user.ID, user.Username, user.Email, user.Activo, user.Permisos)
+						if terr == nil {
+							http.SetCookie(w, &http.Cookie{
+								Name:     h.deps.Config.CookieName,
+								Value:    newToken,
+								Path:     "/",
+								HttpOnly: true,
+								Secure:   h.deps.Config.CookieSecure,
+								SameSite: http.SameSiteStrictMode,
+								Expires:  time.Now().Add(time.Duration(h.deps.Config.JWTExpirationMin) * time.Minute),
+							})
+							claims, _ = h.deps.JWTManager.Validate(newToken)
+							renewed = true
+						}
+					}
+				}
+				if !renewed {
 					http.SetCookie(w, &http.Cookie{
 						Name:     h.deps.Config.CookieName,
-						Value:    newToken,
+						Value:    "",
 						Path:     "/",
 						HttpOnly: true,
 						Secure:   h.deps.Config.CookieSecure,
 						SameSite: http.SameSiteStrictMode,
-						Expires:  time.Now().Add(time.Duration(h.deps.Config.JWTExpirationMin) * time.Minute),
+						MaxAge:   -1,
 					})
+					writeJSONError(w, http.StatusUnauthorized, "session expired")
+					return
+				}
+			}
+
+			if !renewed && h.deps.JWTManager.ShouldRenew(claims) {
+				if h.deps.Config.JWTLoadUserOnRenew {
+					user, uerr := h.deps.UserStore.FindByID(claims.UserID)
+					if uerr == nil {
+						newToken, terr := h.deps.JWTManager.Generate(user.ID, user.Username, user.Email, user.Activo, user.Permisos)
+						if terr == nil {
+							http.SetCookie(w, &http.Cookie{
+								Name:     h.deps.Config.CookieName,
+								Value:    newToken,
+								Path:     "/",
+								HttpOnly: true,
+								Secure:   h.deps.Config.CookieSecure,
+								SameSite: http.SameSiteStrictMode,
+								Expires:  time.Now().Add(time.Duration(h.deps.Config.JWTExpirationMin) * time.Minute),
+							})
+							claims, _ = h.deps.JWTManager.Validate(newToken)
+						}
+					}
+				} else {
+					newToken, terr := h.deps.JWTManager.Generate(claims.UserID, claims.Username, claims.Email, claims.Activo, claims.Permisos)
+					if terr == nil {
+						http.SetCookie(w, &http.Cookie{
+							Name:     h.deps.Config.CookieName,
+							Value:    newToken,
+							Path:     "/",
+							HttpOnly: true,
+							Secure:   h.deps.Config.CookieSecure,
+							SameSite: http.SameSiteStrictMode,
+							Expires:  time.Now().Add(time.Duration(h.deps.Config.JWTExpirationMin) * time.Minute),
+						})
+					}
 				}
 			}
 

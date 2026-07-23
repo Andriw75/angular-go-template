@@ -8,40 +8,44 @@ import (
 )
 
 type Config struct {
-	ServerPort       string
-	UseMock          bool
-	DBType           string
-	DBHost           string
-	DBPort           int
-	DBUser           string
-	DBPassword       string
-	DBName           string
-	JWTSecret        string
-	JWTExpirationMin int
-	JWTRenewMin      int
-	CookieName       string
-	CookieSecure     bool
-	CORSOrigin       string
+	ServerPort         string
+	UseMock            bool
+	DBType             string
+	DBHost             string
+	DBPort             int
+	DBUser             string
+	DBPassword         string
+	DBName             string
+	JWTSecret          string
+	JWTExpirationMin   int
+	JWTRenewMin        int
+	CookieName         string
+	CookieSecure       bool
+	CORSOrigin         string
+	JWTStoreEnabled    bool
+	JWTLoadUserOnRenew bool
 }
 
 func LoadConfig() (*Config, error) {
 	godotenv.Load()
 
 	cfg := &Config{
-		ServerPort:       getEnv("SERVER_PORT", ":8080"),
-		UseMock:          getEnvBool("USE_MOCK", true),
-		DBType:           getEnv("DB_TYPE", "postgres"),
-		DBHost:           getEnv("DB_HOST", "localhost"),
-		DBPort:           getEnvInt("DB_PORT", 5432),
-		DBUser:           getEnv("DB_USER", "postgres"),
-		DBPassword:       getEnv("DB_PASSWORD", "postgres"),
-		DBName:           getEnv("DB_NAME", "mydb"),
-		JWTSecret:        getEnv("JWT_SECRET", "mi-secreto-super-seguro-2024"),
-		JWTExpirationMin: getEnvInt("JWT_EXPIRATION_MINUTES", 15),
-		JWTRenewMin:      getEnvInt("JWT_RENEW_MINUTES", 5),
-		CookieName:       getEnv("COOKIE_NAME", "access_token_go"),
-		CookieSecure:     getEnvBool("COOKIE_SECURE", false),
-		CORSOrigin:       getEnv("CORS_ORIGIN", "http://localhost:4200"),
+		ServerPort:         getEnv("SERVER_PORT", ":8080"),
+		UseMock:            getEnvBool("USE_MOCK", true),
+		DBType:             getEnv("DB_TYPE", "postgres"),
+		DBHost:             getEnv("DB_HOST", "localhost"),
+		DBPort:             getEnvInt("DB_PORT", 5432),
+		DBUser:             getEnv("DB_USER", "postgres"),
+		DBPassword:         getEnv("DB_PASSWORD", "postgres"),
+		DBName:             getEnv("DB_NAME", "mydb"),
+		JWTSecret:          getEnv("JWT_SECRET", "mi-secreto-super-seguro-2024"),
+		JWTExpirationMin:   getEnvInt("JWT_EXPIRATION_MINUTES", 15),
+		JWTRenewMin:        getEnvInt("JWT_RENEW_MINUTES", 5),
+		CookieName:         getEnv("COOKIE_NAME", "access_token_go"),
+		CookieSecure:       getEnvBool("COOKIE_SECURE", false),
+		CORSOrigin:         getEnv("CORS_ORIGIN", "http://localhost:4200"),
+		JWTStoreEnabled:    getEnvBool("JWT_STORE_ENABLED", true),
+		JWTLoadUserOnRenew: getEnvBool("JWT_LOAD_USER_ON_RENEW", true),
 	}
 	return cfg, nil
 }

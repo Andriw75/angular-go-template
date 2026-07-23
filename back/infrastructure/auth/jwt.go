@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -11,6 +13,7 @@ type JWTManager struct {
 	secret     string
 	duration   time.Duration
 	renewAfter time.Duration
+	Store      *JWTStore
 }
 
 type Claims struct {
@@ -22,12 +25,24 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func NewJWTManager(secret string, expirationMinutes int) *JWTManager {
+func NewJWTManager(secret string, expirationMinutes, renewMinutes int) *JWTManager {
+	renewAfter := time.Duration(expirationMinutes-5) * time.Minute
+	if renewMinutes > 0 {
+		renewAfter = time.Duration(renewMinutes) * time.Minute
+	}
 	return &JWTManager{
 		secret:     secret,
 		duration:   time.Duration(expirationMinutes) * time.Minute,
-		renewAfter: time.Duration(expirationMinutes-5) * time.Minute,
+		renewAfter: renewAfter,
 	}
+}
+
+func generateJTI() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }
 
 func (m *JWTManager) Generate(userID int64, username, email string, activo bool, permisos []string) (string, error) {
@@ -45,8 +60,25 @@ func (m *JWTManager) Generate(userID int64, username, email string, activo bool,
 		},
 	}
 
+	if m.Store != nil {
+		jti, err := generateJTI()
+		if err != nil {
+			return "", fmt.Errorf("failed to generate jti: %w", err)
+		}
+		claims.ID = jti
+	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(m.secret))
+	tokenStr, err := token.SignedString([]byte(m.secret))
+	if err != nil {
+		return "", err
+	}
+
+	if m.Store != nil && claims.ID != "" {
+		m.Store.Add(claims.ID, userID)
+	}
+
+	return tokenStr, nil
 }
 
 func (m *JWTManager) Validate(tokenStr string) (*Claims, error) {
