@@ -25,13 +25,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	jwtManager := auth.NewJWTManager(cfg.JWTSecret, cfg.JWTExpirationMin)
+	jwtStore := auth.NewJWTStore()
+	jwtManager := auth.NewJWTManager(cfg.JWTSecret, cfg.JWTExpirationMin, cfg.JWTRenewMin)
 	cryptManager := auth.NewCryptManager()
+
+	if cfg.JWTStoreEnabled {
+		jwtManager.Store = jwtStore
+	}
 
 	deps := &handlers.Dependencies{
 		Config:       cfg,
 		JWTManager:   jwtManager,
 		CryptManager: cryptManager,
+		JWTStore:     jwtStore,
 	}
 
 	if cfg.UseMock {
