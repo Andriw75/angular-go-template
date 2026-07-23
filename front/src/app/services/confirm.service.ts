@@ -1,9 +1,12 @@
 import { Injectable, signal } from '@angular/core';
 
+export type ConfirmType = 'danger' | 'warning' | 'primary';
+
 export interface ConfirmState {
   visible: boolean;
   title: string;
   message: string;
+  type: ConfirmType;
   resolve: ((value: boolean) => void) | null;
 }
 
@@ -13,13 +16,14 @@ export class ConfirmService {
     visible: false,
     title: '',
     message: '',
+    type: 'primary',
     resolve: null,
   });
   readonly state = this.#state.asReadonly();
 
-  confirm(title: string, message: string): Promise<boolean> {
+  confirm(title: string, message: string, type: ConfirmType = 'primary'): Promise<boolean> {
     return new Promise((resolve) => {
-      this.#state.set({ visible: true, title, message, resolve });
+      this.#state.set({ visible: true, title, message, type, resolve });
     });
   }
 
@@ -28,7 +32,7 @@ export class ConfirmService {
     if (s.resolve) {
       s.resolve(true);
     }
-    this.#state.set({ visible: false, title: '', message: '', resolve: null });
+    this.#state.set({ visible: false, title: '', message: '', type: 'primary', resolve: null });
   }
 
   cancel(): void {
@@ -36,6 +40,6 @@ export class ConfirmService {
     if (s.resolve) {
       s.resolve(false);
     }
-    this.#state.set({ visible: false, title: '', message: '', resolve: null });
+    this.#state.set({ visible: false, title: '', message: '', type: 'primary', resolve: null });
   }
 }
