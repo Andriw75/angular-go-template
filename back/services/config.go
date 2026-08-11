@@ -2,6 +2,7 @@ package services
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/joho/godotenv"
@@ -24,6 +25,7 @@ type Config struct {
 	CORSOrigin         string
 	JWTStoreEnabled    bool
 	JWTLoadUserOnRenew bool
+	PublicDir          string
 }
 
 func LoadConfig() (*Config, error) {
@@ -46,8 +48,20 @@ func LoadConfig() (*Config, error) {
 		CORSOrigin:         getEnv("CORS_ORIGIN", "http://localhost:4200"),
 		JWTStoreEnabled:    getEnvBool("JWT_STORE_ENABLED", true),
 		JWTLoadUserOnRenew: getEnvBool("JWT_LOAD_USER_ON_RENEW", true),
+		PublicDir:          getEnv("PUBLIC_DIR", ""),
 	}
 	return cfg, nil
+}
+
+// PublicPath es la carpeta pública servida por nginx.
+// La variable de entorno llega hasta "template"; la subruta "public" es fija
+// (a futuro: private, user, etc.).
+func (c *Config) PublicPath() string {
+	return filepath.Join(c.PublicDir, "public")
+}
+
+func (c *Config) ImagesDir() string {
+	return filepath.Join(c.PublicPath(), "imagenes")
 }
 
 func (c *Config) DBDSN() string {

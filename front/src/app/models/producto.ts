@@ -1,3 +1,5 @@
+import type { Imagen } from './imagen';
+
 export interface Producto {
   id: number;
   nombre: string;
@@ -6,6 +8,7 @@ export interface Producto {
   stock: number;
   categoria_id: number;
   activo: boolean;
+  imagenes: Imagen[];
   creado_en: string;
   actualizado_en: string;
 }

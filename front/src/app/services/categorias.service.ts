@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import type { Categoria, CategoriaInput, PaginatedCategorias } from '../models/categoria';
+import type { Imagen } from '../models/imagen';
 
 export interface CategoriaListParams {
   offset?: number;
@@ -54,5 +55,17 @@ export class CategoriasService {
 
   delete(id: number, cascade = false): Observable<void> {
     return this.http.delete<void>(`${this.api}/categorias/${id}?cascade=${cascade}`);
+  }
+
+  uploadImagenes(id: number, files: File[]): Observable<Imagen[]> {
+    const formData = new FormData();
+    for (const f of files) {
+      formData.append('images', f, f.name);
+    }
+    return this.http.post<Imagen[]>(`${this.api}/categorias/${id}/imagenes`, formData);
+  }
+
+  deleteImagen(id: number, imagenId: number): Observable<void> {
+    return this.http.delete<void>(`${this.api}/categorias/${id}/imagenes/${imagenId}`);
   }
 }

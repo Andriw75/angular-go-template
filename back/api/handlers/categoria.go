@@ -51,6 +51,9 @@ func (h *CategoriaHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := h.deps.CategoriaStore.List(offset, limit, parseCategoriaFilters(r))
+	for i := range result.Data {
+		result.Data[i].Imagenes = outputs.ToImagenResponses(h.deps.ImagenStore.ListByEntidad("categoria", result.Data[i].ID))
+	}
 	writeJSON(w, http.StatusOK, result)
 }
 
@@ -67,7 +70,35 @@ func (h *CategoriaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, outputs.ToCategoriaResponse(categoria))
+	resp := outputs.ToCategoriaResponse(categoria)
+	resp.Imagenes = outputs.ToImagenResponses(h.deps.ImagenStore.ListByEntidad("categoria", resp.ID))
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *CategoriaHandler) UploadImages(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if _, err := h.deps.CategoriaStore.FindByID(id); err != nil {
+		writeJSONError(w, http.StatusNotFound, "categoria not found")
+		return
+	}
+	uploadImagesForEntity(h.deps, "categoria", id, w, r)
+}
+
+func (h *CategoriaHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
+	id, imagenID, ok := parseImagenParams(r)
+	if !ok {
+		writeJSONError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if _, err := h.deps.CategoriaStore.FindByID(id); err != nil {
+		writeJSONError(w, http.StatusNotFound, "categoria not found")
+		return
+	}
+	deleteImageForEntity(h.deps, "categoria", id, imagenID, w)
 }
 
 func (h *CategoriaHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +126,9 @@ func (h *CategoriaHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, outputs.ToCategoriaResponse(&created))
+	resp := outputs.ToCategoriaResponse(&created)
+	resp.Imagenes = outputs.ToImagenResponses(h.deps.ImagenStore.ListByEntidad("categoria", resp.ID))
+	writeJSON(w, http.StatusCreated, resp)
 }
 
 func (h *CategoriaHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -127,7 +160,9 @@ func (h *CategoriaHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, outputs.ToCategoriaResponse(existing))
+	resp := outputs.ToCategoriaResponse(existing)
+	resp.Imagenes = outputs.ToImagenResponses(h.deps.ImagenStore.ListByEntidad("categoria", resp.ID))
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *CategoriaHandler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -144,20 +179,40 @@ func (h *CategoriaHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	cascade, _ := strconv.ParseBool(r.URL.Query().Get("cascade"))
 
-	count := h.deps.ProductoStore.CountByCategoria(id)
-	if count > 0 && !cascade {
+	products := h.deps.ProductoStore.ListByCategoria(id)
+	if len(products) > 0 && !cascade {
 		writeJSONError(w, http.StatusConflict, "categoria has products, use cascade=true to delete them too")
 		return
 	}
 
-	if count > 0 {
-		h.deps.ProductoStore.DeleteByCategoria(id)
+	// Recolectar archivos a eliminar (se borran solo tras el éxito en el store).
+	var filesToRemove []string
+	if cascade {
+		for _, p := range products {
+			for _, img := range h.deps.ImagenStore.ListByEntidad("producto", p.ID) {
+				filesToRemove = append(filesToRemove, img.FileName)
+			}
+		}
+	}
+	for _, img := range h.deps.ImagenStore.ListByEntidad("categoria", id) {
+		filesToRemove = append(filesToRemove, img.FileName)
 	}
 
+	// Bajas en el store (negocio) primero.
+	if cascade {
+		for _, p := range products {
+			h.deps.ImagenStore.DeleteByEntidad("producto", p.ID)
+			_ = h.deps.ProductoStore.Delete(p.ID)
+		}
+	}
+	h.deps.ImagenStore.DeleteByEntidad("categoria", id)
 	if err := h.deps.CategoriaStore.Delete(id); err != nil {
 		writeJSONError(w, http.StatusNotFound, "categoria not found")
 		return
 	}
+
+	// Solo tras el éxito: limpiar archivos en disco.
+	h.deps.Storage.RemoveImages(filesToRemove...)
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "categoria deleted"})
 }

@@ -87,3 +87,13 @@ type Producto struct {
 }
 
 func (p *Producto) SetID(id int64) { p.ID = id }
+
+type Imagen struct {
+	ID        int64     `json:"id"`
+	Tipo      string    `json:"tipo"`
+	EntidadID int64     `json:"entidad_id"`
+	FileName  string    `json:"file_name"`
+	CreadoEn  time.Time `json:"creado_en"`
+}
+
+func (i *Imagen) SetID(id int64) { i.ID = id }
