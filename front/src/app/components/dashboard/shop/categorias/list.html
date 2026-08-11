@@ -1,0 +1,80 @@
+<div class="page-header">
+  <h1>Categorías</h1>
+  <button class="btn btn--primary" (click)="openCreate()">+ Nueva Categoría</button>
+</div>
+
+<div class="filters">
+  <input
+    class="filter-input"
+    type="text"
+    placeholder="Buscar nombre, descripción..."
+    [(ngModel)]="searchQuery"
+    (keydown.enter)="search()"
+  />
+  <select class="filter-select" [(ngModel)]="filterActivo" (change)="search()">
+    <option value="">Todas (activo)</option>
+    <option value="true">Solo activas</option>
+    <option value="false">Solo inactivas</option>
+  </select>
+  <button class="btn btn--secondary" (click)="search()">Buscar</button>
+  <button class="btn btn--ghost" (click)="resetFilters()">Limpiar</button>
+</div>
+
+@if (loading()) {
+  <div class="loading">Cargando...</div>
+} @else {
+  <div class="table-wrapper">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Descripción</th>
+          <th>Activo</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (categoria of categorias(); track categoria.id) {
+          <tr>
+            <td>{{ categoria.id }}</td>
+            <td><strong>{{ categoria.nombre }}</strong></td>
+            <td>{{ categoria.descripcion }}</td>
+            <td>
+              @if (categoria.activo) {
+                <span class="badge badge--activo">Sí</span>
+              } @else {
+                <span class="badge badge--inactivo">No</span>
+              }
+            </td>
+            <td>
+              <button class="btn-icon btn-icon--edit" title="Editar" (click)="openEdit(categoria)">✏️</button>
+              <button class="btn-icon btn-icon--delete" title="Eliminar" (click)="confirmDelete(categoria)" [disabled]="deleting() === categoria.id">🗑️</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="5" class="empty">No hay categorías registradas</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination-wrapper">
+    <app-pagination
+      [page]="page()"
+      [totalPages]="totalPages"
+      [total]="total()"
+      (pageChange)="onPageChange($event)"
+    />
+  </div>
+}
+
+@if (showModal()) {
+  <app-categoria-modal
+    [categoria]="selectedCategoria()"
+    (onClose)="showModal.set(false)"
+    (onSaved)="onModalSaved()"
+  />
+}

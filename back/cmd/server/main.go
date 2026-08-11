@@ -47,6 +47,8 @@ func main() {
 		deps.BusStore = mock.NewBusStore()
 		deps.MensajeStore = mock.NewMensajeStore()
 		deps.ActivosStore = mock.NewActivosStore()
+		deps.CategoriaStore = mock.NewCategoriaStore()
+		deps.ProductoStore = mock.NewProductoStore()
 		deps.SSEHub = handlers.NewSSEHub()
 		seedActivos(deps.MensajeStore, deps.ActivosStore)
 	} else {
@@ -56,6 +58,8 @@ func main() {
 		deps.BusStore = mock.NewBusStore()
 		deps.MensajeStore = mock.NewMensajeStore()
 		deps.ActivosStore = mock.NewActivosStore()
+		deps.CategoriaStore = mock.NewCategoriaStore()
+		deps.ProductoStore = mock.NewProductoStore()
 		deps.SSEHub = handlers.NewSSEHub()
 		seedActivos(deps.MensajeStore, deps.ActivosStore)
 	}

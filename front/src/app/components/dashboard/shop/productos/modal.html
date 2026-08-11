@@ -1,0 +1,55 @@
+<div class="overlay" (click)="close()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ isEditing() ? 'Editar Producto' : 'Nuevo Producto' }}</h2>
+      <button class="close-btn" (click)="close()">&times;</button>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="modal-body">
+      <div class="grid">
+        <div class="field">
+          <label>Nombre *</label>
+          <input type="text" [(ngModel)]="form.nombre" name="nombre" required />
+        </div>
+        <div class="field">
+          <label>Categoría *</label>
+          <select [(ngModel)]="form.categoria_id" name="categoria_id" required>
+            <option [ngValue]="0" disabled>Selecciona una categoría</option>
+            @for (c of categorias(); track c.id) {
+              <option [ngValue]="c.id">{{ c.nombre }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label>Precio</label>
+          <input type="number" step="0.01" min="0" [(ngModel)]="form.precio" name="precio" />
+        </div>
+        <div class="field">
+          <label>Stock</label>
+          <input type="number" min="0" [(ngModel)]="form.stock" name="stock" />
+        </div>
+        <div class="field field--full">
+          <label>Descripción</label>
+          <textarea [(ngModel)]="form.descripcion" name="descripcion" rows="3"></textarea>
+        </div>
+        <div class="field field--inline">
+          <label>
+            <input type="checkbox" [(ngModel)]="form.activo" name="activo" />
+            Activo
+          </label>
+        </div>
+      </div>
+
+      @if (error()) {
+        <div class="form-error">{{ error() }}</div>
+      }
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn--secondary" (click)="close()">Cancelar</button>
+        <button type="submit" class="btn btn--primary" [disabled]="saving()">
+          {{ saving() ? 'Guardando...' : 'Guardar' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

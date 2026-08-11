@@ -23,6 +23,8 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	permisoHandler := handlers.NewPermisoHandler(deps)
 	busHandler := handlers.NewBusHandler(deps)
 	mensajeHandler := handlers.NewMensajeHandler(deps)
+	categoriaHandler := handlers.NewCategoriaHandler(deps)
+	productoHandler := handlers.NewProductoHandler(deps)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -72,6 +74,26 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 		r.Get("/{id}", mensajeHandler.GetByID)
 		r.Put("/{id}", mensajeHandler.Update)
 		r.Delete("/{id}", mensajeHandler.Delete)
+	})
+
+	r.Route("/categorias", func(r chi.Router) {
+		r.Use(authHandler.AuthMiddleware("shop"))
+		r.Get("/count", categoriaHandler.Count)
+		r.Get("/", categoriaHandler.List)
+		r.Post("/", categoriaHandler.Create)
+		r.Get("/{id}", categoriaHandler.GetByID)
+		r.Put("/{id}", categoriaHandler.Update)
+		r.Delete("/{id}", categoriaHandler.Delete)
+	})
+
+	r.Route("/productos", func(r chi.Router) {
+		r.Use(authHandler.AuthMiddleware("shop"))
+		r.Get("/count", productoHandler.Count)
+		r.Get("/", productoHandler.List)
+		r.Post("/", productoHandler.Create)
+		r.Get("/{id}", productoHandler.GetByID)
+		r.Put("/{id}", productoHandler.Update)
+		r.Delete("/{id}", productoHandler.Delete)
 	})
 
 	return r

@@ -46,4 +46,24 @@ export const MENU: MenuItem[] = [
     requiredPermission: 'usuarios',
     icon: { component: UsersIcon, inputs: { size: '20' } },
   },
+  {
+    label: 'Tienda',
+    key: 'shop',
+    requiredPermission: 'shop',
+    icon: { component: UsersIcon, inputs: { size: '20' } },
+    submenu: [
+      {
+        label: 'Categorias',
+        key: 'categorias',
+        path: '/dashboard/categorias',
+        requiredPermission: 'shop',
+      },
+      {
+        label: 'Productos',
+        key: 'productos',
+        path: '/dashboard/productos',
+        requiredPermission: 'shop',
+      },
+    ],
+  },
 ];

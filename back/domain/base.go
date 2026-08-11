@@ -62,3 +62,28 @@ type MensajePendiente struct {
 }
 
 func (m *MensajePendiente) SetID(id int64) { m.ID = id }
+
+type Categoria struct {
+	ID             int64     `json:"id"`
+	Nombre         string    `json:"nombre"`
+	Descripcion    string    `json:"descripcion"`
+	Activo         bool      `json:"activo"`
+	CreadoEn       time.Time `json:"creado_en"`
+	ActualizadoEn  time.Time `json:"actualizado_en"`
+}
+
+func (c *Categoria) SetID(id int64) { c.ID = id }
+
+type Producto struct {
+	ID            int64     `json:"id"`
+	Nombre        string    `json:"nombre"`
+	Descripcion   string    `json:"descripcion"`
+	Precio        float64   `json:"precio"`
+	Stock         int       `json:"stock"`
+	CategoriaID   int64     `json:"categoria_id"`
+	Activo        bool      `json:"activo"`
+	CreadoEn      time.Time `json:"creado_en"`
+	ActualizadoEn time.Time `json:"actualizado_en"`
+}
+
+func (p *Producto) SetID(id int64) { p.ID = id }
