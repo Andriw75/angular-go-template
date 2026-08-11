@@ -16,5 +16,7 @@ type Dependencies struct {
 	BusStore     *mock.BusStore
 	MensajeStore *mock.MensajeStore
 	ActivosStore *mock.ActivosStore
+	CategoriaStore *mock.CategoriaStore
+	ProductoStore  *mock.ProductoStore
 	SSEHub       *SSEHub
 }
