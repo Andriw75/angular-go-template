@@ -107,6 +107,19 @@ func (h *ProductoHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
 	deleteImageForEntity(h.deps, "producto", id, imagenID, w)
 }
 
+func (h *ProductoHandler) ReorderImages(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if _, err := h.deps.ProductoStore.FindByID(id); err != nil {
+		writeJSONError(w, http.StatusNotFound, "producto not found")
+		return
+	}
+	reorderImagesForEntity(h.deps, "producto", id, w, r)
+}
+
 func (h *ProductoHandler) validateCategoria(id int64) bool {
 	_, err := h.deps.CategoriaStore.FindByID(id)
 	return err == nil

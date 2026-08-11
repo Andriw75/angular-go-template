@@ -85,6 +85,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 		r.Put("/{id}", categoriaHandler.Update)
 		r.Delete("/{id}", categoriaHandler.Delete)
 		r.Post("/{id}/imagenes", categoriaHandler.UploadImages)
+		r.Put("/{id}/imagenes/orden", categoriaHandler.ReorderImages)
 		r.Delete("/{id}/imagenes/{imagenID}", categoriaHandler.DeleteImage)
 	})
 
@@ -97,6 +98,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 		r.Put("/{id}", productoHandler.Update)
 		r.Delete("/{id}", productoHandler.Delete)
 		r.Post("/{id}/imagenes", productoHandler.UploadImages)
+		r.Put("/{id}/imagenes/orden", productoHandler.ReorderImages)
 		r.Delete("/{id}/imagenes/{imagenID}", productoHandler.DeleteImage)
 	})
 

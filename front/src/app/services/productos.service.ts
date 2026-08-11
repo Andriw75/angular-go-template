@@ -72,4 +72,8 @@ export class ProductosService {
   deleteImagen(id: number, imagenId: number): Observable<void> {
     return this.http.delete<void>(`${this.api}/productos/${id}/imagenes/${imagenId}`);
   }
+
+  reorderImagenes(id: number, ids: number[]): Observable<Imagen[]> {
+    return this.http.put<Imagen[]>(`${this.api}/productos/${id}/imagenes/orden`, { ids });
+  }
 }

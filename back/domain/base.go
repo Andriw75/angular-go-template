@@ -93,6 +93,7 @@ type Imagen struct {
 	Tipo      string    `json:"tipo"`
 	EntidadID int64     `json:"entidad_id"`
 	FileName  string    `json:"file_name"`
+	Orden     int       `json:"orden"`
 	CreadoEn  time.Time `json:"creado_en"`
 }
 
