@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -93,4 +94,19 @@ func parseImagenParams(r *http.Request) (int64, int64, bool) {
 		return 0, 0, false
 	}
 	return id, imagenID, true
+}
+
+func reorderImagesForEntity(deps *Dependencies, tipo string, entidadID int64, w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		IDs []int64 `json:"ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := deps.ImagenStore.Reorder(tipo, entidadID, body.IDs); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, outputs.ToImagenResponses(deps.ImagenStore.ListByEntidad(tipo, entidadID)))
 }

@@ -101,6 +101,19 @@ func (h *CategoriaHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
 	deleteImageForEntity(h.deps, "categoria", id, imagenID, w)
 }
 
+func (h *CategoriaHandler) ReorderImages(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if _, err := h.deps.CategoriaStore.FindByID(id); err != nil {
+		writeJSONError(w, http.StatusNotFound, "categoria not found")
+		return
+	}
+	reorderImagesForEntity(h.deps, "categoria", id, w, r)
+}
+
 func (h *CategoriaHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var input inputs.CategoriaInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {

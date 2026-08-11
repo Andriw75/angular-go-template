@@ -1,10 +1,27 @@
-import { Component, effect, inject, input, output, signal } from '@angular/core';
+import { Component, effect, inject, input, OnDestroy, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { CategoriasService } from '../../../../services/categorias.service';
 import { ToastService } from '../../../../services/toast.service';
 import { environment } from '../../../../../environments/environment';
 import type { Categoria, CategoriaInput } from '../../../../models/categoria';
 import type { Imagen } from '../../../../models/imagen';
+
+type CardStatus = 'uploaded' | 'pending-upload' | 'pending-delete';
+
+interface ImagenCard {
+  key: number;
+  id: number | null;
+  url: string;
+  file?: File;
+  status: CardStatus;
+}
+
+const STATUS_LABEL: Record<CardStatus, string> = {
+  'uploaded': 'En servidor',
+  'pending-upload': 'Por subir',
+  'pending-delete': 'Por eliminar',
+};
 
 @Component({
   selector: 'app-categoria-modal',
@@ -12,7 +29,7 @@ import type { Imagen } from '../../../../models/imagen';
   styleUrl: './modal.css',
   imports: [FormsModule],
 })
-export class CategoriaModalComponent {
+export class CategoriaModalComponent implements OnDestroy {
   private service = inject(CategoriasService);
   private toast = inject(ToastService);
 
@@ -24,8 +41,9 @@ export class CategoriaModalComponent {
   saving = signal(false);
   error = signal('');
 
-  imagenes = signal<Imagen[]>([]);
-  uploading = signal(false);
+  cards = signal<ImagenCard[]>([]);
+  applying = signal(false);
+  draggingKey = signal<number | null>(null);
 
   form: CategoriaInput = {
     nombre: '',
@@ -33,9 +51,15 @@ export class CategoriaModalComponent {
     activo: true,
   };
 
+  private nextKey = 1;
+  private prevCards: ImagenCard[] = [];
+  private serverOrderIds: number[] = [];
+
   constructor() {
     effect(() => {
       const c = this.categoria();
+      this.revokeLocalUrls(this.prevCards);
+      let cards: ImagenCard[];
       if (c) {
         this.isEditing.set(true);
         this.form = {
@@ -43,22 +67,48 @@ export class CategoriaModalComponent {
           descripcion: c.descripcion,
           activo: c.activo,
         };
-        this.imagenes.set(c.imagenes ?? []);
+        cards = this.toCards(c.imagenes ?? []);
       } else {
         this.isEditing.set(false);
         this.form = { nombre: '', descripcion: '', activo: true };
-        this.imagenes.set([]);
+        cards = [];
       }
+      this.prevCards = cards;
+      this.cards.set(cards);
+      this.serverOrderIds = cards.filter((card) => card.id != null).map((card) => card.id!);
       this.error.set('');
     });
   }
 
-  close(): void {
-    this.onClose.emit();
+  ngOnDestroy(): void {
+    this.revokeLocalUrls(this.cards());
   }
 
-  imageUrl(img: Imagen): string {
-    return environment.MEDIA_URL + img.url;
+  private toCards(imagenes: Imagen[]): ImagenCard[] {
+    return [...imagenes]
+      .sort((a, b) => a.orden - b.orden)
+      .map((img) => ({
+        key: this.nextKey++,
+        id: img.id,
+        url: environment.MEDIA_URL + img.url,
+        status: 'uploaded' as CardStatus,
+      }));
+  }
+
+  private revokeLocalUrls(cards: ImagenCard[]): void {
+    for (const c of cards) {
+      if (c.file && c.url.startsWith('blob:')) {
+        URL.revokeObjectURL(c.url);
+      }
+    }
+  }
+
+  private get entityId(): number {
+    return this.categoria()!.id;
+  }
+
+  close(): void {
+    this.onClose.emit();
   }
 
   onFilesSelected(event: Event): void {
@@ -66,30 +116,153 @@ export class CategoriaModalComponent {
     const files = input.files ? Array.from(input.files) : [];
     if (!files.length) return;
 
-    this.uploading.set(true);
-    this.service.uploadImagenes(this.categoria()!.id, files).subscribe({
-      next: (imgs) => {
-        this.imagenes.set(imgs);
-        this.uploading.set(false);
-        input.value = '';
-        this.toast.success('Imágenes subidas');
-      },
-      error: () => {
-        this.uploading.set(false);
-        input.value = '';
-        this.toast.error('Error al subir imágenes');
-      },
+    const newCards: ImagenCard[] = files.map((f) => ({
+      key: this.nextKey++,
+      id: null,
+      url: URL.createObjectURL(f),
+      file: f,
+      status: 'pending-upload',
+    }));
+    this.cards.update((list) => [...list, ...newCards]);
+    input.value = '';
+  }
+
+  removeOrRestore(card: ImagenCard): void {
+    this.cards.update((list) => {
+      if (card.status === 'pending-upload') {
+        if (card.url.startsWith('blob:')) URL.revokeObjectURL(card.url);
+        return list.filter((c) => c.key !== card.key);
+      }
+      if (card.status === 'uploaded') {
+        return list.map((c) => (c.key === card.key ? { ...c, status: 'pending-delete' as CardStatus } : c));
+      }
+      return list.map((c) => (c.key === card.key ? { ...c, status: 'uploaded' as CardStatus } : c));
     });
   }
 
-  removeImagen(img: Imagen): void {
-    this.service.deleteImagen(this.categoria()!.id, img.id).subscribe({
-      next: () => {
-        this.imagenes.update((list) => list.filter((i) => i.id !== img.id));
-        this.toast.success('Imagen eliminada');
-      },
-      error: () => this.toast.error('Error al eliminar imagen'),
+  statusLabel(card: ImagenCard): string {
+    return STATUS_LABEL[card.status];
+  }
+
+  onDragStart(event: DragEvent, card: ImagenCard): void {
+    this.draggingKey.set(card.key);
+    event.dataTransfer!.effectAllowed = 'move';
+    event.dataTransfer!.setData('text/plain', String(card.key));
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.dataTransfer!.dropEffect = 'move';
+  }
+
+  onDrop(event: DragEvent, target: ImagenCard): void {
+    event.preventDefault();
+    const from = this.draggingKey();
+    this.draggingKey.set(null);
+    if (from == null) return;
+
+    this.cards.update((list) => {
+      const fromIdx = list.findIndex((c) => c.key === from);
+      const toIdx = list.findIndex((c) => c.key === target.key);
+      if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return list;
+      const arr = [...list];
+      const [moved] = arr.splice(fromIdx, 1);
+      arr.splice(toIdx, 0, moved);
+      return arr;
     });
+  }
+
+  onDragEnd(): void {
+    this.draggingKey.set(null);
+  }
+
+  get pendingUploads(): number {
+    return this.cards().filter((c) => c.status === 'pending-upload').length;
+  }
+
+  get pendingDeletes(): number {
+    return this.cards().filter((c) => c.status === 'pending-delete').length;
+  }
+
+  get hasPending(): boolean {
+    return this.pendingUploads + this.pendingDeletes > 0 || this.orderChanged;
+  }
+
+  get orderChanged(): boolean {
+    const current = this.cards().filter((c) => c.status === 'uploaded').map((c) => c.id!);
+    if (current.length !== this.serverOrderIds.length) return false;
+    return current.some((id, i) => id !== this.serverOrderIds[i]);
+  }
+
+  get pendingSummary(): string {
+    const parts: string[] = [];
+    if (this.pendingUploads) parts.push(`${this.pendingUploads} subir`);
+    if (this.pendingDeletes) parts.push(`${this.pendingDeletes} eliminar`);
+    if (this.orderChanged) parts.push('reordenar');
+    return parts.length ? `Aplicar cambios (${parts.join(' · ')})` : 'Aplicar cambios';
+  }
+
+  async applyImages(): Promise<void> {
+    const id = this.entityId;
+    this.applying.set(true);
+    try {
+      const current = this.cards();
+      const toUpload = current.filter((c) => c.status === 'pending-upload');
+      const toDelete = current.filter((c) => c.status === 'pending-delete');
+
+      // 1. Eliminar las marcadas en el servidor
+      for (const c of toDelete) {
+        await firstValueFrom(this.service.deleteImagen(id, c.id!));
+      }
+
+      // 2. Subir las pendientes (en orden), en un solo request
+      let uploadedIds: number[] = [];
+      if (toUpload.length) {
+        const known = new Set(current.filter((c) => c.id != null).map((c) => c.id!));
+        const files = toUpload.map((c) => c.file!);
+        const all = await firstValueFrom(this.service.uploadImagenes(id, files));
+        uploadedIds = all.filter((img) => !known.has(img.id)).map((img) => img.id);
+      }
+
+      // 3. Reordenar: ids de servidor en el orden visual actual
+      const orderIds: number[] = [];
+      for (const c of this.cards()) {
+        if (c.status === 'uploaded') {
+          orderIds.push(c.id!);
+        } else if (c.status === 'pending-upload') {
+          const newId = uploadedIds.shift();
+          if (newId != null) orderIds.push(newId);
+        }
+      }
+      if (orderIds.length) {
+        await firstValueFrom(this.service.reorderImagenes(id, orderIds));
+      }
+
+      // 4. Refrescar desde el servidor
+      const fresh = await firstValueFrom(this.service.getByID(id));
+      this.revokeLocalUrls(this.cards());
+      this.cards.set(this.toCards(fresh.imagenes ?? []));
+      this.serverOrderIds = (fresh.imagenes ?? []).map((img) => img.id);
+
+      this.toast.success('Cambios de imágenes aplicados');
+    } catch {
+      this.toast.error('Error al aplicar cambios de imágenes');
+    } finally {
+      this.applying.set(false);
+    }
+  }
+
+  async discardChanges(): Promise<void> {
+    if (this.applying()) return;
+    try {
+      const fresh = await firstValueFrom(this.service.getByID(this.entityId));
+      this.revokeLocalUrls(this.cards());
+      this.cards.set(this.toCards(fresh.imagenes ?? []));
+      this.serverOrderIds = (fresh.imagenes ?? []).map((img) => img.id);
+      this.toast.success('Cambios descartados');
+    } catch {
+      this.toast.error('Error al descartar cambios');
+    }
   }
 
   onSubmit(): void {
