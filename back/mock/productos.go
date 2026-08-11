@@ -159,6 +159,16 @@ func (s *ProductoStore) CountByCategoria(categoriaID int64) int64 {
 	return count
 }
 
+func (s *ProductoStore) ListByCategoria(categoriaID int64) []domain.Producto {
+	var out []domain.Producto
+	for _, p := range s.store.FindAll() {
+		if p.CategoriaID == categoriaID {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
 func (s *ProductoStore) DeleteByCategoria(categoriaID int64) {
 	for _, p := range s.store.FindAll() {
 		if p.CategoriaID == categoriaID {

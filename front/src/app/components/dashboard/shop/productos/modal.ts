@@ -3,8 +3,10 @@ import { FormsModule } from '@angular/forms';
 import { ProductosService } from '../../../../services/productos.service';
 import { CategoriasService } from '../../../../services/categorias.service';
 import { ToastService } from '../../../../services/toast.service';
+import { environment } from '../../../../../environments/environment';
 import type { Producto, ProductoInput } from '../../../../models/producto';
 import type { Categoria } from '../../../../models/categoria';
+import type { Imagen } from '../../../../models/imagen';
 
 @Component({
   selector: 'app-producto-modal',
@@ -25,6 +27,9 @@ export class ProductoModalComponent {
   saving = signal(false);
   error = signal('');
   categorias = signal<Categoria[]>([]);
+
+  imagenes = signal<Imagen[]>([]);
+  uploading = signal(false);
 
   form: ProductoInput = {
     nombre: '',
@@ -50,6 +55,7 @@ export class ProductoModalComponent {
           categoria_id: p.categoria_id,
           activo: p.activo,
         };
+        this.imagenes.set(p.imagenes ?? []);
       } else {
         this.isEditing.set(false);
         this.form = {
@@ -60,6 +66,7 @@ export class ProductoModalComponent {
           categoria_id: 0,
           activo: true,
         };
+        this.imagenes.set([]);
       }
       this.error.set('');
     });
@@ -73,6 +80,41 @@ export class ProductoModalComponent {
 
   close(): void {
     this.onClose.emit();
+  }
+
+  imageUrl(img: Imagen): string {
+    return environment.MEDIA_URL + img.url;
+  }
+
+  onFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const files = input.files ? Array.from(input.files) : [];
+    if (!files.length) return;
+
+    this.uploading.set(true);
+    this.service.uploadImagenes(this.producto()!.id, files).subscribe({
+      next: (imgs) => {
+        this.imagenes.set(imgs);
+        this.uploading.set(false);
+        input.value = '';
+        this.toast.success('Imágenes subidas');
+      },
+      error: () => {
+        this.uploading.set(false);
+        input.value = '';
+        this.toast.error('Error al subir imágenes');
+      },
+    });
+  }
+
+  removeImagen(img: Imagen): void {
+    this.service.deleteImagen(this.producto()!.id, img.id).subscribe({
+      next: () => {
+        this.imagenes.update((list) => list.filter((i) => i.id !== img.id));
+        this.toast.success('Imagen eliminada');
+      },
+      error: () => this.toast.error('Error al eliminar imagen'),
+    });
   }
 
   onSubmit(): void {

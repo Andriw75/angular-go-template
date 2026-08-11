@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import type { Producto, ProductoInput, PaginatedProductos } from '../models/producto';
+import type { Imagen } from '../models/imagen';
 
 export interface ProductoListParams {
   offset?: number;
@@ -58,5 +59,17 @@ export class ProductosService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.api}/productos/${id}`);
+  }
+
+  uploadImagenes(id: number, files: File[]): Observable<Imagen[]> {
+    const formData = new FormData();
+    for (const f of files) {
+      formData.append('images', f, f.name);
+    }
+    return this.http.post<Imagen[]>(`${this.api}/productos/${id}/imagenes`, formData);
+  }
+
+  deleteImagen(id: number, imagenId: number): Observable<void> {
+    return this.http.delete<void>(`${this.api}/productos/${id}/imagenes/${imagenId}`);
   }
 }

@@ -21,6 +21,28 @@
             Activo
           </label>
         </div>
+
+        @if (isEditing()) {
+          <div class="field field--full images-section">
+            <label>Imágenes</label>
+            <div class="image-grid">
+              @for (img of imagenes(); track img.id) {
+                <div class="image-item">
+                  <img [src]="imageUrl(img)" alt="imagen" />
+                  <button type="button" class="image-remove" title="Eliminar" (click)="removeImagen(img)">✕</button>
+                </div>
+              } @empty {
+                <span class="image-empty">Sin imágenes</span>
+              }
+            </div>
+            <div class="image-upload">
+              <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" [disabled]="uploading()" />
+              @if (uploading()) {
+                <span class="image-uploading">Subiendo...</span>
+              }
+            </div>
+          </div>
+        }
       </div>
 
       @if (error()) {

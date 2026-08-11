@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"back/infrastructure/auth"
+	"back/infrastructure/storage"
 	"back/mock"
 	"back/services"
 )
@@ -18,5 +19,7 @@ type Dependencies struct {
 	ActivosStore *mock.ActivosStore
 	CategoriaStore *mock.CategoriaStore
 	ProductoStore  *mock.ProductoStore
+	ImagenStore    *mock.ImagenStore
+	Storage        *storage.Storage
 	SSEHub       *SSEHub
 }

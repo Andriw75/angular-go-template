@@ -12,6 +12,7 @@ import (
 	"back/api"
 	"back/api/handlers"
 	"back/infrastructure/auth"
+	"back/infrastructure/storage"
 	"back/mock"
 	"back/services"
 )
@@ -62,6 +63,13 @@ func main() {
 		deps.ProductoStore = mock.NewProductoStore()
 		deps.SSEHub = handlers.NewSSEHub()
 		seedActivos(deps.MensajeStore, deps.ActivosStore)
+	}
+
+	deps.ImagenStore = mock.NewImagenStore()
+	deps.Storage = storage.NewStorage(cfg.ImagesDir())
+	if err := deps.Storage.EnsureDirs(); err != nil {
+		slog.Error("failed to create images dir", "error", err, "dir", cfg.ImagesDir())
+		os.Exit(1)
 	}
 
 	router := api.NewRouter(deps)

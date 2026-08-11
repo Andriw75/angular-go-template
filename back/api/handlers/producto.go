@@ -57,6 +57,9 @@ func (h *ProductoHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := h.deps.ProductoStore.List(offset, limit, parseProductoFilters(r))
+	for i := range result.Data {
+		result.Data[i].Imagenes = outputs.ToImagenResponses(h.deps.ImagenStore.ListByEntidad("producto", result.Data[i].ID))
+	}
 	writeJSON(w, http.StatusOK, result)
 }
 
@@ -73,7 +76,35 @@ func (h *ProductoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, outputs.ToProductoResponse(producto))
+	resp := outputs.ToProductoResponse(producto)
+	resp.Imagenes = outputs.ToImagenResponses(h.deps.ImagenStore.ListByEntidad("producto", resp.ID))
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *ProductoHandler) UploadImages(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if _, err := h.deps.ProductoStore.FindByID(id); err != nil {
+		writeJSONError(w, http.StatusNotFound, "producto not found")
+		return
+	}
+	uploadImagesForEntity(h.deps, "producto", id, w, r)
+}
+
+func (h *ProductoHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
+	id, imagenID, ok := parseImagenParams(r)
+	if !ok {
+		writeJSONError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if _, err := h.deps.ProductoStore.FindByID(id); err != nil {
+		writeJSONError(w, http.StatusNotFound, "producto not found")
+		return
+	}
+	deleteImageForEntity(h.deps, "producto", id, imagenID, w)
 }
 
 func (h *ProductoHandler) validateCategoria(id int64) bool {
@@ -113,7 +144,9 @@ func (h *ProductoHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, outputs.ToProductoResponse(&created))
+	resp := outputs.ToProductoResponse(&created)
+	resp.Imagenes = outputs.ToImagenResponses(h.deps.ImagenStore.ListByEntidad("producto", resp.ID))
+	writeJSON(w, http.StatusCreated, resp)
 }
 
 func (h *ProductoHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -153,7 +186,9 @@ func (h *ProductoHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, outputs.ToProductoResponse(existing))
+	resp := outputs.ToProductoResponse(existing)
+	resp.Imagenes = outputs.ToImagenResponses(h.deps.ImagenStore.ListByEntidad("producto", resp.ID))
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *ProductoHandler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -163,10 +198,20 @@ func (h *ProductoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var filesToRemove []string
+	for _, img := range h.deps.ImagenStore.ListByEntidad("producto", id) {
+		filesToRemove = append(filesToRemove, img.FileName)
+	}
+
+	// Baja en el store primero; si falla, no se toca nada.
 	if err := h.deps.ProductoStore.Delete(id); err != nil {
 		writeJSONError(w, http.StatusNotFound, "producto not found")
 		return
 	}
+	h.deps.ImagenStore.DeleteByEntidad("producto", id)
+
+	// Solo tras el éxito: limpiar archivos en disco.
+	h.deps.Storage.RemoveImages(filesToRemove...)
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "producto deleted"})
 }
