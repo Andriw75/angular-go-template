@@ -1,0 +1,138 @@
+<div class="lista">
+  <div class="lista-header">
+    <h2>Instalaciones</h2>
+    <span class="lista-count">{{ store.filtered().length }} de {{ store.total() }}</span>
+  </div>
+
+  <div class="chips">
+    @for (estado of estados; track estado) {
+      <button
+        type="button"
+        class="chip"
+        [class.active]="store.estado() === estado"
+        (click)="store.toggleEstado(estado)"
+      >
+        <span class="chip-dot" [style.background]="estadoColor(estado)"></span>
+        <span class="chip-label">{{ estadoLabel(estado) }}</span>
+        <span class="chip-count">{{ store.countsByEstado().get(estado) ?? 0 }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="filters">
+    <input
+      class="search-input"
+      type="text"
+      placeholder="Buscar nombre, dirección, serial, contenido…"
+      [value]="store.q()"
+      (input)="store.q.set($any($event.target).value)"
+    />
+    <select [ngModel]="store.tipo()" (ngModelChange)="store.tipo.set($event)">
+      <option value="">Tipo</option>
+      @for (t of tipos; track t) {
+        <option [value]="t">{{ t }}</option>
+      }
+    </select>
+    <select [ngModel]="store.estado()" (ngModelChange)="store.estado.set($event)">
+      <option value="">Estado</option>
+      @for (e of estados; track e) {
+        <option [value]="e">{{ estadoLabel(e) }}</option>
+      }
+    </select>
+    <select [ngModel]="store.zona()" (ngModelChange)="store.zona.set($event)">
+      <option value="">Zona</option>
+      @for (z of zonas; track z) {
+        <option [value]="z">{{ z }}</option>
+      }
+    </select>
+    <button type="button" class="btn btn--secondary" (click)="store.resetFilters()">Limpiar</button>
+  </div>
+
+  <div class="lista-items">
+    @if (store.loading()) {
+      <div class="empty">Cargando…</div>
+    } @else if (store.filtered().length === 0) {
+      <div class="empty">Sin resultados</div>
+    } @else {
+      @for (item of store.filtered(); track item.id) {
+        <div
+          class="item"
+          #cardRef
+          [class.selected]="store.selectedId() === item.id"
+          (click)="store.select(item.id)"
+        >
+          <div class="item-header">
+            <div class="item-title-wrap">
+              <div class="item-title">{{ item.nombre }}</div>
+              <div class="item-sub">{{ item.direccion }}</div>
+            </div>
+            <span class="estado-dot" [style.background]="estadoColor(item.estado)" [title]="estadoLabel(item.estado)"></span>
+          </div>
+
+          <div class="item-badges">
+            <span class="badge badge--tipo">{{ item.tipo }}</span>
+            <span
+              class="badge badge--estado"
+              [style.background]="estadoBg(item.estado)"
+              [style.color]="estadoColor(item.estado)"
+            >
+              {{ estadoLabel(item.estado) }}
+            </span>
+            <span class="badge badge--zona">{{ item.zona }}</span>
+          </div>
+
+          <div class="item-meta">
+            <span>{{ item.serial }}</span>
+            <span>{{ item.fecha_instalacion }}</span>
+            <span>{{ item.lat.toFixed(5) }}, {{ item.lng.toFixed(5) }}</span>
+          </div>
+
+          @if (store.selectedId() === item.id) {
+            <dl class="item-details">
+              <div><dt>Instalado</dt><dd>{{ item.fecha_instalacion }}</dd></div>
+              <div><dt>Dirección</dt><dd>{{ item.direccion }}</dd></div>
+              <div><dt>Zona</dt><dd>{{ item.zona }}</dd></div>
+              <div><dt>Serial</dt><dd>{{ item.serial }}</dd></div>
+              <div><dt>Coordenadas</dt><dd>{{ item.lat.toFixed(5) }}, {{ item.lng.toFixed(5) }}</dd></div>
+            </dl>
+
+            @if (optionals(item).length > 0) {
+              <dl class="item-details item-details--optional">
+                @for (o of optionals(item); track o.label) {
+                  <div><dt>{{ o.label }}</dt><dd>{{ o.value }}</dd></div>
+                }
+              </dl>
+            }
+          }
+
+          <div class="item-actions">
+            @if (store.selectedId() === item.id) {
+              <button
+                type="button"
+                class="btn btn--secondary"
+                (click)="$event.stopPropagation(); edit.emit(item)"
+              >
+                Editar
+              </button>
+              <button
+                type="button"
+                class="btn btn--danger"
+                (click)="$event.stopPropagation(); remove.emit(item)"
+              >
+                Eliminar
+              </button>
+            }
+            <button
+              type="button"
+              class="btn btn--primary btn--focus"
+              (click)="$event.stopPropagation(); store.select(item.id)"
+            >
+              <icon-map size="14" />
+              Enfocar
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</div>

@@ -93,7 +93,7 @@ export class BusModalComponent {
     this.error.set('');
 
     const obs = this.isEditing()
-      ? this.service.update(this.bus()!.id, this.form)
+      ? this.service.update(this.bus()!.id, this.buildChanges(this.bus()!))
       : this.service.create(this.form);
 
     obs.subscribe({
@@ -108,5 +108,29 @@ export class BusModalComponent {
         this.error.set('Error al guardar el bus');
       },
     });
+  }
+
+  private buildChanges(original: Bus): Partial<BusInput> {
+    const changes: Record<string, unknown> = {};
+    const f = this.form;
+
+    if (f.placa !== original.placa) changes['placa'] = f.placa;
+    if (f.nombre !== original.nombre) changes['nombre'] = f.nombre;
+    if (f.marca !== original.marca) changes['marca'] = f.marca;
+    if (f.modelo !== original.modelo) changes['modelo'] = f.modelo;
+    if (f.anio !== original.anio) changes['anio'] = f.anio;
+    if (f.capacidad !== original.capacidad) changes['capacidad'] = f.capacidad;
+    if (f.tipo !== original.tipo) changes['tipo'] = f.tipo;
+    if (f.activo !== original.activo) changes['activo'] = f.activo;
+    if (f.fecha_compra !== original.fecha_compra) changes['fecha_compra'] = f.fecha_compra;
+    if (f.ultimo_mantenimiento !== original.ultimo_mantenimiento) {
+      changes['ultimo_mantenimiento'] = f.ultimo_mantenimiento;
+    }
+    if (f.precio !== original.precio) changes['precio'] = f.precio;
+    if (f.peso !== original.peso) changes['peso'] = f.peso;
+    if (f.color !== original.color) changes['color'] = f.color;
+    if (f.descripcion !== original.descripcion) changes['descripcion'] = f.descripcion;
+
+    return changes as Partial<BusInput>;
   }
 }

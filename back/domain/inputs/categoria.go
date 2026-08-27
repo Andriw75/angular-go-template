@@ -5,3 +5,9 @@ type CategoriaInput struct {
 	Descripcion string `json:"descripcion"`
 	Activo      bool   `json:"activo"`
 }
+
+type CategoriaUpdateInput struct {
+	Nombre      *string `json:"nombre,omitempty"`
+	Descripcion *string `json:"descripcion,omitempty"`
+	Activo      *bool   `json:"activo,omitempty"`
+}

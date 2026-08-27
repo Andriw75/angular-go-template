@@ -130,26 +130,10 @@ func (h *BusHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var input inputs.BusInput
+	var input inputs.BusUpdateInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
-	}
-
-	fechaCompra, err := time.Parse("2006-01-02", input.FechaCompra)
-	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid fecha_compra, use YYYY-MM-DD")
-		return
-	}
-
-	var ultimoMantenimiento *time.Time
-	if input.UltimoMantenimiento != nil {
-		t, err := time.Parse("2006-01-02", *input.UltimoMantenimiento)
-		if err != nil {
-			writeJSONError(w, http.StatusBadRequest, "invalid ultimo_mantenimiento, use YYYY-MM-DD")
-			return
-		}
-		ultimoMantenimiento = &t
 	}
 
 	existing, err := h.deps.BusStore.FindByID(id)
@@ -158,20 +142,63 @@ func (h *BusHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing.Placa = input.Placa
-	existing.Nombre = input.Nombre
-	existing.Marca = input.Marca
-	existing.Modelo = input.Modelo
-	existing.Anio = input.Anio
-	existing.Capacidad = input.Capacidad
-	existing.Tipo = input.Tipo
-	existing.Activo = input.Activo
-	existing.FechaCompra = fechaCompra
-	existing.UltimoMantenimiento = ultimoMantenimiento
-	existing.Precio = input.Precio
-	existing.Peso = input.Peso
-	existing.Color = input.Color
-	existing.Descripcion = input.Descripcion
+	if input.Placa != nil {
+		existing.Placa = *input.Placa
+	}
+	if input.Nombre != nil {
+		existing.Nombre = *input.Nombre
+	}
+	if input.Marca != nil {
+		existing.Marca = *input.Marca
+	}
+	if input.Modelo != nil {
+		existing.Modelo = *input.Modelo
+	}
+	if input.Anio != nil {
+		existing.Anio = *input.Anio
+	}
+	if input.Capacidad != nil {
+		existing.Capacidad = *input.Capacidad
+	}
+	if input.Tipo != nil {
+		existing.Tipo = *input.Tipo
+	}
+	if input.Activo != nil {
+		existing.Activo = *input.Activo
+	}
+	if input.Precio != nil {
+		existing.Precio = *input.Precio
+	}
+	if input.Peso != nil {
+		existing.Peso = *input.Peso
+	}
+	if input.Color != nil {
+		existing.Color = *input.Color
+	}
+	if input.Descripcion != nil {
+		existing.Descripcion = *input.Descripcion
+	}
+	if input.FechaCompra != nil {
+		fechaCompra, err := time.Parse("2006-01-02", *input.FechaCompra)
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, "invalid fecha_compra, use YYYY-MM-DD")
+			return
+		}
+		existing.FechaCompra = fechaCompra
+	}
+	// Permite limpiar ultimo_mantenimiento enviando null.
+	if input.UltimoMantenimiento != nil {
+		if *input.UltimoMantenimiento == nil {
+			existing.UltimoMantenimiento = nil
+		} else {
+			t, err := time.Parse("2006-01-02", **input.UltimoMantenimiento)
+			if err != nil {
+				writeJSONError(w, http.StatusBadRequest, "invalid ultimo_mantenimiento, use YYYY-MM-DD")
+				return
+			}
+			existing.UltimoMantenimiento = &t
+		}
+	}
 
 	if err := h.deps.BusStore.Update(id, *existing); err != nil {
 		slog.Error("failed to update bus", "error", err)

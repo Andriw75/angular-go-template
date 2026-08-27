@@ -151,7 +151,7 @@ func (h *CategoriaHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var input inputs.CategoriaInput
+	var input inputs.CategoriaUpdateInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -163,9 +163,15 @@ func (h *CategoriaHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing.Nombre = input.Nombre
-	existing.Descripcion = input.Descripcion
-	existing.Activo = input.Activo
+	if input.Nombre != nil {
+		existing.Nombre = *input.Nombre
+	}
+	if input.Descripcion != nil {
+		existing.Descripcion = *input.Descripcion
+	}
+	if input.Activo != nil {
+		existing.Activo = *input.Activo
+	}
 
 	if err := h.deps.CategoriaStore.Update(id, *existing); err != nil {
 		slog.Error("failed to update categoria", "error", err)

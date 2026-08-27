@@ -51,6 +51,7 @@ func main() {
 		deps.CategoriaStore = mock.NewCategoriaStore()
 		deps.ProductoStore = mock.NewProductoStore()
 		deps.SSEHub = handlers.NewSSEHub()
+		deps.InstalacionStore = mock.NewInstalacionStore()
 		seedActivos(deps.MensajeStore, deps.ActivosStore)
 	} else {
 		slog.Info("connecting to database", "type", cfg.DBType)
@@ -62,6 +63,7 @@ func main() {
 		deps.CategoriaStore = mock.NewCategoriaStore()
 		deps.ProductoStore = mock.NewProductoStore()
 		deps.SSEHub = handlers.NewSSEHub()
+		deps.InstalacionStore = mock.NewInstalacionStore()
 		seedActivos(deps.MensajeStore, deps.ActivosStore)
 	}
 

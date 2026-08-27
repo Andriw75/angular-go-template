@@ -169,7 +169,7 @@ func (h *ProductoHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var input inputs.ProductoInput
+	var input inputs.ProductoUpdateInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -181,17 +181,29 @@ func (h *ProductoHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if input.CategoriaID <= 0 || !h.validateCategoria(input.CategoriaID) {
+	if input.CategoriaID != nil && (*input.CategoriaID <= 0 || !h.validateCategoria(*input.CategoriaID)) {
 		writeJSONError(w, http.StatusBadRequest, "invalid categoria_id")
 		return
 	}
 
-	existing.Nombre = input.Nombre
-	existing.Descripcion = input.Descripcion
-	existing.Precio = input.Precio
-	existing.Stock = input.Stock
-	existing.CategoriaID = input.CategoriaID
-	existing.Activo = input.Activo
+	if input.Nombre != nil {
+		existing.Nombre = *input.Nombre
+	}
+	if input.Descripcion != nil {
+		existing.Descripcion = *input.Descripcion
+	}
+	if input.Precio != nil {
+		existing.Precio = *input.Precio
+	}
+	if input.Stock != nil {
+		existing.Stock = *input.Stock
+	}
+	if input.CategoriaID != nil {
+		existing.CategoriaID = *input.CategoriaID
+	}
+	if input.Activo != nil {
+		existing.Activo = *input.Activo
+	}
 
 	if err := h.deps.ProductoStore.Update(id, *existing); err != nil {
 		slog.Error("failed to update producto", "error", err)

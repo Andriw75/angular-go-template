@@ -49,7 +49,7 @@ export class CategoriasService {
     return this.http.post<Categoria>(`${this.api}/categorias`, input);
   }
 
-  update(id: number, input: CategoriaInput): Observable<Categoria> {
+  update(id: number, input: Partial<CategoriaInput>): Observable<Categoria> {
     return this.http.put<Categoria>(`${this.api}/categorias/${id}`, input);
   }
 
