@@ -1,0 +1,94 @@
+<div class="overlay" (click)="close.emit()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ data()?.mode === 'edit' ? 'Editar Instalación' : 'Nueva Instalación' }}</h2>
+      <button class="close-btn" (click)="close.emit()">&times;</button>
+    </div>
+
+    <form (ngSubmit)="submit()" class="modal-body">
+      <div class="grid">
+        <div class="field">
+          <label>Tipo *</label>
+          <select [ngModel]="tipo()" (ngModelChange)="tipo.set($any($event))" name="tipo" required>
+            @for (t of tipos; track t) {
+              <option [value]="t">{{ t }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label>Estado *</label>
+          <select [ngModel]="estado()" (ngModelChange)="estado.set($any($event))" name="estado" required>
+            @for (e of estados; track e) {
+              <option [value]="e">{{ e }}</option>
+            }
+          </select>
+        </div>
+        <div class="field field--full">
+          <label>Nombre *</label>
+          <input type="text" [ngModel]="nombre()" (ngModelChange)="nombre.set($event)" name="nombre" required placeholder="Ej: Cámara Los Olivos 001" />
+        </div>
+        <div class="field">
+          <label>Zona *</label>
+          <select [ngModel]="zona()" (ngModelChange)="zona.set($any($event))" name="zona" required>
+            @for (z of zonas; track z) {
+              <option [value]="z">{{ z }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label>Serial *</label>
+          <input type="text" [ngModel]="serial()" (ngModelChange)="serial.set($event)" name="serial" required />
+        </div>
+        <div class="field field--full">
+          <label>Dirección</label>
+          <input type="text" [ngModel]="direccion()" (ngModelChange)="direccion.set($event)" name="direccion" placeholder="Ej: Av. Carlos Izaguirre 345" />
+        </div>
+        <div class="field">
+          <label>Latitud *</label>
+          <input type="number" step="any" [ngModel]="lat()" (ngModelChange)="lat.set($any($event))" name="lat" required />
+        </div>
+        <div class="field">
+          <label>Longitud *</label>
+          <input type="number" step="any" [ngModel]="lng()" (ngModelChange)="lng.set($any($event))" name="lng" required />
+        </div>
+        <div class="field">
+          <label>Fecha instalación *</label>
+          <input type="date" [ngModel]="fechaInstalacion()" (ngModelChange)="fechaInstalacion.set($event)" name="fecha" required />
+        </div>
+      </div>
+
+      <details class="optionals">
+        <summary class="optionals-summary">Campos opcionales</summary>
+        <div class="grid optionals-grid">
+          <div class="field field--full">
+            <label>Descripción</label>
+            <textarea [ngModel]="descripcion()" (ngModelChange)="descripcion.set($event)" name="descripcion" rows="2"></textarea>
+          </div>
+          <div class="field"><label>Fabricante</label><input type="text" [ngModel]="fabricante()" (ngModelChange)="fabricante.set($event)" name="fabricante" /></div>
+          <div class="field"><label>Modelo</label><input type="text" [ngModel]="modelo()" (ngModelChange)="modelo.set($event)" name="modelo" /></div>
+          <div class="field"><label>Instalador</label><input type="text" [ngModel]="instalador()" (ngModelChange)="instalador.set($event)" name="instalador" /></div>
+          <div class="field"><label>Proveedor</label><input type="text" [ngModel]="proveedor()" (ngModelChange)="proveedor.set($event)" name="proveedor" /></div>
+          <div class="field"><label>Contacto</label><input type="text" [ngModel]="contacto()" (ngModelChange)="contacto.set($event)" name="contacto" /></div>
+          <div class="field"><label>Firmware</label><input type="text" [ngModel]="firmware()" (ngModelChange)="firmware.set($event)" name="firmware" /></div>
+          <div class="field"><label>IP</label><input type="text" [ngModel]="ip()" (ngModelChange)="ip.set($event)" name="ip" /></div>
+          <div class="field"><label>MAC</label><input type="text" [ngModel]="mac()" (ngModelChange)="mac.set($event)" name="mac" /></div>
+          <div class="field"><label>Resolución</label><input type="text" [ngModel]="resolucion()" (ngModelChange)="resolucion.set($event)" name="resolucion" /></div>
+          <div class="field"><label>Contenido</label><input type="text" [ngModel]="contenido()" (ngModelChange)="contenido.set($event)" name="contenido" /></div>
+          <div class="field"><label>Señal (%)</label><input type="number" min="0" max="100" [ngModel]="senal() ?? ''" (ngModelChange)="senal.set($any($event) === '' ? null : $any($event))" name="senal" /></div>
+          <div class="field"><label>Batería (%)</label><input type="number" min="0" max="100" [ngModel]="bateria() ?? ''" (ngModelChange)="bateria.set($any($event) === '' ? null : $any($event))" name="bateria" /></div>
+          <div class="field"><label>Potencia (W)</label><input type="number" min="0" [ngModel]="potencia() ?? ''" (ngModelChange)="potencia.set($any($event) === '' ? null : $any($event))" name="potencia" /></div>
+          <div class="field"><label>Última conexión</label><input type="datetime-local" [ngModel]="ultimaConexion()" (ngModelChange)="ultimaConexion.set($event)" name="ultima_conexion" /></div>
+        </div>
+      </details>
+
+      @if (error()) {
+        <div class="form-error">{{ error() }}</div>
+      }
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn--secondary" (click)="close.emit()">Cancelar</button>
+        <button type="submit" class="btn btn--primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>

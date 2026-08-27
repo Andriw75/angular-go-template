@@ -94,7 +94,7 @@ export class ProductoModalComponent {
     this.error.set('');
 
     const obs = this.isEditing()
-      ? this.service.update(this.producto()!.id, this.form)
+      ? this.service.update(this.producto()!.id, this.buildChanges(this.producto()!))
       : this.service.create(this.form);
 
     obs.subscribe({
@@ -109,5 +109,16 @@ export class ProductoModalComponent {
         this.error.set('Error al guardar el producto');
       },
     });
+  }
+
+  private buildChanges(original: Producto): Partial<ProductoInput> {
+    const changes: Record<string, unknown> = {};
+    if (this.form.nombre !== original.nombre) changes['nombre'] = this.form.nombre;
+    if (this.form.descripcion !== original.descripcion) changes['descripcion'] = this.form.descripcion;
+    if (this.form.precio !== original.precio) changes['precio'] = this.form.precio;
+    if (this.form.stock !== original.stock) changes['stock'] = this.form.stock;
+    if (this.form.categoria_id !== original.categoria_id) changes['categoria_id'] = this.form.categoria_id;
+    if (this.form.activo !== original.activo) changes['activo'] = this.form.activo;
+    return changes as Partial<ProductoInput>;
   }
 }

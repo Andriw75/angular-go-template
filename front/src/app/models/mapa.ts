@@ -3,4 +3,5 @@ export interface MapConfig {
   initialLng: number;
   initialZoom: number;
   tileUrl: string;
+  attribution?: string;
 }

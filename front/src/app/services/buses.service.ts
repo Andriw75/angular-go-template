@@ -52,7 +52,7 @@ export class BusesService {
     return this.http.post<Bus>(`${this.api}/buses`, input);
   }
 
-  update(id: number, input: BusInput): Observable<Bus> {
+  update(id: number, input: Partial<BusInput>): Observable<Bus> {
     return this.http.put<Bus>(`${this.api}/buses/${id}`, input);
   }
 

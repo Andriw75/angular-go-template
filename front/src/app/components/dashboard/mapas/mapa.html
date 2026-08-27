@@ -1,6 +1,48 @@
 <div class="map-page">
   <div class="map-toolbar">
-    <h1>Mapas</h1>
+    <h1>Mapa de instalaciones</h1>
+    <div class="map-toolbar-right">
+      @if (store.items().length > 0) {
+        <span class="map-coords">{{ store.filtered().length }} de {{ store.total() }} instalaciones</span>
+      }
+      <span class="map-hint">Clic derecho para crear / editar</span>
+    </div>
   </div>
-  <div class="map-container" #mapContainer></div>
+
+  <div class="map-body">
+    <app-instalaciones-lista
+      class="map-sidebar"
+      (edit)="editFromList($event)"
+      (remove)="deleteFromList($event)"
+    />
+    <div class="map-viewport" #mapViewport>
+      <div #mapContainer class="map-container"></div>
+
+      @if (store.loading()) {
+        <div class="map-loading">Cargando instalaciones…</div>
+      }
+
+      @if (contextMenu(); as menu) {
+        <div class="map-context-menu" [style.left.px]="menu.x" [style.top.px]="menu.y">
+          @if (menu.target) {
+            <button type="button" class="ctx-item" (click)="editTarget(menu)">
+              ✎ Editar instalación
+            </button>
+            <button type="button" class="ctx-item ctx-item--danger" (click)="deleteTarget(menu)">
+              🗑 Eliminar instalación
+            </button>
+          } @else {
+            <button type="button" class="ctx-item" (click)="createAt(menu)">
+              + Crear instalación aquí
+            </button>
+          }
+          <div class="ctx-coords">{{ menu.lat.toFixed(5) }}, {{ menu.lng.toFixed(5) }}</div>
+        </div>
+      }
+    </div>
+  </div>
 </div>
+
+@if (formData(); as data) {
+  <app-instalacion-modal [data]="data" (save)="onModalSaved($event)" (close)="onModalClosed()" />
+}

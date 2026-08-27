@@ -61,7 +61,7 @@ export class CategoriaModalComponent {
     this.error.set('');
 
     const obs = this.isEditing()
-      ? this.service.update(this.categoria()!.id, this.form)
+      ? this.service.update(this.categoria()!.id, this.buildChanges(this.categoria()!))
       : this.service.create(this.form);
 
     obs.subscribe({
@@ -76,5 +76,13 @@ export class CategoriaModalComponent {
         this.error.set('Error al guardar la categoría');
       },
     });
+  }
+
+  private buildChanges(original: Categoria): Partial<CategoriaInput> {
+    const changes: Record<string, unknown> = {};
+    if (this.form.nombre !== original.nombre) changes['nombre'] = this.form.nombre;
+    if (this.form.descripcion !== original.descripcion) changes['descripcion'] = this.form.descripcion;
+    if (this.form.activo !== original.activo) changes['activo'] = this.form.activo;
+    return changes as Partial<CategoriaInput>;
   }
 }
