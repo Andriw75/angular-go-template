@@ -1,0 +1,26 @@
+.map-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.map-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.map-toolbar h1 {
+  font-size: 24px;
+}
+
+.map-container {
+  flex: 1;
+  min-height: 420px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  z-index: 0;
+}

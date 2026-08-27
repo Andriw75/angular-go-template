@@ -33,6 +33,11 @@ export const routes: Routes = [
           import('./components/dashboard/mensajes/list').then((m) => m.MensajesListComponent),
       },
       {
+        path: 'mapas',
+        loadComponent: () =>
+          import('./components/dashboard/mapas/mapa').then((m) => m.MapasComponent),
+      },
+      {
         path: 'categorias',
         loadComponent: () =>
           import('./components/dashboard/shop/categorias/list').then((m) => m.CategoriasListComponent),
