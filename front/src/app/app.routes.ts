@@ -18,43 +18,8 @@ export const routes: Routes = [
         loadComponent: () => import('./components/dashboard/home/home').then((m) => m.HomeComponent),
       },
       {
-        path: 'buses',
-        loadComponent: () =>
-          import('./components/dashboard/buses/list').then((m) => m.BusesListComponent),
-      },
-      {
-        path: 'usuarios',
-        loadComponent: () =>
-          import('./components/dashboard/usuarios/list').then((m) => m.UsersListComponent),
-      },
-      {
-        path: 'mensajes',
-        loadComponent: () =>
-          import('./components/dashboard/mensajes/list').then((m) => m.MensajesListComponent),
-      },
-      {
-        path: 'mapas',
-        loadComponent: () =>
-          import('./components/dashboard/mapas/mapa').then((m) => m.MapasComponent),
-      },
-      {
-        path: 'categorias',
-        loadComponent: () =>
-          import('./components/dashboard/shop/categorias/list').then((m) => m.CategoriasListComponent),
-      },
-      {
-        path: 'productos',
-        loadComponent: () =>
-          import('./components/dashboard/shop/productos/list').then((m) => m.ProductosListComponent),
-      },
-      {
         path: '**',
-        loadComponent: () =>
-          import('./components/dashboard/home/home').then((m) => m.HomeComponent),
-      },
-      {
-        path: '**',
-        loadComponent: () => import('./components/dashboard/home/home').then((m) => m.HomeComponent),
+        redirectTo: '',
       },
     ],
   },

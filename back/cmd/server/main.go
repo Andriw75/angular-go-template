@@ -12,7 +12,6 @@ import (
 	"back/api"
 	"back/api/handlers"
 	"back/infrastructure/auth"
-	"back/infrastructure/storage"
 	"back/mock"
 	"back/services"
 )
@@ -45,33 +44,10 @@ func main() {
 		slog.Info("using mock data store")
 		deps.UserStore = mock.NewUserStore(cryptManager)
 		deps.PermisoStore = mock.NewPermisoStore()
-		deps.BusStore = mock.NewBusStore()
-		deps.MensajeStore = mock.NewMensajeStore()
-		deps.ActivosStore = mock.NewActivosStore()
-		deps.CategoriaStore = mock.NewCategoriaStore()
-		deps.ProductoStore = mock.NewProductoStore()
-		deps.SSEHub = handlers.NewSSEHub()
-		deps.InstalacionStore = mock.NewInstalacionStore()
-		seedActivos(deps.MensajeStore, deps.ActivosStore)
 	} else {
 		slog.Info("connecting to database", "type", cfg.DBType)
 		deps.UserStore = mock.NewUserStore(cryptManager)
 		deps.PermisoStore = mock.NewPermisoStore()
-		deps.BusStore = mock.NewBusStore()
-		deps.MensajeStore = mock.NewMensajeStore()
-		deps.ActivosStore = mock.NewActivosStore()
-		deps.CategoriaStore = mock.NewCategoriaStore()
-		deps.ProductoStore = mock.NewProductoStore()
-		deps.SSEHub = handlers.NewSSEHub()
-		deps.InstalacionStore = mock.NewInstalacionStore()
-		seedActivos(deps.MensajeStore, deps.ActivosStore)
-	}
-
-	deps.ImagenStore = mock.NewImagenStore()
-	deps.Storage = storage.NewStorage(cfg.ImagesDir())
-	if err := deps.Storage.EnsureDirs(); err != nil {
-		slog.Error("failed to create images dir", "error", err, "dir", cfg.ImagesDir())
-		os.Exit(1)
 	}
 
 	router := api.NewRouter(deps)
@@ -102,12 +78,4 @@ func main() {
 	}
 
 	slog.Info("server stopped")
-}
-
-func seedActivos(store *mock.MensajeStore, activos *mock.ActivosStore) {
-	for _, m := range store.FindAll() {
-		if m.Estado != "finalizado" {
-			activos.Set(m)
-		}
-	}
 }

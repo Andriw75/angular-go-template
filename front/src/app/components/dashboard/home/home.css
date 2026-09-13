@@ -1,8 +1,12 @@
+.home {
+  padding: 2rem;
+}
+
 .home h1 {
-  font-size: 28px;
-  margin-bottom: 8px;
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .home p {
-  color: var(--color-text-secondary);
+  color: #666;
 }

@@ -21,11 +21,6 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	authHandler := handlers.NewAuthHandler(deps)
 	userHandler := handlers.NewUserHandler(deps)
 	permisoHandler := handlers.NewPermisoHandler(deps)
-	busHandler := handlers.NewBusHandler(deps)
-	mensajeHandler := handlers.NewMensajeHandler(deps)
-	categoriaHandler := handlers.NewCategoriaHandler(deps)
-	productoHandler := handlers.NewProductoHandler(deps)
-	instalacionHandler := handlers.NewInstalacionHandler(deps)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -53,62 +48,6 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	r.Route("/permisos", func(r chi.Router) {
 		r.Use(authHandler.AuthMiddleware("usuarios"))
 		r.Get("/", permisoHandler.List)
-	})
-
-	r.Route("/buses", func(r chi.Router) {
-		r.Use(authHandler.AuthMiddleware("buses"))
-		r.Get("/count", busHandler.Count)
-		r.Get("/", busHandler.List)
-		r.Post("/", busHandler.Create)
-		r.Get("/{id}", busHandler.GetByID)
-		r.Put("/{id}", busHandler.Update)
-		r.Delete("/{id}", busHandler.Delete)
-	})
-
-	r.Route("/mensajes_pendientes", func(r chi.Router) {
-		r.Use(authHandler.AuthMiddleware("mensajes_pendientes"))
-		r.Get("/events", mensajeHandler.Events)
-		r.Get("/", mensajeHandler.List)
-		r.Post("/", mensajeHandler.Create)
-		r.Get("/pasadas", mensajeHandler.ListPasadas)
-		r.Get("/pasadas/count", mensajeHandler.CountPasadas)
-		r.Get("/{id}", mensajeHandler.GetByID)
-		r.Put("/{id}", mensajeHandler.Update)
-		r.Delete("/{id}", mensajeHandler.Delete)
-	})
-
-	r.Route("/categorias", func(r chi.Router) {
-		r.Use(authHandler.AuthMiddleware("shop"))
-		r.Get("/count", categoriaHandler.Count)
-		r.Get("/", categoriaHandler.List)
-		r.Post("/", categoriaHandler.Create)
-		r.Get("/{id}", categoriaHandler.GetByID)
-		r.Put("/{id}", categoriaHandler.Update)
-		r.Delete("/{id}", categoriaHandler.Delete)
-		r.Post("/{id}/imagenes", categoriaHandler.UploadImages)
-		r.Put("/{id}/imagenes/orden", categoriaHandler.ReorderImages)
-		r.Delete("/{id}/imagenes/{imagenID}", categoriaHandler.DeleteImage)
-	})
-
-	r.Route("/productos", func(r chi.Router) {
-		r.Use(authHandler.AuthMiddleware("shop"))
-		r.Get("/count", productoHandler.Count)
-		r.Get("/", productoHandler.List)
-		r.Post("/", productoHandler.Create)
-		r.Get("/{id}", productoHandler.GetByID)
-		r.Put("/{id}", productoHandler.Update)
-		r.Delete("/{id}", productoHandler.Delete)
-		r.Post("/{id}/imagenes", productoHandler.UploadImages)
-		r.Put("/{id}/imagenes/orden", productoHandler.ReorderImages)
-		r.Delete("/{id}/imagenes/{imagenID}", productoHandler.DeleteImage)
-	})
-
-	r.Route("/instalaciones", func(r chi.Router) {
-		r.Use(authHandler.AuthMiddleware())
-		r.Get("/", instalacionHandler.List)
-		r.Post("/", instalacionHandler.Create)
-		r.Put("/{id}", instalacionHandler.Update)
-		r.Delete("/{id}", instalacionHandler.Delete)
 	})
 
 	return r

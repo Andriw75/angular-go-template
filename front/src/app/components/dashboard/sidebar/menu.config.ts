@@ -1,9 +1,5 @@
 import { type Type } from '@angular/core';
 import { HomeIcon } from '../../../common/icons/home.icon';
-import { UsersIcon } from '../../../common/icons/users.icon';
-import { BusIcon } from '../../../common/icons/bus.icon';
-import { MapIcon } from '../../../common/icons/map.icon';
-import { SettingsIcon } from '../../../common/icons/settings.icon';
 
 export interface IconConfig {
   component: Type<any>;
@@ -25,52 +21,5 @@ export const MENU: MenuItem[] = [
     key: 'home',
     path: '/dashboard',
     icon: { component: HomeIcon, inputs: { size: '20' } },
-  },
-  {
-    label: 'Buses',
-    key: 'buses',
-    path: '/dashboard/buses',
-    requiredPermission: 'buses',
-    icon: { component: BusIcon, inputs: { size: '20' } },
-  },
-  {
-    label: 'Mensajes',
-    key: 'mensajes',
-    path: '/dashboard/mensajes',
-    requiredPermission: 'mensajes_pendientes',
-    icon: { component: SettingsIcon, inputs: { size: '20' } },
-  },
-  {
-    label: 'Mapas',
-    key: 'mapas',
-    path: '/dashboard/mapas',
-    icon: { component: MapIcon, inputs: { size: '20' } },
-  },
-  {
-    label: 'Usuarios',
-    key: 'usuarios',
-    path: '/dashboard/usuarios',
-    requiredPermission: 'usuarios',
-    icon: { component: UsersIcon, inputs: { size: '20' } },
-  },
-  {
-    label: 'Tienda',
-    key: 'shop',
-    requiredPermission: 'shop',
-    icon: { component: UsersIcon, inputs: { size: '20' } },
-    submenu: [
-      {
-        label: 'Categorias',
-        key: 'categorias',
-        path: '/dashboard/categorias',
-        requiredPermission: 'shop',
-      },
-      {
-        label: 'Productos',
-        key: 'productos',
-        path: '/dashboard/productos',
-        requiredPermission: 'shop',
-      },
-    ],
   },
 ];

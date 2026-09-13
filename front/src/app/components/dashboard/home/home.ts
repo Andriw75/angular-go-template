@@ -7,5 +7,6 @@ import { AuthService } from '../../../services/auth.service';
   styleUrl: './home.css',
 })
 export class HomeComponent {
-  protected auth = inject(AuthService);
+  private auth = inject(AuthService);
+  user = this.auth.user;
 }

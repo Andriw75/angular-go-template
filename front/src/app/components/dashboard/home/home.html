@@ -1,4 +1,4 @@
 <div class="home">
-  <h1>Bienvenido, {{ auth.user()?.username }}</h1>
-  <p>Panel de administración</p>
+  <h1>Bienvenido, {{ user()?.username || 'Usuario' }}</h1>
+  <p>Has iniciado sesion correctamente.</p>
 </div>
