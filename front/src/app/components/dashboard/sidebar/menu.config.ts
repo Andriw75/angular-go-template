@@ -4,6 +4,7 @@ import { UsersIcon } from '../../../common/icons/users.icon';
 import { BusIcon } from '../../../common/icons/bus.icon';
 import { MapIcon } from '../../../common/icons/map.icon';
 import { SettingsIcon } from '../../../common/icons/settings.icon';
+import { FileIcon } from '../../../common/icons/file.icon';
 
 export interface IconConfig {
   component: Type<any>;
@@ -52,6 +53,13 @@ export const MENU: MenuItem[] = [
     path: '/dashboard/usuarios',
     requiredPermission: 'usuarios',
     icon: { component: UsersIcon, inputs: { size: '20' } },
+  },
+  {
+    label: 'Archivos',
+    key: 'archivos',
+    path: '/dashboard/archivos',
+    requiredPermission: 'archivos',
+    icon: { component: FileIcon, inputs: { size: '20' } },
   },
   {
     label: 'Tienda',

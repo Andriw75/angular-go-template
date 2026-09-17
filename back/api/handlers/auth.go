@@ -194,6 +194,27 @@ func (h *AuthHandler) AuthMiddleware(requiredPermission ...string) func(http.Han
 	}
 }
 
+func (h *AuthHandler) OptionalAuthMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			cookie, err := r.Cookie(h.deps.Config.CookieName)
+			if err != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			claims, err := h.deps.JWTManager.Validate(cookie.Value)
+			if err != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			ctx := WithClaims(r.Context(), claims)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
 func tienePermiso(permisos []string, required string) bool {
 	for _, p := range permisos {
 		if p == required {

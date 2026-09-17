@@ -1,0 +1,100 @@
+<div class="page-header">
+  <h1>Archivos</h1>
+  <div class="page-header__actions">
+    <a class="btn btn--secondary" routerLink="/dashboard/archivos/guia">Guia</a>
+    <button class="btn btn--primary" (click)="openUpload()">+ Subir Archivo</button>
+  </div>
+</div>
+
+<div class="filters">
+  <input
+    class="filter-input"
+    type="text"
+    placeholder="Buscar nombre..."
+    [(ngModel)]="searchQuery"
+    (keydown.enter)="search()"
+  />
+  <select class="filter-select" [(ngModel)]="filterVisibilidad">
+    <option value="">Todas</option>
+    <option value="publico">Publico</option>
+    <option value="autenticado">Autenticado</option>
+    <option value="propietario">Solo propietario</option>
+  </select>
+  <button class="btn btn--secondary" (click)="search()">Buscar</button>
+  <button class="btn btn--ghost" (click)="resetFilters()">Limpiar</button>
+</div>
+
+@if (loading()) {
+  <div class="loading">Cargando...</div>
+} @else {
+  <div class="table-wrapper">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Tipo</th>
+          <th>Tamano</th>
+          <th>Visibilidad</th>
+          <th>Subido</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (archivo of filteredArchivos; track archivo.id) {
+          <tr>
+            <td>
+              <div class="file-name">
+                @if (isImage(archivo)) {
+                  <img class="file-thumb" [src]="service.getURL(archivo)" [alt]="archivo.nombre" />
+                } @else {
+                  <span class="file-icon">&#128196;</span>
+                }
+                <strong>{{ archivo.nombre }}</strong>
+              </div>
+            </td>
+            <td><span class="badge badge--tipo">{{ archivo.tipo }}</span></td>
+            <td>{{ formatSize(archivo.tamano) }}</td>
+            <td>
+              <select
+                class="visibilidad-select"
+                [ngModel]="archivo.visibilidad"
+                (ngModelChange)="onVisibilidadChange(archivo, $event)"
+              >
+                <option value="publico">Publico</option>
+                <option value="autenticado">Autenticado</option>
+                <option value="propietario">Solo propietario</option>
+              </select>
+            </td>
+            <td>{{ archivo.creado_en | date:'dd/MM/yyyy HH:mm' }}</td>
+            <td>
+              <button class="btn-icon btn-icon--copy" title="Copiar link" (click)="copyLink(archivo)">&#128279;</button>
+              <button class="btn-icon btn-icon--download" title="Descargar" (click)="downloadArchivo(archivo)">&#11015;</button>
+              <button class="btn-icon" title="Ver" (click)="openArchivo(archivo)">&#128065;</button>
+              <button class="btn-icon btn-icon--delete" title="Eliminar" (click)="confirmDelete(archivo)" [disabled]="deleting() === archivo.id">&#128465;</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="empty">No hay archivos registrados</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination-wrapper">
+    <app-pagination
+      [page]="page()"
+      [totalPages]="totalPages"
+      [total]="total()"
+      (pageChange)="onPageChange($event)"
+    />
+  </div>
+}
+
+@if (showModal()) {
+  <app-archivo-modal
+    (onClose)="showModal.set(false)"
+    (onSaved)="onModalSaved()"
+  />
+}

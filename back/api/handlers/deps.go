@@ -20,6 +20,7 @@ type Dependencies struct {
 	CategoriaStore   *mock.CategoriaStore
 	ProductoStore    *mock.ProductoStore
 	ImagenStore      *mock.ImagenStore
+	ArchivoStore     *mock.ArchivoStore
 	Storage          *storage.Storage
 	SSEHub           *SSEHub
 	InstalacionStore *mock.InstalacionStore

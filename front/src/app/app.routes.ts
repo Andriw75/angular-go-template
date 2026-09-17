@@ -48,6 +48,16 @@ export const routes: Routes = [
           import('./components/dashboard/shop/productos/list').then((m) => m.ProductosListComponent),
       },
       {
+        path: 'archivos',
+        loadComponent: () =>
+          import('./components/dashboard/archivos/list').then((m) => m.ArchivosListComponent),
+      },
+      {
+        path: 'archivos/guia',
+        loadComponent: () =>
+          import('./components/dashboard/archivos/info').then((m) => m.ArchivosInfoComponent),
+      },
+      {
         path: '**',
         loadComponent: () =>
           import('./components/dashboard/home/home').then((m) => m.HomeComponent),

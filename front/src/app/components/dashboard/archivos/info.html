@@ -1,0 +1,134 @@
+<div class="info-page">
+  <div class="page-header">
+    <h1>Gestion de Archivos</h1>
+    <a class="btn btn--secondary" routerLink="/dashboard/archivos">Volver</a>
+  </div>
+
+  <p class="info-subtitle">Sistema de archivos con control de acceso granular por visibilidad.</p>
+
+  <h2>Niveles de Visibilidad</h2>
+  <div class="info-cards">
+    <div class="info-card info-card--publico">
+      <div class="info-card__header">
+        <span class="info-card__icon">&#127760;</span>
+        <h3>Publico</h3>
+      </div>
+      <p>Accesible para cualquier persona sin sesion.</p>
+      <ul>
+        <li>Archivos de productos publicos</li>
+        <li>Contenido publico del sitio</li>
+      </ul>
+      <span class="info-card__badge info-card__badge--publico">Sin restricciones</span>
+    </div>
+
+    <div class="info-card info-card--autenticado">
+      <div class="info-card__header">
+        <span class="info-card__icon">&#128274;</span>
+        <h3>Autenticado</h3>
+      </div>
+      <p>Solo usuarios con sesion iniciada.</p>
+      <ul>
+        <li>Documentos internos</li>
+        <li>Catalogos privados</li>
+      </ul>
+      <span class="info-card__badge info-card__badge--autenticado">Requiere login</span>
+    </div>
+
+    <div class="info-card info-card--propietario">
+      <div class="info-card__header">
+        <span class="info-card__icon">&#128100;</span>
+        <h3>Solo Propietario</h3>
+      </div>
+      <p>Solo el usuario que subio el archivo.</p>
+      <ul>
+        <li>Documentos personales</li>
+        <li>Borradores no publicados</li>
+      </ul>
+      <span class="info-card__badge info-card__badge--propietario">Solo tu</span>
+    </div>
+  </div>
+
+  <h2>Tabla de Compatibilidad</h2>
+  <div class="table-wrapper">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Visibilidad</th>
+          <th>Visitante</th>
+          <th>Usuario logueado</th>
+          <th>Propietario</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>&#127760; Publico</strong></td>
+          <td><span class="check">&#10004; Puede ver</span></td>
+          <td><span class="check">&#10004; Puede ver</span></td>
+          <td><span class="check">&#10004; Puede ver</span></td>
+        </tr>
+        <tr>
+          <td><strong>&#128274; Autenticado</strong></td>
+          <td><span class="cross">&#10008; No puede ver</span></td>
+          <td><span class="check">&#10004; Puede ver</span></td>
+          <td><span class="check">&#10004; Puede ver</span></td>
+        </tr>
+        <tr>
+          <td><strong>&#128100; Solo propietario</strong></td>
+          <td><span class="cross">&#10008; No puede ver</span></td>
+          <td><span class="cross">&#10008; No puede ver</span></td>
+          <td><span class="check">&#10004; Puede ver</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Flujo de Autenticacion</h2>
+  <div class="flow-diagram">
+    <div class="flow-step">
+      <div class="flow-step__number">1</div>
+      <div class="flow-step__content">
+        <strong>Usuario solicita archivo</strong>
+        <span>GET /archivos/{{ '{' }}filename{{ '}' }}</span>
+      </div>
+    </div>
+    <div class="flow-arrow">&#8595;</div>
+    <div class="flow-step">
+      <div class="flow-step__number">2</div>
+      <div class="flow-step__content">
+        <strong>Go valida visibilidad + JWT</strong>
+        <span>Verifica si el usuario tiene acceso</span>
+      </div>
+    </div>
+    <div class="flow-arrow">&#8595;</div>
+    <div class="flow-step flow-step--redirect">
+      <div class="flow-step__number">&#8644;</div>
+      <div class="flow-step__content">
+        <strong>X-Accel-Redirect</strong>
+        <span>Go devuelve cabecera, nginx sirve el archivo</span>
+      </div>
+    </div>
+    <div class="flow-arrow">&#8595;</div>
+    <div class="flow-step flow-step--result">
+      <div class="flow-step__number">&#10004;</div>
+      <div class="flow-step__content">
+        <strong>Archivo servido</strong>
+        <span>nginx entrega bytes con sendfile, sin pasar por Go</span>
+      </div>
+    </div>
+  </div>
+
+  <h2>Tipos de Archivo Permitidos</h2>
+  <div class="table-wrapper">
+    <table class="table">
+      <thead>
+        <tr><th>Categoria</th><th>Extensiones</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Imagenes</strong></td><td>.jpg, .jpeg, .png, .webp, .gif</td></tr>
+        <tr><td><strong>Documentos</strong></td><td>.pdf, .doc, .docx, .xls, .xlsx, .txt, .csv</td></tr>
+        <tr><td><strong>Comprimidos</strong></td><td>.zip, .rar</td></tr>
+        <tr><td><strong>Multimedia</strong></td><td>.mp4, .mp3, .webm</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>

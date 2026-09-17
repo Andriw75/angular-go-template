@@ -9,46 +9,48 @@ import (
 )
 
 type Config struct {
-	ServerPort         string
-	UseMock            bool
-	DBType             string
-	DBHost             string
-	DBPort             int
-	DBUser             string
-	DBPassword         string
-	DBName             string
-	JWTSecret          string
-	JWTExpirationMin   int
-	JWTRenewMin        int
-	CookieName         string
-	CookieSecure       bool
-	CORSOrigin         string
-	JWTStoreEnabled    bool
-	JWTLoadUserOnRenew bool
-	PublicDir          string
+	ServerPort           string
+	UseMock              bool
+	DBType               string
+	DBHost               string
+	DBPort               int
+	DBUser               string
+	DBPassword           string
+	DBName               string
+	JWTSecret            string
+	JWTExpirationMin     int
+	JWTRenewMin          int
+	CookieName           string
+	CookieSecure         bool
+	CORSOrigin           string
+	JWTStoreEnabled      bool
+	JWTLoadUserOnRenew   bool
+	PublicDir            string
+	XAccelRedirectPrefix string
 }
 
 func LoadConfig() (*Config, error) {
 	godotenv.Load()
 
 	cfg := &Config{
-		ServerPort:         getEnv("SERVER_PORT", ":8080"),
-		UseMock:            getEnvBool("USE_MOCK", true),
-		DBType:             getEnv("DB_TYPE", "postgres"),
-		DBHost:             getEnv("DB_HOST", "localhost"),
-		DBPort:             getEnvInt("DB_PORT", 5432),
-		DBUser:             getEnv("DB_USER", "postgres"),
-		DBPassword:         getEnv("DB_PASSWORD", "postgres"),
-		DBName:             getEnv("DB_NAME", "mydb"),
-		JWTSecret:          getEnv("JWT_SECRET", "REDACTED_DEFAULT_JWT_SECRET"),
-		JWTExpirationMin:   getEnvInt("JWT_EXPIRATION_MINUTES", 15),
-		JWTRenewMin:        getEnvInt("JWT_RENEW_MINUTES", 5),
-		CookieName:         getEnv("COOKIE_NAME", "access_token_go"),
-		CookieSecure:       getEnvBool("COOKIE_SECURE", false),
-		CORSOrigin:         getEnv("CORS_ORIGIN", "http://localhost:4200"),
-		JWTStoreEnabled:    getEnvBool("JWT_STORE_ENABLED", true),
-		JWTLoadUserOnRenew: getEnvBool("JWT_LOAD_USER_ON_RENEW", true),
-		PublicDir:          getEnv("PUBLIC_DIR", ""),
+		ServerPort:           getEnv("SERVER_PORT", ":8080"),
+		UseMock:              getEnvBool("USE_MOCK", true),
+		DBType:               getEnv("DB_TYPE", "postgres"),
+		DBHost:               getEnv("DB_HOST", "localhost"),
+		DBPort:               getEnvInt("DB_PORT", 5432),
+		DBUser:               getEnv("DB_USER", "postgres"),
+		DBPassword:           getEnv("DB_PASSWORD", "postgres"),
+		DBName:               getEnv("DB_NAME", "mydb"),
+		JWTSecret:            getEnv("JWT_SECRET", "REDACTED_DEFAULT_JWT_SECRET"),
+		JWTExpirationMin:     getEnvInt("JWT_EXPIRATION_MINUTES", 15),
+		JWTRenewMin:          getEnvInt("JWT_RENEW_MINUTES", 5),
+		CookieName:           getEnv("COOKIE_NAME", "access_token_go"),
+		CookieSecure:         getEnvBool("COOKIE_SECURE", false),
+		CORSOrigin:           getEnv("CORS_ORIGIN", "http://localhost:4200"),
+		JWTStoreEnabled:      getEnvBool("JWT_STORE_ENABLED", true),
+		JWTLoadUserOnRenew:   getEnvBool("JWT_LOAD_USER_ON_RENEW", true),
+		PublicDir:            getEnv("PUBLIC_DIR", ""),
+		XAccelRedirectPrefix: getEnv("X_ACCEL_REDIRECT_PREFIX", ""),
 	}
 	return cfg, nil
 }
@@ -62,6 +64,10 @@ func (c *Config) PublicPath() string {
 
 func (c *Config) ImagesDir() string {
 	return filepath.Join(c.PublicPath(), "imagenes")
+}
+
+func (c *Config) FilesDir() string {
+	return filepath.Join(filepath.Dir(c.PublicDir), "archivos")
 }
 
 func (c *Config) DBDSN() string {

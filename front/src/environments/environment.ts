@@ -1,5 +1,5 @@
 export const environment = {
-  API_URL: 'http://localhost:8080',
+  API_URL: 'http://localhost:5000/template/api',
   MEDIA_URL: 'http://localhost:5000/template/public',
   MAPS: {
     initialLat: -12.005424268674062,

@@ -29,7 +29,7 @@ func NewUserStore(crypt *auth.CryptManager) *UserStore {
 		Email:         "admin@example.com",
 		Password:      hash,
 		Activo:        true,
-		Permisos:      []string{"buses", "usuarios", "mensajes_pendientes", "shop"},
+		Permisos:      []string{"buses", "usuarios", "mensajes_pendientes", "shop", "archivos"},
 		CreadoEn:      now,
 		ActualizadoEn: now,
 	})

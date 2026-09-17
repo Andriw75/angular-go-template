@@ -25,6 +25,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	mensajeHandler := handlers.NewMensajeHandler(deps)
 	categoriaHandler := handlers.NewCategoriaHandler(deps)
 	productoHandler := handlers.NewProductoHandler(deps)
+	archivoHandler := handlers.NewArchivoHandler(deps)
 	instalacionHandler := handlers.NewInstalacionHandler(deps)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -101,6 +102,18 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 		r.Post("/{id}/imagenes", productoHandler.UploadImages)
 		r.Put("/{id}/imagenes/orden", productoHandler.ReorderImages)
 		r.Delete("/{id}/imagenes/{imagenID}", productoHandler.DeleteImage)
+	})
+
+	r.Route("/archivos", func(r chi.Router) {
+		r.With(authHandler.OptionalAuthMiddleware()).Get("/{filename}", archivoHandler.Serve)
+
+		r.Group(func(r chi.Router) {
+			r.Use(authHandler.AuthMiddleware("archivos"))
+			r.Get("/", archivoHandler.List)
+			r.Post("/", archivoHandler.Upload)
+			r.Put("/{id}/visibilidad", archivoHandler.UpdateVisibilidad)
+			r.Delete("/{id}", archivoHandler.Delete)
+		})
 	})
 
 	r.Route("/instalaciones", func(r chi.Router) {

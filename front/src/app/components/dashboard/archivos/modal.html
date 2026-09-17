@@ -1,0 +1,81 @@
+<div class="overlay" (click)="close()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Subir Archivos</h2>
+      <button class="close-btn" (click)="close()">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="field">
+        <label>Visibilidad</label>
+        <select [(ngModel)]="visibilidad">
+          <option value="publico">Publico - Accesible para todos</option>
+          <option value="autenticado">Autenticado - Solo usuarios logueados</option>
+          <option value="propietario">Solo propietario - Solo tu puedes verlo</option>
+        </select>
+        <span class="field-hint">
+          @switch (visibilidad()) {
+            @case ('publico') { Cualquiera puede acceder sin iniciar sesion. }
+            @case ('autenticado') { Se requiere estar logueado para acceder. }
+            @case ('propietario') { Solo tu cuenta puede acceder al archivo. }
+          }
+        </span>
+      </div>
+
+      <div
+        class="dropzone"
+        [class.dropzone--active]="dragging()"
+        [class.dropzone--has-files]="selectedFiles().length > 0"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave()"
+        (drop)="onDrop($event)"
+      >
+        <input type="file" multiple (change)="onFilesSelected($event)" />
+        <svg class="dropzone-icon" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        <span class="dropzone-text">
+          {{ selectedFiles().length === 0 ? 'Arrastra archivos aqui o haz clic' : 'Agregar mas archivos' }}
+        </span>
+        <span class="dropzone-hint">Cualquier tipo de archivo</span>
+      </div>
+
+      @if (selectedFiles().length > 0) {
+        <div class="file-list">
+          @for (file of selectedFiles(); track file.name + file.size) {
+            <div class="file-item">
+              @if (isImage(file)) {
+                <img class="file-preview" [src]="getPreviewUrl(file)" alt="preview" />
+              } @else {
+                <span class="file-item__icon">&#128196;</span>
+              }
+              <div class="file-item__info">
+                <span class="file-item__name">{{ file.name }}</span>
+                <span class="file-item__size">{{ formatSize(file.size) }}</span>
+              </div>
+              <button class="file-item__remove" (click)="removeFile(file)">&times;</button>
+            </div>
+          }
+        </div>
+      }
+
+      @if (error()) {
+        <div class="form-error">{{ error() }}</div>
+      }
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn btn--secondary" (click)="close()">Cancelar</button>
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="uploading() || !selectedFiles().length"
+        (click)="upload()"
+      >
+        {{ uploading() ? 'Subiendo...' : 'Subir ' + selectedFiles().length + ' archivo(s)' }}
+      </button>
+    </div>
+  </div>
+</div>

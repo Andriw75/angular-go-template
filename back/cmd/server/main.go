@@ -68,11 +68,17 @@ func main() {
 	}
 
 	deps.ImagenStore = mock.NewImagenStore()
+	deps.ArchivoStore = mock.NewArchivoStore()
 	deps.Storage = storage.NewStorage(cfg.ImagesDir())
 	if err := deps.Storage.EnsureDirs(); err != nil {
 		slog.Error("failed to create images dir", "error", err, "dir", cfg.ImagesDir())
 		os.Exit(1)
 	}
+	if err := os.MkdirAll(cfg.FilesDir(), 0o755); err != nil {
+		slog.Error("failed to create files dir", "error", err, "dir", cfg.FilesDir())
+		os.Exit(1)
+	}
+	slog.Info("files dir ready", "dir", cfg.FilesDir(), "x_accel_redirect", cfg.XAccelRedirectPrefix != "")
 
 	router := api.NewRouter(deps)
 
