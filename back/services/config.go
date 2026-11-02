@@ -68,8 +68,10 @@ func (c *Config) ImagesDir() string {
 	return filepath.Join(c.PublicPath(), "imagenes")
 }
 
+// FilesDir es la carpeta privada de archivos. Vive dentro de PUBLIC_DIR para
+// mantener todo el proyecto junto, pero nginx la bloquea y solo la sirve Go.
 func (c *Config) FilesDir() string {
-	return filepath.Join(filepath.Dir(c.PublicDir), "archivos")
+	return filepath.Join(c.PublicDir, "archivos")
 }
 
 func (c *Config) DBDSN() string {
