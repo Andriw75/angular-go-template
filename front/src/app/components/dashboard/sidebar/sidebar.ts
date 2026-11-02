@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 import { MensajesStoreService } from '../../../services/mensajes-store.service';
+import { SessionService } from '../../../services/session.service';
 import { MENU, type MenuItem } from './menu.config';
 import { SidebarMenuItemComponent } from './sidebar-menu-item';
 import { UserSolidIcon } from '../../../common/icons/user-solid.icon';
@@ -18,6 +19,7 @@ export class SidebarComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
   private mensajesStore = inject(MensajesStoreService);
+  protected session = inject(SessionService);
 
   user = this.auth.user;
   menu = MENU;
@@ -31,6 +33,7 @@ export class SidebarComponent {
 
   logout(): void {
     this.mensajesStore.disconnect();
+    this.session.clear();
     this.isLoggingOut.set(true);
     this.auth.logout().subscribe({
       next: () => {

@@ -16,6 +16,22 @@
     </ul>
   </div>
 
+  @if (session.active()) {
+    <div
+      class="sessionTimer"
+      [class.sessionTimer--warning]="session.warning()"
+      [class.sessionTimer--critical]="session.critical()"
+      [title]="'Sesión restante: ' + session.label()"
+    >
+      @if (!isCollapsed()) {
+        <span class="sessionTimerLabel">Sesión</span>
+        <span class="sessionTimerValue">{{ session.label() }}</span>
+      } @else {
+        <span class="sessionTimerDot"></span>
+      }
+    </div>
+  }
+
   <button class="logoutButton" (click)="logout()" [disabled]="isLoggingOut()">
     @if (isLoggingOut()) {
       <icon-spinner size="1.2em" class="spinner" />

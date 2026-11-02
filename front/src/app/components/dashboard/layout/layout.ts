@@ -1,9 +1,12 @@
 import { Component, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router, RouterOutlet } from '@angular/router';
 import { SidebarComponent } from '../sidebar/sidebar';
 import { ConfirmComponent } from '../../../common/confirm/confirm';
 import { ToastComponent } from '../../../common/toast/toast';
+import { AuthService } from '../../../services/auth.service';
 import { MensajesStoreService } from '../../../services/mensajes-store.service';
+import { SessionService } from '../../../services/session.service';
 
 @Component({
   selector: 'app-dashboard-layout',
@@ -13,6 +16,20 @@ import { MensajesStoreService } from '../../../services/mensajes-store.service';
 })
 export class DashboardLayoutComponent {
   constructor() {
-    inject(MensajesStoreService).init();
+    const mensajes = inject(MensajesStoreService);
+    const session = inject(SessionService);
+    const auth = inject(AuthService);
+    const router = inject(Router);
+
+    mensajes.init();
+
+    session.expired$
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => {
+        mensajes.disconnect();
+        auth.user.set(null);
+        session.clear();
+        router.navigate(['/login'], { queryParams: { expired: '1' } });
+      });
   }
 }

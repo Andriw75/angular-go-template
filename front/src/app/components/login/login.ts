@@ -1,5 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { SpinnerIcon } from '../../common/icons/spinner.icon';
 
@@ -9,14 +9,21 @@ import { SpinnerIcon } from '../../common/icons/spinner.icon';
   styleUrl: './login.css',
   imports: [SpinnerIcon],
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private auth = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   username = signal('');
   password = signal('');
   error = signal('');
   isLoading = signal(false);
+
+  ngOnInit(): void {
+    if (this.route.snapshot.queryParamMap.get('expired') === '1') {
+      this.error.set('La sesión ha caducado. Vuelve a iniciar sesión.');
+    }
+  }
 
   handleSubmit(e: Event): void {
     e.preventDefault();

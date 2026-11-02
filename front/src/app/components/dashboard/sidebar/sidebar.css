@@ -141,3 +141,50 @@
 .menuContainer::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+.sessionTimer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.sessionTimerLabel {
+  opacity: 0.8;
+}
+
+.sessionTimerValue {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.sessionTimer--warning {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffecb3;
+}
+
+.sessionTimer--critical {
+  background: rgba(220, 53, 69, 0.25);
+  color: #ffcdd2;
+}
+
+.sessionTimerDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #8bc34a;
+}
+
+.sessionTimer--warning .sessionTimerDot {
+  background: #ffc107;
+}
+
+.sessionTimer--critical .sessionTimerDot {
+  background: #f44336;
+}

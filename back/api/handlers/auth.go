@@ -3,9 +3,11 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"back/domain/outputs"
+	"back/infrastructure/auth"
 )
 
 type AuthHandler struct {
@@ -14,6 +16,21 @@ type AuthHandler struct {
 
 func NewAuthHandler(deps *Dependencies) *AuthHandler {
 	return &AuthHandler{deps: deps}
+}
+
+// setSessionHeaders expone al frontend cuánto le queda al token actual.
+// El backend solo aporta el dato; el frontend decide si muestra el contador.
+func (h *AuthHandler) setSessionHeaders(w http.ResponseWriter, claims *auth.Claims) {
+	if claims == nil || claims.ExpiresAt == nil {
+		return
+	}
+
+	remaining := int(time.Until(claims.ExpiresAt.Time).Seconds())
+	if remaining < 0 {
+		remaining = 0
+	}
+
+	w.Header().Set("X-Session-Expires-In", strconv.Itoa(remaining))
 }
 
 func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
@@ -48,6 +65,9 @@ func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Now().Add(time.Duration(h.deps.Config.JWTExpirationMin) * time.Minute),
 	})
 
+	claims, _ := h.deps.JWTManager.Validate(token)
+	h.setSessionHeaders(w, claims)
+
 	writeJSON(w, http.StatusOK, outputs.ToUserResponse(user))
 }
 
@@ -76,6 +96,8 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, "not authenticated")
 		return
 	}
+
+	h.setSessionHeaders(w, claims)
 
 	writeJSON(w, http.StatusOK, outputs.UserResponse{
 		ID:       claims.UserID,
@@ -181,6 +203,8 @@ func (h *AuthHandler) AuthMiddleware(requiredPermission ...string) func(http.Han
 				}
 			}
 
+			h.setSessionHeaders(w, claims)
+
 			if len(requiredPermission) > 0 {
 				if !tienePermiso(claims.Permisos, requiredPermission[0]) {
 					writeJSONError(w, http.StatusForbidden, "forbidden")
@@ -208,6 +232,8 @@ func (h *AuthHandler) OptionalAuthMiddleware() func(http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 				return
 			}
+
+			h.setSessionHeaders(w, claims)
 
 			ctx := WithClaims(r.Context(), claims)
 			next.ServeHTTP(w, r.WithContext(ctx))
