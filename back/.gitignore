@@ -3,3 +3,8 @@ tmp/
 *.exe
 *.test
 *.out
+
+data/
+*.db
+*.db-shm
+*.db-wal

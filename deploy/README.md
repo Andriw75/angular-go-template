@@ -7,7 +7,7 @@ template/
 ├── back/            # API Go (chi) — puerto 8080
 ├── front/           # Angular 21 (standalone) — build /template/
 └── deploy/
-    ├── nginx.conf   # server block para nginx (puerto 4000)
+    ├── nginx.conf   # server block para nginx (puerto 5000)
     └── README.md
 ```
 
@@ -22,7 +22,7 @@ Según el modo en que estés corriendo, usa una u otra configuración:
 ```ts
 export const environment = {
   API_URL: 'http://localhost:8080', // Go API directa (CORS → localhost:4200)
-  MEDIA_URL: 'http://localhost:4000/template/public', // nginx sirve las imágenes
+  MEDIA_URL: 'http://localhost:5000/template/public', // nginx sirve las imágenes
 };
 ```
 
@@ -33,12 +33,12 @@ export const environment = {
 
 ```ts
 export const environment = {
-  API_URL: 'http://192.168.90.68:4000/template/api',     // proxy nginx → Go API
-  MEDIA_URL: 'http://192.168.90.68:4000/template/public', // nginx estáticos
+  API_URL: 'http://192.168.90.68:5000/template/api',     // proxy nginx → Go API
+  MEDIA_URL: 'http://192.168.90.68:5000/template/public', // nginx estáticos
 };
 ```
 
-> En deploy **todo** pasa por nginx (puerto 4000): el frontend, los archivos públicos
+> En deploy **todo** pasa por nginx (puerto 5000): el frontend, los archivos públicos
 > y la API vía `/template/api/` (nginx hace proxy a `127.0.0.1:8080`).
 > Cambia `192.168.90.68` por la IP real del servidor.
 
@@ -51,17 +51,35 @@ cd back
 go build -o server.exe ./cmd/server
 ```
 
-Variables de entorno (`back/.env`) mínimas para imágenes:
+Variables de entorno (`back/.env`) mínimas:
 
 ```
 SERVER_PORT=:8080
-USE_MOCK=true
+DB_TYPE=sqlite          # sqlite | postgres
+DB_PATH=data/template.db
 PUBLIC_DIR=C:\Andriw 2\nginx-1.28.0\html\template
 ```
 
+Para usar PostgreSQL:
+
+```
+DB_TYPE=postgres
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=
+DB_NAME=template
+DB_SSLMODE=disable
+```
+
+> Al arrancar, el backend crea las tablas si no existen y siembra los permisos
+> base y el usuario `admin` / `REDACTED_DEFAULT_ADMIN_PASSWORD`. No hay modo mock.
+>
 > `PUBLIC_DIR` llega **hasta `template`**; el código agrega `/public` (y dentro
 > `/imagenes`) de forma fija, dejando espacio a futuros `private`, `user`, etc.
-> El servidor crea `public/imagenes` automáticamente si no existe.
+> El servidor crea `public/imagenes` automáticamente si no existe. Los archivos
+> privados viven fuera de la carpeta pública, en `..\archivos`, y los sirve Go
+> según su visibilidad (`publico`, `autenticado`, `propietario`).
 
 Ejecutar:
 
@@ -102,7 +120,7 @@ Copy-Item -Recurse -Force .\dist\front\* "C:\Andriw 2\nginx-1.28.0\html\template
 nginx -s reload
 ```
 
-### Rutas servidas (puerto 4000)
+### Rutas servidas (puerto 5000)
 
 | Ruta                        | Origen                                     |
 | --------------------------- | ------------------------------------------ |
@@ -121,5 +139,5 @@ nginx -s reload
 
 | Modo    | API_URL                     | MEDIA_URL                              | Imágenes escritas en            |
 | ------- | --------------------------- | -------------------------------------- | ------------------------------- |
-| Dev     | `http://localhost:8080`     | `http://localhost:4000/template/public`| `PUBLIC_DIR\public\imagenes`    |
-| Deploy  | `http://IP:4000/template/api` | `http://IP:4000/template/public`      | `PUBLIC_DIR\public\imagenes`    |
+| Dev     | `http://localhost:8080`     | `http://localhost:5000/template/public`| `PUBLIC_DIR\public\imagenes`    |
+| Deploy  | `http://IP:5000/template/api` | `http://IP:5000/template/public`      | `PUBLIC_DIR\public\imagenes`    |

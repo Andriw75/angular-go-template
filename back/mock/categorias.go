@@ -6,16 +6,14 @@ import (
 
 	"back/domain"
 	"back/domain/outputs"
+	"back/store"
 )
 
 type CategoriaStore struct {
 	store *MockStore[domain.Categoria]
 }
 
-type CategoriaFilters struct {
-	Q      string
-	Activo *bool
-}
+type CategoriaFilters = store.CategoriaFilters
 
 func NewCategoriaStore() *CategoriaStore {
 	s := &CategoriaStore{store: NewMockStore[domain.Categoria](nil)}

@@ -8,17 +8,14 @@ import (
 
 	"back/domain"
 	"back/domain/outputs"
+	"back/store"
 )
 
 type ProductoStore struct {
 	store *MockStore[domain.Producto]
 }
 
-type ProductoFilters struct {
-	Q           string
-	CategoriaID int64
-	Activo      *bool
-}
+type ProductoFilters = store.ProductoFilters
 
 const productoSeedCount = 40
 

@@ -12,7 +12,7 @@ import (
 	"back/domain"
 	"back/domain/inputs"
 	"back/domain/outputs"
-	"back/mock"
+	"back/store"
 )
 
 type CategoriaHandler struct {
@@ -23,9 +23,9 @@ func NewCategoriaHandler(deps *Dependencies) *CategoriaHandler {
 	return &CategoriaHandler{deps: deps}
 }
 
-func parseCategoriaFilters(r *http.Request) mock.CategoriaFilters {
+func parseCategoriaFilters(r *http.Request) store.CategoriaFilters {
 	q := r.URL.Query()
-	f := mock.CategoriaFilters{
+	f := store.CategoriaFilters{
 		Q: strings.TrimSpace(q.Get("q")),
 	}
 	if s := q.Get("activo"); s != "" {

@@ -13,7 +13,7 @@ import (
 	"back/domain"
 	"back/domain/inputs"
 	"back/domain/outputs"
-	"back/mock"
+	"back/store"
 )
 
 type BusHandler struct {
@@ -24,9 +24,9 @@ func NewBusHandler(deps *Dependencies) *BusHandler {
 	return &BusHandler{deps: deps}
 }
 
-func parseBusFilters(r *http.Request) mock.BusFilters {
+func parseBusFilters(r *http.Request) store.BusFilters {
 	q := r.URL.Query()
-	f := mock.BusFilters{
+	f := store.BusFilters{
 		Q:    strings.TrimSpace(q.Get("q")),
 		Tipo: strings.TrimSpace(q.Get("tipo")),
 	}

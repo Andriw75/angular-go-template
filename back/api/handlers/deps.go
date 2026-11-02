@@ -2,9 +2,10 @@ package handlers
 
 import (
 	"back/infrastructure/auth"
+	"back/infrastructure/cache"
 	"back/infrastructure/storage"
-	"back/mock"
 	"back/services"
+	"back/store"
 )
 
 type Dependencies struct {
@@ -12,16 +13,16 @@ type Dependencies struct {
 	JWTManager       *auth.JWTManager
 	CryptManager     *auth.CryptManager
 	JWTStore         *auth.JWTStore
-	UserStore        *mock.UserStore
-	PermisoStore     *mock.PermisoStore
-	BusStore         *mock.BusStore
-	MensajeStore     *mock.MensajeStore
-	ActivosStore     *mock.ActivosStore
-	CategoriaStore   *mock.CategoriaStore
-	ProductoStore    *mock.ProductoStore
-	ImagenStore      *mock.ImagenStore
-	ArchivoStore     *mock.ArchivoStore
+	UserStore        store.UserStore
+	PermisoStore     store.PermisoStore
+	BusStore         store.BusStore
+	MensajeStore     store.MensajeStore
+	ActivosStore     *cache.ActivosStore
+	CategoriaStore   store.CategoriaStore
+	ProductoStore    store.ProductoStore
+	ImagenStore      store.ImagenStore
+	ArchivoStore     store.ArchivoStore
 	Storage          *storage.Storage
 	SSEHub           *SSEHub
-	InstalacionStore *mock.InstalacionStore
+	InstalacionStore store.InstalacionStore
 }

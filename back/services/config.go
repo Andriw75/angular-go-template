@@ -10,13 +10,14 @@ import (
 
 type Config struct {
 	ServerPort           string
-	UseMock              bool
 	DBType               string
 	DBHost               string
 	DBPort               int
 	DBUser               string
 	DBPassword           string
 	DBName               string
+	DBPath               string
+	DBSSLMode            string
 	JWTSecret            string
 	JWTExpirationMin     int
 	JWTRenewMin          int
@@ -34,13 +35,14 @@ func LoadConfig() (*Config, error) {
 
 	cfg := &Config{
 		ServerPort:           getEnv("SERVER_PORT", ":8080"),
-		UseMock:              getEnvBool("USE_MOCK", true),
-		DBType:               getEnv("DB_TYPE", "postgres"),
+		DBType:               getEnv("DB_TYPE", "sqlite"),
 		DBHost:               getEnv("DB_HOST", "localhost"),
 		DBPort:               getEnvInt("DB_PORT", 5432),
 		DBUser:               getEnv("DB_USER", "postgres"),
 		DBPassword:           getEnv("DB_PASSWORD", "postgres"),
-		DBName:               getEnv("DB_NAME", "mydb"),
+		DBName:               getEnv("DB_NAME", "template"),
+		DBPath:               getEnv("DB_PATH", filepath.Join("data", "template.db")),
+		DBSSLMode:            getEnv("DB_SSLMODE", "disable"),
 		JWTSecret:            getEnv("JWT_SECRET", "REDACTED_DEFAULT_JWT_SECRET"),
 		JWTExpirationMin:     getEnvInt("JWT_EXPIRATION_MINUTES", 15),
 		JWTRenewMin:          getEnvInt("JWT_RENEW_MINUTES", 5),
@@ -73,9 +75,9 @@ func (c *Config) FilesDir() string {
 func (c *Config) DBDSN() string {
 	switch c.DBType {
 	case "postgres":
-		return "postgres://" + c.DBUser + ":" + c.DBPassword + "@" + c.DBHost + ":" + itoa(c.DBPort) + "/" + c.DBName
-	case "mysql":
-		return c.DBUser + ":" + c.DBPassword + "@tcp(" + c.DBHost + ":" + itoa(c.DBPort) + ")/" + c.DBName + "?parseTime=true"
+		return "postgres://" + c.DBUser + ":" + c.DBPassword + "@" + c.DBHost + ":" + itoa(c.DBPort) + "/" + c.DBName + "?sslmode=" + c.DBSSLMode
+	case "sqlite":
+		return c.DBPath
 	default:
 		return ""
 	}

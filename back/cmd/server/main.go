@@ -12,9 +12,11 @@ import (
 	"back/api"
 	"back/api/handlers"
 	"back/infrastructure/auth"
+	"back/infrastructure/cache"
+	"back/infrastructure/database"
 	"back/infrastructure/storage"
-	"back/mock"
 	"back/services"
+	"back/store"
 )
 
 func main() {
@@ -34,42 +36,46 @@ func main() {
 		jwtManager.Store = jwtStore
 	}
 
+	db, err := database.Open(cfg)
+	if err != nil {
+		slog.Error("failed to open database", "error", err, "type", cfg.DBType)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	if err := db.Migrate(ctx); err != nil {
+		slog.Error("failed to migrate database", "error", err)
+		os.Exit(1)
+	}
+	if err := db.Seed(ctx, cryptManager); err != nil {
+		slog.Error("failed to seed database", "error", err)
+		os.Exit(1)
+	}
+	slog.Info("database ready", "type", db.Type())
+
+	activos := cache.NewActivosStore()
+
 	deps := &handlers.Dependencies{
-		Config:       cfg,
-		JWTManager:   jwtManager,
-		CryptManager: cryptManager,
-		JWTStore:     jwtStore,
+		Config:           cfg,
+		JWTManager:       jwtManager,
+		CryptManager:     cryptManager,
+		JWTStore:         jwtStore,
+		UserStore:        database.NewUserStore(db, cryptManager),
+		PermisoStore:     database.NewPermisoStore(db),
+		BusStore:         database.NewBusStore(db),
+		MensajeStore:     database.NewMensajeStore(db),
+		ActivosStore:     activos,
+		CategoriaStore:   database.NewCategoriaStore(db),
+		ProductoStore:    database.NewProductoStore(db),
+		ImagenStore:      database.NewImagenStore(db),
+		ArchivoStore:     database.NewArchivoStore(db),
+		InstalacionStore: database.NewInstalacionStore(db),
+		SSEHub:           handlers.NewSSEHub(),
+		Storage:          storage.NewStorage(cfg.ImagesDir()),
 	}
+	seedActivos(deps.MensajeStore, activos)
 
-	if cfg.UseMock {
-		slog.Info("using mock data store")
-		deps.UserStore = mock.NewUserStore(cryptManager)
-		deps.PermisoStore = mock.NewPermisoStore()
-		deps.BusStore = mock.NewBusStore()
-		deps.MensajeStore = mock.NewMensajeStore()
-		deps.ActivosStore = mock.NewActivosStore()
-		deps.CategoriaStore = mock.NewCategoriaStore()
-		deps.ProductoStore = mock.NewProductoStore()
-		deps.SSEHub = handlers.NewSSEHub()
-		deps.InstalacionStore = mock.NewInstalacionStore()
-		seedActivos(deps.MensajeStore, deps.ActivosStore)
-	} else {
-		slog.Info("connecting to database", "type", cfg.DBType)
-		deps.UserStore = mock.NewUserStore(cryptManager)
-		deps.PermisoStore = mock.NewPermisoStore()
-		deps.BusStore = mock.NewBusStore()
-		deps.MensajeStore = mock.NewMensajeStore()
-		deps.ActivosStore = mock.NewActivosStore()
-		deps.CategoriaStore = mock.NewCategoriaStore()
-		deps.ProductoStore = mock.NewProductoStore()
-		deps.SSEHub = handlers.NewSSEHub()
-		deps.InstalacionStore = mock.NewInstalacionStore()
-		seedActivos(deps.MensajeStore, deps.ActivosStore)
-	}
-
-	deps.ImagenStore = mock.NewImagenStore()
-	deps.ArchivoStore = mock.NewArchivoStore()
-	deps.Storage = storage.NewStorage(cfg.ImagesDir())
 	if err := deps.Storage.EnsureDirs(); err != nil {
 		slog.Error("failed to create images dir", "error", err, "dir", cfg.ImagesDir())
 		os.Exit(1)
@@ -100,18 +106,18 @@ func main() {
 	<-quit
 
 	slog.Info("shutting down server...")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("server forced to shutdown", "error", err)
 	}
 
 	slog.Info("server stopped")
 }
 
-func seedActivos(store *mock.MensajeStore, activos *mock.ActivosStore) {
-	for _, m := range store.FindAll() {
+func seedActivos(ms store.MensajeStore, activos *cache.ActivosStore) {
+	for _, m := range ms.FindAll() {
 		if m.Estado != "finalizado" {
 			activos.Set(m)
 		}

@@ -8,17 +8,14 @@ import (
 
 	"back/domain"
 	"back/domain/outputs"
+	"back/store"
 )
 
 type BusStore struct {
 	store *MockStore[domain.Bus]
 }
 
-type BusFilters struct {
-	Q      string
-	Tipo   string
-	Activo *bool
-}
+type BusFilters = store.BusFilters
 
 const seedCount = 60
 

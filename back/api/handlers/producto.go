@@ -12,7 +12,7 @@ import (
 	"back/domain"
 	"back/domain/inputs"
 	"back/domain/outputs"
-	"back/mock"
+	"back/store"
 )
 
 type ProductoHandler struct {
@@ -23,9 +23,9 @@ func NewProductoHandler(deps *Dependencies) *ProductoHandler {
 	return &ProductoHandler{deps: deps}
 }
 
-func parseProductoFilters(r *http.Request) mock.ProductoFilters {
+func parseProductoFilters(r *http.Request) store.ProductoFilters {
 	q := r.URL.Query()
-	f := mock.ProductoFilters{
+	f := store.ProductoFilters{
 		Q: strings.TrimSpace(q.Get("q")),
 	}
 	if s := q.Get("categoria_id"); s != "" {
