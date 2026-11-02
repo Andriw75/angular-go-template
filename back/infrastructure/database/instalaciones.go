@@ -21,13 +21,14 @@ const instalacionColumns = `id, tipo, nombre, estado, lat, lng, direccion, zona,
 	resolucion, contenido, senal, bateria, potencia, contacto, creado_en, actualizado_en`
 
 func (s *InstalacionStore) List() []domain.Instalacion {
+	out := make([]domain.Instalacion, 0)
+
 	rows, err := s.db.QueryContext(context.Background(), `SELECT `+instalacionColumns+` FROM instalaciones ORDER BY id`)
 	if err != nil {
-		return nil
+		return out
 	}
 	defer rows.Close()
 
-	var out []domain.Instalacion
 	for rows.Next() {
 		i, err := scanInstalacion(rows)
 		if err != nil {

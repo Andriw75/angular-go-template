@@ -55,7 +55,7 @@ export class InstalacionesStoreService {
     this.loading.set(true);
     this.service.list().subscribe({
       next: (items) => {
-        this.items.set(items);
+        this.items.set(items ?? []);
         this.loading.set(false);
       },
       error: () => this.loading.set(false),

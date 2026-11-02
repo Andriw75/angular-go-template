@@ -234,6 +234,20 @@ export class MapasComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  focusFromList(item: Instalacion): void {
+    this.store.select(item.id);
+    this.focusItem(item);
+  }
+
+  private focusItem(item: Instalacion): void {
+    if (!this.map) return;
+    this.map.flyTo(
+      [item.lat, item.lng],
+      Math.max(this.map.getZoom(), 15),
+      { duration: 0.6 },
+    );
+  }
+
   editFromList(item: Instalacion): void {
     this.formData.set({ mode: 'edit', lat: item.lat, lng: item.lng, instalacion: item });
   }

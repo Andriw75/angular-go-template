@@ -14,6 +14,7 @@
       class="map-sidebar"
       (edit)="editFromList($event)"
       (remove)="deleteFromList($event)"
+      (focus)="focusFromList($event)"
     />
     <div class="map-viewport" #mapViewport>
       <div #mapContainer class="map-container"></div>

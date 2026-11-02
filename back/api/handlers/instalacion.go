@@ -22,7 +22,11 @@ func NewInstalacionHandler(deps *Dependencies) *InstalacionHandler {
 }
 
 func (h *InstalacionHandler) List(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, h.deps.InstalacionStore.List())
+	items := h.deps.InstalacionStore.List()
+	if items == nil {
+		items = []domain.Instalacion{}
+	}
+	writeJSON(w, http.StatusOK, items)
 }
 
 func (h *InstalacionHandler) Create(w http.ResponseWriter, r *http.Request) {

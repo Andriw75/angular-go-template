@@ -125,7 +125,7 @@
             <button
               type="button"
               class="btn btn--primary btn--focus"
-              (click)="$event.stopPropagation(); store.select(item.id)"
+              (click)="$event.stopPropagation(); focus.emit(item)"
             >
               <icon-map size="14" />
               Enfocar

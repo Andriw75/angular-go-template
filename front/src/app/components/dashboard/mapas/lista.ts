@@ -43,6 +43,7 @@ export class ListaInstalacionesComponent {
 
   edit = output<Instalacion>();
   remove = output<Instalacion>();
+  focus = output<Instalacion>();
 
   @ViewChildren('cardRef', { read: ElementRef }) cards!: QueryList<ElementRef<HTMLElement>>;
 
