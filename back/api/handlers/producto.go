@@ -58,7 +58,11 @@ func (h *ProductoHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	result := h.deps.ProductoStore.List(offset, limit, parseProductoFilters(r))
 	for i := range result.Data {
-		result.Data[i].Imagenes = outputs.ToImagenResponses(h.deps.ImagenStore.ListByEntidad("producto", result.Data[i].ID))
+		publico, _ := ImageIsPublic(h.deps, "producto", result.Data[i].ID)
+		result.Data[i].Imagenes = outputs.ToImagenResponses(
+			h.deps.ImagenStore.ListByEntidad("producto", result.Data[i].ID),
+			publico,
+		)
 	}
 	writeJSON(w, http.StatusOK, result)
 }
@@ -76,8 +80,12 @@ func (h *ProductoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	publico, _ := ImageIsPublic(h.deps, "producto", producto.ID)
 	resp := outputs.ToProductoResponse(producto)
-	resp.Imagenes = outputs.ToImagenResponses(h.deps.ImagenStore.ListByEntidad("producto", resp.ID))
+	resp.Imagenes = outputs.ToImagenResponses(
+		h.deps.ImagenStore.ListByEntidad("producto", resp.ID),
+		publico,
+	)
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -157,8 +165,12 @@ func (h *ProductoHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	publico, _ := ImageIsPublic(h.deps, "producto", created.ID)
 	resp := outputs.ToProductoResponse(&created)
-	resp.Imagenes = outputs.ToImagenResponses(h.deps.ImagenStore.ListByEntidad("producto", resp.ID))
+	resp.Imagenes = outputs.ToImagenResponses(
+		h.deps.ImagenStore.ListByEntidad("producto", resp.ID),
+		publico,
+	)
 	writeJSON(w, http.StatusCreated, resp)
 }
 
@@ -211,8 +223,14 @@ func (h *ProductoHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	EnsureImagePlacement(h.deps, "producto", id)
+
+	publico, _ := ImageIsPublic(h.deps, "producto", id)
 	resp := outputs.ToProductoResponse(existing)
-	resp.Imagenes = outputs.ToImagenResponses(h.deps.ImagenStore.ListByEntidad("producto", resp.ID))
+	resp.Imagenes = outputs.ToImagenResponses(
+		h.deps.ImagenStore.ListByEntidad("producto", resp.ID),
+		publico,
+	)
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -235,8 +253,8 @@ func (h *ProductoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	h.deps.ImagenStore.DeleteByEntidad("producto", id)
 
-	// Solo tras el éxito: limpiar archivos en disco.
-	h.deps.Storage.RemoveImages(filesToRemove...)
+	// Solo tras el éxito: limpiar archivos en disco (públicos y privados).
+	RemoveImageFileNames(h.deps, filesToRemove)
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "producto deleted"})
 }

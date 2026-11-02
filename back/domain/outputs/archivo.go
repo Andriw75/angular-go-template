@@ -13,6 +13,7 @@ type ArchivoResponse struct {
 	Tipo        string `json:"tipo"`
 	Tamano      int64  `json:"tamano"`
 	Visibilidad string `json:"visibilidad"`
+	Publico     bool   `json:"publico"`
 	CreadoEn    string `json:"creado_en"`
 }
 
@@ -24,6 +25,7 @@ func ToArchivoResponse(a *domain.Archivo) ArchivoResponse {
 		Tipo:        a.Tipo,
 		Tamano:      a.Tamano,
 		Visibilidad: string(a.Visibilidad),
+		Publico:     a.Visibilidad == domain.VisibilidadPublico,
 		CreadoEn:    a.CreadoEn.Format(time.RFC3339),
 	}
 }

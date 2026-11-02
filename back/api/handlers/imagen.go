@@ -3,8 +3,13 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"mime"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -21,6 +26,83 @@ var imageExts = map[string]bool{
 
 const maxUploadSize = 64 << 20
 
+// ImageIsPublic indica si la imagen debe servirse por nginx. Para productos
+// exige producto activo y categoría activa; para categorías, categoría activa.
+func ImageIsPublic(deps *Dependencies, tipo string, entidadID int64) (bool, error) {
+	switch tipo {
+	case "producto":
+		producto, err := deps.ProductoStore.FindByID(entidadID)
+		if err != nil {
+			return false, err
+		}
+		if !producto.Activo {
+			return false, nil
+		}
+		categoria, err := deps.CategoriaStore.FindByID(producto.CategoriaID)
+		if err != nil {
+			return false, err
+		}
+		return categoria.Activo, nil
+
+	case "categoria":
+		categoria, err := deps.CategoriaStore.FindByID(entidadID)
+		if err != nil {
+			return false, err
+		}
+		return categoria.Activo, nil
+
+	default:
+		return false, fmt.Errorf("tipo de imagen desconocido: %s", tipo)
+	}
+}
+
+func imageDirs(deps *Dependencies, public bool) (dir, other string) {
+	if public {
+		return deps.Config.PublicImagesDir(), deps.Config.PrivateImagesDir()
+	}
+	return deps.Config.PrivateImagesDir(), deps.Config.PublicImagesDir()
+}
+
+// EnsureImagePlacement mueve las imágenes de una entidad a la carpeta que
+// corresponde según su estado actual (pública o privada).
+func EnsureImagePlacement(deps *Dependencies, tipo string, entidadID int64) {
+	public, err := ImageIsPublic(deps, tipo, entidadID)
+	if err != nil {
+		return
+	}
+	dir, other := imageDirs(deps, public)
+	for _, img := range deps.ImagenStore.ListByEntidad(tipo, entidadID) {
+		if err := deps.Storage.MoveFileIfMissing(other, dir, img.FileName); err != nil {
+			slog.Warn("no se pudo mover imagen", "tipo", tipo, "entidad", entidadID, "file", img.FileName, "error", err)
+		}
+	}
+}
+
+// EnsureCategoryImagesPlacement mueve las imágenes de la categoría y de todos
+// sus productos, porque el estado de la categoría afecta a ambos.
+func EnsureCategoryImagesPlacement(deps *Dependencies, categoriaID int64) {
+	EnsureImagePlacement(deps, "categoria", categoriaID)
+	for _, producto := range deps.ProductoStore.ListByCategoria(categoriaID) {
+		EnsureImagePlacement(deps, "producto", producto.ID)
+	}
+}
+
+// RemoveImageFiles borra los archivos físicos de una entidad de ambas carpetas
+// (pública y privada), para cubrir cualquier transición previa.
+func RemoveImageFiles(deps *Dependencies, tipo string, entidadID int64) {
+	var filenames []string
+	for _, img := range deps.ImagenStore.ListByEntidad(tipo, entidadID) {
+		filenames = append(filenames, img.FileName)
+	}
+	RemoveImageFileNames(deps, filenames)
+}
+
+// RemoveImageFileNames borra archivos de imágenes de ambas carpetas.
+func RemoveImageFileNames(deps *Dependencies, filenames []string) {
+	deps.Storage.RemoveIn(deps.Config.PublicImagesDir(), filenames...)
+	deps.Storage.RemoveIn(deps.Config.PrivateImagesDir(), filenames...)
+}
+
 func uploadImagesForEntity(deps *Dependencies, tipo string, entidadID int64, w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "error al parsear formulario")
@@ -33,8 +115,15 @@ func uploadImagesForEntity(deps *Dependencies, tipo string, entidadID int64, w h
 		return
 	}
 
+	public, err := ImageIsPublic(deps, tipo, entidadID)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "entidad no encontrada")
+		return
+	}
+
+	dir, _ := imageDirs(deps, public)
 	prefix := fmt.Sprintf("%s_%d", tipo, entidadID)
-	filenames, err := deps.Storage.SaveFiles(files, prefix, imageExts)
+	filenames, err := deps.Storage.SaveFilesIn(dir, files, prefix, imageExts)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -47,7 +136,7 @@ func uploadImagesForEntity(deps *Dependencies, tipo string, entidadID int64, w h
 				_ = deps.ImagenStore.Delete(cid)
 			}
 		}
-		deps.Storage.RemoveImages(filenames...)
+		deps.Storage.RemoveIn(dir, filenames...)
 	}
 
 	for _, fn := range filenames {
@@ -60,7 +149,7 @@ func uploadImagesForEntity(deps *Dependencies, tipo string, entidadID int64, w h
 		created = append(created, img.ID)
 	}
 
-	writeJSON(w, http.StatusCreated, outputs.ToImagenResponses(deps.ImagenStore.ListByEntidad(tipo, entidadID)))
+	writeJSON(w, http.StatusCreated, outputs.ToImagenResponses(deps.ImagenStore.ListByEntidad(tipo, entidadID), public))
 }
 
 func deleteImageForEntity(deps *Dependencies, tipo string, entidadID, imagenID int64, w http.ResponseWriter) {
@@ -74,12 +163,13 @@ func deleteImageForEntity(deps *Dependencies, tipo string, entidadID, imagenID i
 		return
 	}
 
-	// Primero la baja en el store; solo tras éxito se borra el archivo.
+	// Primero la baja en el store; solo tras éxito se borran los archivos.
 	if err := deps.ImagenStore.Delete(imagenID); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to delete imagen")
 		return
 	}
-	deps.Storage.RemoveImages(img.FileName)
+	deps.Storage.RemoveIn(deps.Config.PublicImagesDir(), img.FileName)
+	deps.Storage.RemoveIn(deps.Config.PrivateImagesDir(), img.FileName)
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "imagen deleted"})
 }
@@ -108,5 +198,79 @@ func reorderImagesForEntity(deps *Dependencies, tipo string, entidadID int64, w 
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, outputs.ToImagenResponses(deps.ImagenStore.ListByEntidad(tipo, entidadID)))
+
+	public, err := ImageIsPublic(deps, tipo, entidadID)
+	if err != nil {
+		public = false
+	}
+	writeJSON(w, http.StatusOK, outputs.ToImagenResponses(deps.ImagenStore.ListByEntidad(tipo, entidadID), public))
+}
+
+type ImagenHandler struct {
+	deps *Dependencies
+}
+
+func NewImagenHandler(deps *Dependencies) *ImagenHandler {
+	return &ImagenHandler{deps: deps}
+}
+
+// Serve entrega imágenes restringidas. Las públicas las sirve nginx; si llega
+// una petición pública aquí, se responde desde la carpeta pública como respaldo.
+func (h *ImagenHandler) Serve(w http.ResponseWriter, r *http.Request) {
+	filename := chi.URLParam(r, "filename")
+	if filename == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	img, err := h.deps.ImagenStore.FindByFileName(filename)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	public, err := ImageIsPublic(h.deps, img.Tipo, img.EntidadID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	dir, other := imageDirs(h.deps, public)
+	if !public {
+		claims := GetClaims(r.Context())
+		if claims == nil {
+			writeJSONError(w, http.StatusUnauthorized, "authentication required")
+			return
+		}
+		if !tienePermiso(claims.Permisos, "shop") {
+			writeJSONError(w, http.StatusForbidden, "forbidden")
+			return
+		}
+	}
+
+	// Defensa: si una transición falló y el archivo quedó en la otra carpeta,
+	// moverlo a la que corresponde.
+	if _, err := os.Stat(filepath.Join(other, filename)); err == nil {
+		_ = h.deps.Storage.MoveFileIfMissing(other, dir, filename)
+	}
+
+	filePath := filepath.Join(dir, filename)
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		// Respaldo: probar la otra carpeta.
+		filePath = filepath.Join(other, filename)
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			http.NotFound(w, r)
+			return
+		}
+	}
+
+	if ct := mime.TypeByExtension(strings.ToLower(filepath.Ext(filename))); ct != "" {
+		w.Header().Set("Content-Type", ct)
+	}
+	if public {
+		w.Header().Set("Cache-Control", "public, max-age=60")
+	} else {
+		w.Header().Set("Cache-Control", "private, no-store, max-age=0")
+	}
+	http.ServeFile(w, r, filePath)
 }

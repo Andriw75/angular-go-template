@@ -64,8 +64,30 @@ func (c *Config) PublicPath() string {
 	return filepath.Join(c.PublicDir, "public")
 }
 
+// ImagesDir es la carpeta privada de imágenes de entidades. nginx no la sirve;
+// la API valida el estado de la entidad antes de entregar cada archivo.
 func (c *Config) ImagesDir() string {
+	return c.PrivateImagesDir()
+}
+
+// PublicImagesDir es la carpeta que nginx sirve para imágenes públicas.
+func (c *Config) PublicImagesDir() string {
 	return filepath.Join(c.PublicPath(), "imagenes")
+}
+
+// PrivateImagesDir es la carpeta de imágenes restringidas; solo la sirve Go.
+func (c *Config) PrivateImagesDir() string {
+	return filepath.Join(c.FilesDir(), "imagenes")
+}
+
+// PublicFilesDir es la carpeta de archivos públicos que sirve nginx.
+func (c *Config) PublicFilesDir() string {
+	return filepath.Join(c.PublicPath(), "archivos")
+}
+
+// PrivateFilesDir es la carpeta de archivos restringidos; solo la sirve Go.
+func (c *Config) PrivateFilesDir() string {
+	return c.FilesDir()
 }
 
 // FilesDir es la carpeta privada de archivos. Vive dentro de PUBLIC_DIR para

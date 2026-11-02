@@ -72,7 +72,8 @@ export class ImageManagerComponent implements OnDestroy {
       .map((img) => ({
         key: this.nextKey++,
         id: img.id,
-        url: environment.MEDIA_URL + img.url,
+        // Públicas: nginx (MEDIA_URL). Restringidas: API (valida estado/permiso).
+        url: (img.publico ? environment.MEDIA_URL : environment.API_URL) + img.url,
         status: 'uploaded' as CardStatus,
       }));
   }

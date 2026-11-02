@@ -7,6 +7,7 @@ export interface Archivo {
   tipo: string;
   tamano: number;
   visibilidad: Visibilidad;
+  publico: boolean;
   creado_en: string;
 }
 

@@ -1,95 +1,178 @@
 <div class="page-header">
-  <h1>Archivos</h1>
-  <div class="page-header__actions">
-    <a class="btn btn--secondary" routerLink="/dashboard/archivos/guia">Guia</a>
-    <button class="btn btn--primary" (click)="openUpload()">+ Subir Archivo</button>
-  </div>
+  <h1>Archivos e imágenes</h1>
+  @if (activeTab() === 'archivos') {
+    <div class="page-header__actions">
+      <button class="btn btn--primary" (click)="openUpload()">+ Subir Archivo</button>
+    </div>
+  }
 </div>
 
-<div class="filters">
-  <input
-    class="filter-input"
-    type="text"
-    placeholder="Buscar nombre..."
-    [(ngModel)]="searchQuery"
-    (keydown.enter)="search()"
-  />
-  <select class="filter-select" [(ngModel)]="filterVisibilidad">
-    <option value="">Todas</option>
-    <option value="publico">Publico</option>
-    <option value="autenticado">Autenticado</option>
-    <option value="propietario">Solo propietario</option>
-  </select>
-  <button class="btn btn--secondary" (click)="search()">Buscar</button>
-  <button class="btn btn--ghost" (click)="resetFilters()">Limpiar</button>
+<div class="tabs">
+  <button
+    class="tab"
+    [class.tab--active]="activeTab() === 'archivos'"
+    (click)="setTab('archivos')"
+  >
+    Archivos
+  </button>
+  @if (canSeeImages()) {
+    <button
+      class="tab"
+      [class.tab--active]="activeTab() === 'imagenes'"
+      (click)="setTab('imagenes')"
+    >
+      Imágenes
+    </button>
+  }
 </div>
 
-@if (loading()) {
-  <div class="loading">Cargando...</div>
-} @else {
-  <div class="table-wrapper">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          <th>Tipo</th>
-          <th>Tamano</th>
-          <th>Visibilidad</th>
-          <th>Subido</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (archivo of filteredArchivos; track archivo.id) {
-          <tr>
-            <td>
-              <div class="file-name">
-                @if (isImage(archivo)) {
-                  <img class="file-thumb" [src]="service.getURL(archivo)" [alt]="archivo.nombre" />
-                } @else {
-                  <span class="file-icon">&#128196;</span>
-                }
-                <strong>{{ archivo.nombre }}</strong>
-              </div>
-            </td>
-            <td><span class="badge badge--tipo">{{ archivo.tipo }}</span></td>
-            <td>{{ formatSize(archivo.tamano) }}</td>
-            <td>
-              <select
-                class="visibilidad-select"
-                [ngModel]="archivo.visibilidad"
-                (ngModelChange)="onVisibilidadChange(archivo, $event)"
-              >
-                <option value="publico">Publico</option>
-                <option value="autenticado">Autenticado</option>
-                <option value="propietario">Solo propietario</option>
-              </select>
-            </td>
-            <td>{{ archivo.creado_en | date:'dd/MM/yyyy HH:mm' }}</td>
-            <td>
-              <button class="btn-icon btn-icon--copy" title="Copiar link" (click)="copyLink(archivo)">&#128279;</button>
-              <button class="btn-icon btn-icon--download" title="Descargar" (click)="downloadArchivo(archivo)">&#11015;</button>
-              <button class="btn-icon" title="Ver" (click)="openArchivo(archivo)">&#128065;</button>
-              <button class="btn-icon btn-icon--delete" title="Eliminar" (click)="confirmDelete(archivo)" [disabled]="deleting() === archivo.id">&#128465;</button>
-            </td>
-          </tr>
-        } @empty {
-          <tr>
-            <td colspan="6" class="empty">No hay archivos registrados</td>
-          </tr>
-        }
-      </tbody>
-    </table>
-  </div>
-
-  <div class="pagination-wrapper">
-    <app-pagination
-      [page]="page()"
-      [totalPages]="totalPages"
-      [total]="total()"
-      (pageChange)="onPageChange($event)"
+@if (activeTab() === 'archivos') {
+  <div class="filters">
+    <input
+      class="filter-input"
+      type="text"
+      placeholder="Buscar nombre..."
+      [(ngModel)]="searchQuery"
+      (keydown.enter)="search()"
     />
+    <select class="filter-select" [(ngModel)]="filterVisibilidad">
+      <option value="">Todas</option>
+      <option value="publico">Publico</option>
+      <option value="autenticado">Autenticado</option>
+      <option value="propietario">Solo propietario</option>
+    </select>
+    <button class="btn btn--secondary" (click)="search()">Buscar</button>
+    <button class="btn btn--ghost" (click)="resetFilters()">Limpiar</button>
   </div>
+
+  @if (loading()) {
+    <div class="loading">Cargando...</div>
+  } @else {
+    <div class="table-wrapper">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Tipo</th>
+            <th>Tamano</th>
+            <th>Visibilidad</th>
+            <th>Subido</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (archivo of filteredArchivos; track archivo.id) {
+            <tr>
+              <td>
+                <div class="file-name">
+                  @if (isImage(archivo)) {
+                    <img class="file-thumb" [src]="service.getURL(archivo)" [alt]="archivo.nombre" />
+                  } @else {
+                    <span class="file-icon">&#128196;</span>
+                  }
+                  <strong>{{ archivo.nombre }}</strong>
+                </div>
+              </td>
+              <td><span class="badge badge--tipo">{{ archivo.tipo }}</span></td>
+              <td>{{ formatSize(archivo.tamano) }}</td>
+              <td>
+                <select
+                  class="visibilidad-select"
+                  [ngModel]="archivo.visibilidad"
+                  (ngModelChange)="onVisibilidadChange(archivo, $event)"
+                >
+                  <option value="publico">Publico</option>
+                  <option value="autenticado">Autenticado</option>
+                  <option value="propietario">Solo propietario</option>
+                </select>
+              </td>
+              <td>{{ archivo.creado_en | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td>
+                <button class="btn-icon btn-icon--copy" title="Copiar link" (click)="copyLink(archivo)">&#128279;</button>
+                <button class="btn-icon btn-icon--download" title="Descargar" (click)="downloadArchivo(archivo)">&#11015;</button>
+                <button class="btn-icon" title="Ver" (click)="openArchivo(archivo)">&#128065;</button>
+                <button class="btn-icon btn-icon--delete" title="Eliminar" (click)="confirmDelete(archivo)" [disabled]="deleting() === archivo.id">&#128465;</button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="empty">No hay archivos registrados</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination-wrapper">
+      <app-pagination
+        [page]="page()"
+        [totalPages]="totalPages"
+        [total]="total()"
+        (pageChange)="onPageChange($event)"
+      />
+    </div>
+  }
+} @else {
+  <div class="filters">
+    <select
+      class="filter-select"
+      [ngModel]="imageType()"
+      (ngModelChange)="imageType.set($event)"
+    >
+      <option value="">Todas las entidades</option>
+      <option value="categoria">Categorías</option>
+      <option value="producto">Productos</option>
+    </select>
+    <select
+      class="filter-select"
+      [ngModel]="imagePublic()"
+      (ngModelChange)="imagePublic.set($event)"
+    >
+      <option value="">Todos</option>
+      <option value="true">Solo públicos</option>
+      <option value="false">Solo restringidos</option>
+    </select>
+    <button class="btn btn--secondary" (click)="loadImages()" [disabled]="imagesLoading()">
+      Actualizar
+    </button>
+  </div>
+
+  @if (imagesLoading()) {
+    <div class="loading">Cargando imágenes...</div>
+  } @else {
+    <div class="image-gallery">
+      @for (item of filteredEntityImages(); track item.key) {
+        <article class="entity-image-card">
+          <img [src]="imageURL(item)" [alt]="item.entidadNombre" loading="lazy" />
+          <div class="entity-image-info">
+            <strong>{{ item.entidadNombre }}</strong>
+            <div class="entity-image-badges">
+              <span class="badge badge--tipo">{{ item.tipo }}</span>
+              <span
+                class="badge"
+                [class.badge--activo]="item.imagen.publico"
+                [class.badge--inactivo]="!item.imagen.publico"
+              >
+                {{ item.imagen.publico ? 'Público' : 'Restringida' }}
+              </span>
+            </div>
+          </div>
+          <div class="entity-image-actions">
+            <button class="btn-icon btn-icon--copy" title="Copiar link" (click)="copyImageLink(item)">&#128279;</button>
+            <button class="btn-icon" title="Ver" (click)="openImage(item)">&#128065;</button>
+            <button class="btn-icon btn-icon--delete" title="Eliminar" (click)="deleteEntityImage(item)">&#128465;</button>
+          </div>
+        </article>
+      } @empty {
+        <div class="empty">No hay imágenes registradas</div>
+      }
+    </div>
+    <p class="gallery-hint">
+      Se listan hasta 100 categorías y 100 productos. Las imágenes públicas las
+      sirve nginx; las restringidas pasan por la API y exigen permiso de tienda.
+      Para subir o reordenar imágenes, edita la categoría o producto.
+    </p>
+  }
 }
 
 @if (showModal()) {

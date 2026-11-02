@@ -52,7 +52,10 @@ func (h *CategoriaHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	result := h.deps.CategoriaStore.List(offset, limit, parseCategoriaFilters(r))
 	for i := range result.Data {
-		result.Data[i].Imagenes = outputs.ToImagenResponses(h.deps.ImagenStore.ListByEntidad("categoria", result.Data[i].ID))
+		result.Data[i].Imagenes = outputs.ToImagenResponses(
+			h.deps.ImagenStore.ListByEntidad("categoria", result.Data[i].ID),
+			result.Data[i].Activo,
+		)
 	}
 	writeJSON(w, http.StatusOK, result)
 }
@@ -71,7 +74,10 @@ func (h *CategoriaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := outputs.ToCategoriaResponse(categoria)
-	resp.Imagenes = outputs.ToImagenResponses(h.deps.ImagenStore.ListByEntidad("categoria", resp.ID))
+	resp.Imagenes = outputs.ToImagenResponses(
+		h.deps.ImagenStore.ListByEntidad("categoria", resp.ID),
+		categoria.Activo,
+	)
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -140,7 +146,10 @@ func (h *CategoriaHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := outputs.ToCategoriaResponse(&created)
-	resp.Imagenes = outputs.ToImagenResponses(h.deps.ImagenStore.ListByEntidad("categoria", resp.ID))
+	resp.Imagenes = outputs.ToImagenResponses(
+		h.deps.ImagenStore.ListByEntidad("categoria", resp.ID),
+		created.Activo,
+	)
 	writeJSON(w, http.StatusCreated, resp)
 }
 
@@ -179,8 +188,13 @@ func (h *CategoriaHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	EnsureCategoryImagesPlacement(h.deps, id)
+
 	resp := outputs.ToCategoriaResponse(existing)
-	resp.Imagenes = outputs.ToImagenResponses(h.deps.ImagenStore.ListByEntidad("categoria", resp.ID))
+	resp.Imagenes = outputs.ToImagenResponses(
+		h.deps.ImagenStore.ListByEntidad("categoria", resp.ID),
+		existing.Activo,
+	)
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -231,7 +245,7 @@ func (h *CategoriaHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Solo tras el éxito: limpiar archivos en disco.
-	h.deps.Storage.RemoveImages(filesToRemove...)
+	RemoveImageFileNames(h.deps, filesToRemove)
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "categoria deleted"})
 }

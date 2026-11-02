@@ -22,7 +22,7 @@
         </span>
       </div>
 
-      <div
+      <label
         class="dropzone"
         [class.dropzone--active]="dragging()"
         [class.dropzone--has-files]="selectedFiles().length > 0"
@@ -30,7 +30,12 @@
         (dragleave)="onDragLeave()"
         (drop)="onDrop($event)"
       >
-        <input type="file" multiple (change)="onFilesSelected($event)" />
+        <input
+          type="file"
+          multiple
+          accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.rar,.mp4,.mp3,.webm"
+          (change)="onFilesSelected($event)"
+        />
         <svg class="dropzone-icon" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
           <polyline points="17 8 12 3 7 8" />
@@ -39,8 +44,10 @@
         <span class="dropzone-text">
           {{ selectedFiles().length === 0 ? 'Arrastra archivos aqui o haz clic' : 'Agregar mas archivos' }}
         </span>
-        <span class="dropzone-hint">Cualquier tipo de archivo</span>
-      </div>
+        <span class="dropzone-hint">
+          Imágenes, PDF, Office, texto, zip, audio y video
+        </span>
+      </label>
 
       @if (selectedFiles().length > 0) {
         <div class="file-list">

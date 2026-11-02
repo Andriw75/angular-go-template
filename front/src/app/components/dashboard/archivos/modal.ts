@@ -1,8 +1,16 @@
 import { Component, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { apiErrorMessage } from '../../../common/api-error';
 import { ArchivosService } from '../../../services/archivos.service';
 import { ToastService } from '../../../services/toast.service';
 import type { Visibilidad } from '../../../models/archivo';
+
+const ALLOWED_EXTENSIONS = new Set([
+  '.jpg', '.jpeg', '.png', '.webp', '.gif',
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx',
+  '.txt', '.csv', '.zip', '.rar',
+  '.mp4', '.mp3', '.webm',
+]);
 
 @Component({
   selector: 'app-archivo-modal',
@@ -59,6 +67,16 @@ export class ArchivoModalComponent {
   upload(): void {
     if (!this.selectedFiles().length) return;
 
+    const invalid = this.selectedFiles().filter(
+      (file) => !ALLOWED_EXTENSIONS.has(this.extension(file.name)),
+    );
+    if (invalid.length > 0) {
+      this.error.set(
+        `Extensión no permitida: ${invalid.map((file) => file.name).join(', ')}`,
+      );
+      return;
+    }
+
     this.uploading.set(true);
     this.error.set('');
 
@@ -69,11 +87,16 @@ export class ArchivoModalComponent {
         this.onSaved.emit();
         this.close();
       },
-      error: () => {
+      error: (err) => {
         this.uploading.set(false);
-        this.error.set('Error al subir archivos');
+        this.error.set(apiErrorMessage(err, 'Error al subir archivos'));
       },
     });
+  }
+
+  private extension(name: string): string {
+    const index = name.lastIndexOf('.');
+    return index >= 0 ? name.slice(index).toLowerCase() : '';
   }
 
   formatSize(bytes: number): string {

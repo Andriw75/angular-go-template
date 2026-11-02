@@ -11,6 +11,7 @@ import (
 
 	"back/api"
 	"back/api/handlers"
+	"back/domain"
 	"back/infrastructure/auth"
 	"back/infrastructure/cache"
 	"back/infrastructure/database"
@@ -72,19 +73,22 @@ func main() {
 		ArchivoStore:     database.NewArchivoStore(db),
 		InstalacionStore: database.NewInstalacionStore(db),
 		SSEHub:           handlers.NewSSEHub(),
-		Storage:          storage.NewStorage(cfg.ImagesDir()),
+		Storage:          storage.NewStorage(cfg.PrivateImagesDir()),
 	}
 	seedActivos(deps.MensajeStore, activos)
 
-	if err := deps.Storage.EnsureDirs(); err != nil {
-		slog.Error("failed to create images dir", "error", err, "dir", cfg.ImagesDir())
+	dirs := []string{
+		cfg.PublicImagesDir(),
+		cfg.PrivateImagesDir(),
+		cfg.PublicFilesDir(),
+		cfg.PrivateFilesDir(),
+	}
+	if err := deps.Storage.EnsureDirsFor(dirs...); err != nil {
+		slog.Error("failed to create storage dirs", "error", err)
 		os.Exit(1)
 	}
-	if err := os.MkdirAll(cfg.FilesDir(), 0o755); err != nil {
-		slog.Error("failed to create files dir", "error", err, "dir", cfg.FilesDir())
-		os.Exit(1)
-	}
-	slog.Info("files dir ready", "dir", cfg.FilesDir(), "x_accel_redirect", cfg.XAccelRedirectPrefix != "")
+	syncPlacement(deps)
+	slog.Info("storage dirs ready", "public_images", cfg.PublicImagesDir(), "private_images", cfg.PrivateImagesDir(), "public_files", cfg.PublicFilesDir(), "private_files", cfg.PrivateFilesDir(), "x_accel_redirect", cfg.XAccelRedirectPrefix != "")
 
 	router := api.NewRouter(deps)
 
@@ -120,6 +124,39 @@ func seedActivos(ms store.MensajeStore, activos *cache.ActivosStore) {
 	for _, m := range ms.FindAll() {
 		if m.Estado != "finalizado" {
 			activos.Set(m)
+		}
+	}
+}
+
+// syncPlacement mueve archivos existentes a la carpeta que les corresponde
+// (pública para nginx, privada para la API) al arrancar.
+func syncPlacement(deps *handlers.Dependencies) {
+	for _, img := range deps.ImagenStore.ListAll() {
+		public, err := handlers.ImageIsPublic(deps, img.Tipo, img.EntidadID)
+		if err != nil {
+			continue
+		}
+		src, dst := deps.Config.PrivateImagesDir(), deps.Config.PublicImagesDir()
+		if !public {
+			src, dst = dst, src
+		}
+		if err := deps.Storage.MoveFileIfMissing(src, dst, img.FileName); err != nil {
+			slog.Warn("no se pudo ubicar imagen", "file", img.FileName, "error", err)
+		}
+	}
+
+	files, _, err := deps.ArchivoStore.List(0, 1000000, "")
+	if err != nil {
+		return
+	}
+	for _, a := range files {
+		public := a.Visibilidad == domain.VisibilidadPublico
+		src, dst := deps.Config.PrivateFilesDir(), deps.Config.PublicFilesDir()
+		if !public {
+			src, dst = dst, src
+		}
+		if err := deps.Storage.MoveFileIfMissing(src, dst, a.FileName); err != nil {
+			slog.Warn("no se pudo ubicar archivo", "file", a.FileName, "error", err)
 		}
 	}
 }

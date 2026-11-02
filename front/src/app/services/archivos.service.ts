@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import type { Archivo, PaginatedArchivos, Visibilidad } from '../models/archivo';
+import type { Imagen } from '../models/imagen';
 
 export interface ArchivoListParams {
   offset?: number;
@@ -42,6 +43,12 @@ export class ArchivosService {
   }
 
   getURL(archivo: Archivo): string {
-    return `${this.api}${archivo.url}`;
+    const base = archivo.publico ? environment.MEDIA_URL : environment.API_URL;
+    return `${base}${archivo.url}`;
+  }
+
+  getImagenURL(imagen: Imagen): string {
+    const base = imagen.publico ? environment.MEDIA_URL : environment.API_URL;
+    return `${base}${imagen.url}`;
   }
 }

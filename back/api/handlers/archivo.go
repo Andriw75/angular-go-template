@@ -80,7 +80,14 @@ func (h *ArchivoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		userID = claims.UserID
 	}
 
-	filesDir := h.deps.Config.FilesDir()
+	filesDir := h.deps.Config.PrivateFilesDir()
+	if vis == domain.VisibilidadPublico {
+		filesDir = h.deps.Config.PublicFilesDir()
+	}
+	if err := os.MkdirAll(filesDir, 0o755); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "error al preparar carpeta")
+		return
+	}
 
 	var savedNames []string
 	rollback := func() {
@@ -199,10 +206,23 @@ func (h *ArchivoHandler) Serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath := filepath.Join(h.deps.Config.FilesDir(), filename)
+	dir := h.deps.Config.PrivateFilesDir()
+	other := h.deps.Config.PublicFilesDir()
+	if archivo.Visibilidad == domain.VisibilidadPublico {
+		dir, other = other, dir
+	}
+	// Defensa: si una transición falló y el archivo quedó en la otra carpeta,
+	// moverlo a la que corresponde.
+	if _, err := os.Stat(filepath.Join(other, filename)); err == nil {
+		_ = h.deps.Storage.MoveFileIfMissing(other, dir, filename)
+	}
+	filePath := filepath.Join(dir, filename)
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		http.NotFound(w, r)
-		return
+		filePath = filepath.Join(other, filename)
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			http.NotFound(w, r)
+			return
+		}
 	}
 	if archivo.Tipo != "" {
 		w.Header().Set("Content-Type", archivo.Tipo)
@@ -252,7 +272,24 @@ func (h *ArchivoHandler) UpdateVisibilidad(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	oldPublic := archivo.Visibilidad == domain.VisibilidadPublico
+	newPublic := body.Visibilidad == domain.VisibilidadPublico
+	src := h.deps.Config.PrivateFilesDir()
+	dst := h.deps.Config.PublicFilesDir()
+	if oldPublic {
+		src, dst = h.deps.Config.PublicFilesDir(), h.deps.Config.PrivateFilesDir()
+	}
+	if oldPublic != newPublic {
+		if err := h.deps.Storage.MoveFile(src, dst, archivo.FileName); err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "error al mover archivo")
+			return
+		}
+	}
+
 	if err := h.deps.ArchivoStore.UpdateVisibilidad(id, body.Visibilidad); err != nil {
+		if oldPublic != newPublic {
+			_ = h.deps.Storage.MoveFile(dst, src, archivo.FileName)
+		}
 		writeJSONError(w, http.StatusInternalServerError, "error al actualizar visibilidad")
 		return
 	}
@@ -290,10 +327,8 @@ func (h *ArchivoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath := filepath.Join(h.deps.Config.FilesDir(), archivo.FileName)
-	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
-		slog.Warn("no se pudo eliminar archivo del disco", "file", archivo.FileName, "error", err)
-	}
+	h.deps.Storage.RemoveIn(h.deps.Config.PublicFilesDir(), archivo.FileName)
+	h.deps.Storage.RemoveIn(h.deps.Config.PrivateFilesDir(), archivo.FileName)
 
 	slog.Info("archivo eliminado", "id", id, "file", archivo.FileName)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "archivo deleted"})

@@ -83,9 +83,11 @@ type ProductoStore interface {
 
 type ImagenStore interface {
 	Add(tipo string, entidadID int64, fileName string) (domain.Imagen, error)
+	ListAll() []domain.Imagen
 	ListByEntidad(tipo string, entidadID int64) []domain.Imagen
 	Reorder(tipo string, entidadID int64, ids []int64) error
 	FindByID(id int64) (*domain.Imagen, error)
+	FindByFileName(fileName string) (*domain.Imagen, error)
 	Delete(id int64) error
 	DeleteByEntidad(tipo string, entidadID int64) []string
 }

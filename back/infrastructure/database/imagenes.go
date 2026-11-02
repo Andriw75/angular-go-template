@@ -43,6 +43,24 @@ func (s *ImagenStore) Add(tipo string, entidadID int64, fileName string) (domain
 	return img, nil
 }
 
+func (s *ImagenStore) ListAll() []domain.Imagen {
+	rows, err := s.db.QueryContext(context.Background(), `SELECT `+imagenColumns+` FROM imagenes ORDER BY id`)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var out []domain.Imagen
+	for rows.Next() {
+		img, err := scanImagen(rows)
+		if err != nil {
+			return out
+		}
+		out = append(out, *img)
+	}
+	return out
+}
+
 func (s *ImagenStore) ListByEntidad(tipo string, entidadID int64) []domain.Imagen {
 	q := s.db.rebind(`SELECT ` + imagenColumns + ` FROM imagenes
 		WHERE tipo = ? AND entidad_id = ? ORDER BY orden, id`)
@@ -96,6 +114,11 @@ func (s *ImagenStore) Reorder(tipo string, entidadID int64, ids []int64) error {
 func (s *ImagenStore) FindByID(id int64) (*domain.Imagen, error) {
 	q := s.db.rebind(`SELECT ` + imagenColumns + ` FROM imagenes WHERE id = ?`)
 	return scanImagen(s.db.QueryRowContext(context.Background(), q, id))
+}
+
+func (s *ImagenStore) FindByFileName(fileName string) (*domain.Imagen, error) {
+	q := s.db.rebind(`SELECT ` + imagenColumns + ` FROM imagenes WHERE file_name = ?`)
+	return scanImagen(s.db.QueryRowContext(context.Background(), q, fileName))
 }
 
 func (s *ImagenStore) Delete(id int64) error {
