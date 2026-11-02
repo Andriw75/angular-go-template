@@ -22,12 +22,13 @@ Según el modo en que estés corriendo, usa una u otra configuración:
 ```ts
 export const environment = {
   API_URL: 'http://localhost:8080', // Go API directa (CORS → localhost:4200)
-  MEDIA_URL: 'http://localhost:5000/template/public', // nginx sirve las imágenes
+  MEDIA_URL: 'http://localhost:5000/template/public', // estáticos públicos
 };
 ```
 
-> La API se consume directo en `localhost:8080` (sin pasar por nginx). Las imágenes
-> sí las sirve nginx porque el backend escribe en `PUBLIC_DIR`.
+> La API se consume directo en `localhost:8080` (sin pasar por nginx). Lo
+> público (archivos `publico` e imágenes de entidades activas) lo sirve nginx
+> desde `PUBLIC_DIR/public`; lo restringido lo sirve la API.
 
 ### Producción / Deploy (IP absoluta del servidor)
 
@@ -75,11 +76,20 @@ DB_SSLMODE=disable
 > Al arrancar, el backend crea las tablas si no existen y siembra los permisos
 > base y el usuario `admin` / `REDACTED_DEFAULT_ADMIN_PASSWORD`. No hay modo mock.
 >
-> `PUBLIC_DIR` llega **hasta `template`**; el código agrega `/public` (y dentro
-> `/imagenes`) de forma fija, dejando espacio a futuros `private`, `user`, etc.
-> El servidor crea `public/imagenes` automáticamente si no existe. Los archivos
-> privados viven fuera de la carpeta pública, en `..\archivos`, y los sirve Go
-> según su visibilidad (`publico`, `autenticado`, `propietario`).
+> `PUBLIC_DIR` llega **hasta `template`**. Lo público vive en
+> `PUBLIC_DIR/public` y lo sirve nginx:
+>
+> - Imágenes de entidades activas → `public/imagenes`.
+> - Archivos `publico` → `public/archivos`.
+>
+> Lo restringido vive en `PUBLIC_DIR/archivos`, que nginx bloquea, y lo sirve
+> Go:
+>
+> - Imágenes de entidades inactivas → `archivos/imagenes`.
+> - Archivos `autenticado`/`propietario` → `archivos`.
+>
+> El servidor crea todas las carpetas automáticamente y mueve los archivos al
+> cambiar la visibilidad o el estado de la entidad.
 
 Ejecutar:
 
@@ -126,7 +136,8 @@ nginx -s reload
 | --------------------------- | ------------------------------------------ |
 | `/template/`                | Frontend (`html/template`)                 |
 | `/template/public/`         | Estáticos (`html/template/public/`)        |
-| `/template/public/imagenes/`| Imágenes de categorías y productos         |
+| `/template/public/imagenes/`| Imágenes públicas (entidades activas)      |
+| `/template/public/archivos/`| Archivos públicos (`visibilidad=publico`)  |
 | `/template/api/`            | Proxy → `127.0.0.1:8080` (Go API)          |
 
 > `proxy_pass http://127.0.0.1:8080/;` (con `/` final) hace que
@@ -137,7 +148,10 @@ nginx -s reload
 
 ## Flujo resumido
 
-| Modo    | API_URL                     | MEDIA_URL                              | Imágenes escritas en            |
-| ------- | --------------------------- | -------------------------------------- | ------------------------------- |
-| Dev     | `http://localhost:8080`     | `http://localhost:5000/template/public`| `PUBLIC_DIR\public\imagenes`    |
-| Deploy  | `http://IP:5000/template/api` | `http://IP:5000/template/public`      | `PUBLIC_DIR\public\imagenes`    |
+| Modo    | API_URL                     | MEDIA_URL                              | Imágenes activas / públicas          | Imágenes restringidas              |
+| ------- | --------------------------- | -------------------------------------- | ------------------------------------ | ---------------------------------- |
+| Dev     | `http://localhost:8080`     | `http://localhost:5000/template/public`| `PUBLIC_DIR\public\imagenes`         | `PUBLIC_DIR\archivos\imagenes`     |
+| Deploy  | `http://IP:5000/template/api` | `http://IP:5000/template/public`      | `PUBLIC_DIR\public\imagenes`         | `PUBLIC_DIR\archivos\imagenes`     |
+
+> Archivos: los `publico` van a `PUBLIC_DIR\public\archivos` (nginx); los
+> `autenticado`/`propietario` a `PUBLIC_DIR\archivos` (API).
