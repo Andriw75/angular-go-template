@@ -57,6 +57,14 @@ El usuario se crea con `must_change_password=1`; al iniciar sesión se le exige
 cambiar la contraseña antes de acceder al resto de la API. Si
 `BOOTSTRAP_ADMIN_PASSWORD` está vacío, no se crea ningún admin.
 
+Para una base que ya tiene un admin creado con el seed anterior, rota su
+contraseña sin necesitar la vieja:
+
+```bash
+cd back
+NEW_PASSWORD='...' go run ./cmd/set_password -user USUARIO_ADMIN
+```
+
 ---
 
 ## 4. Contraseñas
