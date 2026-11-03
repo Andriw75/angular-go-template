@@ -3,12 +3,15 @@ import { CanActivateFn, Router } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
-export const authGuard: CanActivateFn = () => {
+export const authGuard: CanActivateFn = (_route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
+  // state.url es la URL destino; router.url todavía apunta a la anterior
+  // durante la evaluación del guard.
+  const target = state.url.split('?')[0];
   const forceChangeIfNeeded = (mustChange: boolean): boolean => {
-    if (mustChange && router.url !== '/change-password') {
+    if (mustChange && target !== '/change-password') {
       router.navigate(['/change-password']);
       return false;
     }
