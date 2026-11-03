@@ -73,6 +73,7 @@ resume y enlaza. No numerar archivos; el orden se controla con esta tabla.
 | Tienda (categorías/productos) | Documentado | [docs/flujos/tienda.md](docs/flujos/tienda.md)                           |
 | Ventas y reportes             | Documentado | [docs/flujos/reportes.md](docs/flujos/reportes.md)                       |
 | Instalaciones / mapas         | Documentado | [docs/flujos/instalaciones-mapas.md](docs/flujos/instalaciones-mapas.md) |
+| Laboratorio de consultas      | Documentado | [docs/flujos/laboratorio.md](docs/flujos/laboratorio.md)                 |
 
 ## Diagramas de flujo
 

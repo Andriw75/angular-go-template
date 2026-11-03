@@ -1,6 +1,8 @@
 package store
 
 import (
+	"context"
+	"errors"
 	"time"
 
 	"back/domain"
@@ -8,6 +10,67 @@ import (
 	"back/domain/outputs"
 	"back/infrastructure/auth"
 )
+
+// Errores del laboratorio de consultas largas.
+var (
+	ErrSlowQueryNotFound    = errors.New("consulta no encontrada")
+	ErrSlowQueryUnsupported = errors.New("el laboratorio solo esta disponible en postgres")
+	ErrSlowQueryLimit       = errors.New("limite de consultas concurrentes alcanzado")
+	ErrSlowQueryInvalid     = errors.New("parametros de consulta invalidos")
+)
+
+type SlowQueryModo string
+
+const (
+	SlowQuerySleep SlowQueryModo = "sleep"
+	SlowQueryCPU   SlowQueryModo = "cpu"
+)
+
+type SlowQueryEstado string
+
+const (
+	SlowQueryEjecutando SlowQueryEstado = "ejecutando"
+	SlowQueryCancelando SlowQueryEstado = "cancelando"
+	SlowQueryCancelada  SlowQueryEstado = "cancelada"
+	SlowQueryCompletada SlowQueryEstado = "completada"
+	SlowQueryError      SlowQueryEstado = "error"
+)
+
+type SlowQueryInput struct {
+	Modo     SlowQueryModo
+	Segundos int
+	Filas    int64
+}
+
+type SlowQueryInfo struct {
+	ID               string          `json:"id"`
+	OwnerID          int64           `json:"owner_id"`
+	Modo             SlowQueryModo   `json:"modo"`
+	PID              int             `json:"pid"`
+	Estado           SlowQueryEstado `json:"estado"`
+	Segundos         int             `json:"segundos"`
+	FilasSolicitadas int64           `json:"filas_solicitadas"`
+	FilasProcesadas  int64           `json:"filas_procesadas"`
+	IniciadoEn       time.Time       `json:"iniciado_en"`
+	FinalizadoEn     *time.Time      `json:"finalizado_en,omitempty"`
+	Error            string          `json:"error,omitempty"`
+}
+
+// SlowQueryNotifier recibe los cambios de estado de las tareas del laboratorio
+// para publicarlos por SSE.
+type SlowQueryNotifier interface {
+	Notify(event string, info SlowQueryInfo)
+}
+
+// SlowQueryStore ejecuta consultas largas acotadas y permite cancelarlas
+// terminando realmente la consulta en PostgreSQL.
+type SlowQueryStore interface {
+	Start(ctx context.Context, ownerID int64, input SlowQueryInput) (SlowQueryInfo, error)
+	RunSync(ctx context.Context, ownerID int64, input SlowQueryInput) (SlowQueryInfo, error)
+	List() []SlowQueryInfo
+	Cancel(ctx context.Context, id string) (SlowQueryInfo, error)
+	CancelAll(ctx context.Context)
+}
 
 type BusFilters struct {
 	Q      string

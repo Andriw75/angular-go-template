@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, Subject } from 'rxjs';
+import { Subject, type Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface SSEEvent<T = any> {
@@ -11,36 +11,79 @@ export interface SSEEvent<T = any> {
 
 @Injectable({ providedIn: 'root' })
 export class SSEService {
-  private eventSource: EventSource | null = null;
+  private source: EventSource | null = null;
+  private subject = new Subject<SSEEvent>();
+  private enabled = false;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
+  private retryDelay = 3000;
 
-  connect<T = any>(path: string): Observable<SSEEvent<T>> {
-    const subj = new Subject<SSEEvent<T>>();
+  readonly events$: Observable<SSEEvent> = this.subject.asObservable();
 
-    this.disconnect();
+  // Abre o cierra la conexion global segun los permisos/canales disponibles.
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+    if (enabled) this.open();
+    else this.close();
+  }
 
-    this.eventSource = new EventSource(`${environment.API_URL}${path}`, { withCredentials: true });
+  disconnect(): void {
+    this.enabled = false;
+    this.close();
+  }
 
-    this.eventSource.onmessage = (event) => {
+  private open(): void {
+    if (this.source || !this.enabled) return;
+    this.clearRetry();
+
+    const source = new EventSource(`${environment.API_URL}/sse/events`, { withCredentials: true });
+    this.source = source;
+
+    source.onmessage = (event) => {
       try {
-        const parsed: SSEEvent<T> = JSON.parse(event.data);
-        subj.next(parsed);
+        const parsed: SSEEvent = JSON.parse(event.data);
+        this.retryDelay = 3000;
+        this.subject.next(parsed);
       } catch {
         // ignore parse errors
       }
     };
 
-    this.eventSource.onerror = () => {
-      subj.error(new Error('SSE connection error'));
-      this.disconnect();
+    source.onerror = () => {
+      this.scheduleReconnect();
     };
-
-    return subj.asObservable();
   }
 
-  disconnect(): void {
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = null;
+  private scheduleReconnect(): void {
+    this.closeSource();
+    if (!this.enabled) return;
+
+    this.clearRetry();
+    const delay = this.retryDelay;
+    this.retryDelay = Math.min(this.retryDelay * 2, 30000);
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      this.open();
+    }, delay);
+  }
+
+  private close(): void {
+    this.enabled = false;
+    this.clearRetry();
+    this.closeSource();
+    this.retryDelay = 3000;
+  }
+
+  private closeSource(): void {
+    if (this.source) {
+      this.source.close();
+      this.source = null;
+    }
+  }
+
+  private clearRetry(): void {
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
     }
   }
 }

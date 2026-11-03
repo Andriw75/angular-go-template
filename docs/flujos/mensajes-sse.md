@@ -53,9 +53,15 @@ haciéndose por REST normal: **SSE solo notifica, no reemplaza a la API**.
 - Hay **un solo** `GET /sse/events` para toda la aplicación.
 - Autenticación por cookie HttpOnly: el frontend usa
   `new EventSource(url, { withCredentials: true })`.
-- La ruta vive bajo `AuthMiddleware()` (solo autenticación). El handler decide
-  qué canales puede recibir el usuario según sus permisos; si no tiene ninguno,
-  responde `403`.
+- La ruta vive bajo `AuthMiddleware()` (solo autenticación). El handler calcula
+  los canales permitidos:
+  - Si el canal no tiene permiso (`Permission == ""`), se concede a cualquier
+    usuario autenticado.
+  - Si tiene permiso, se valida contra `claims.Permisos`.
+  - Si no queda ningún canal, responde `403`.
+- Canales actuales:
+  - `mensajes_pendientes/activos` → permiso `mensajes_pendientes`.
+  - `laboratorio/tareas` → solo autenticado (cualquier usuario logueado).
 
 ## Piezas reutilizables vs específicas
 
@@ -176,53 +182,58 @@ data: {"module":"mensajes_pendientes","name":"activos","type":"delete","data":{"
 
 ## Frontend
 
-### `SSE_CHANNELS` y `hasAnySsePermission`
+### `SSE_CHANNELS` y `hasAnySseAccess`
 
 `front/src/app/services/sse-channels.ts`:
 
-- Lista de canales SSE con su `module`, `name` y `permission`.
+- Lista de canales SSE con `module`, `name` y `permission`.
 - Debe coincidir con `sseChannels` del backend.
-- `hasAnySsePermission(user)` devuelve `true` solo si el usuario tiene al menos
-  un permiso de los canales configurados.
+- `permission: null` o vacío significa **solo autenticado**: cualquier usuario
+  con sesión puede recibir ese canal.
+- `hasAnySseAccess(user)` devuelve `true` si hay un canal solo-autenticado o si
+  el usuario tiene el permiso de algún canal.
+- Canales actuales:
+  - `mensajes_pendientes/activos` → permiso `mensajes_pendientes`.
+  - `laboratorio/tareas` → solo autenticado.
 
-### `SSEService`
+### `SSEService` (conexión compartida)
 
 `front/src/app/services/sse.service.ts`:
 
-- Cierra cualquier conexión previa y abre una nueva con
-  `EventSource(API_URL + '/sse/events', { withCredentials: true })`.
-- `onmessage`: parsea JSON y emite `{ module, name, type, data }`.
-- `onerror`: emite error y cierra la conexión.
-- `disconnect()`: cierra y limpia la referencia.
+- Una sola conexión `EventSource(API_URL + '/sse/events', { withCredentials: true })`
+  para toda la aplicación.
+- `events$`: stream compartido con `{ module, name, type, data }`.
+- `setEnabled(enabled)`: abre o cierra la conexión según `hasAnySseAccess`.
+- `onmessage`: parsea JSON y emite por `events$`.
+- `onerror`: cierra y reintenta con backoff (3 s → 30 s).
+- `disconnect()`: cierre forzado para logout/expiración.
 
-### `MensajesStoreService`
+### Consumidores
 
-`front/src/app/services/mensajes-store.service.ts`:
-
-- `init()`:
-  - Si `hasAnySsePermission(auth.user())` es `false`, llama a `disconnect()` y
-    **no abre ninguna conexión**.
-  - Evita conexiones duplicadas (`if (this.sseSub) return`).
-  - Conecta al único `/sse/events`.
-- Filtra por `module === 'mensajes_pendientes' && name === 'activos'` y aplica:
-  - `current`: reemplaza la lista completa.
-  - `create`: inserta al inicio (deduplicando por `id`).
-  - `update`: reemplaza el mensaje por `id`; si no existe, lo agrega.
-  - `delete`: lo quita por `id`.
-- `onerror`: limpia la suscripción y reintenta en 3 s **solo si sigue teniendo
-  permiso**.
-- `disconnect()`: cancela el timer de reintento, cierra la suscripción y el
-  `EventSource`, y vacía la lista.
+- `MensajesStoreService`:
+  - `init()` solo si el usuario tiene el permiso `mensajes_pendientes`.
+  - Se suscribe a `sse.events$` y filtra `mensajes_pendientes/activos`.
+  - Aplica `current/create/update/delete` (con deduplicación por `id`).
+  - No abre ni cierra la conexión global; solo su propia suscripción.
+- `LaboratorioComponent`:
+  - Se suscribe a `sse.events$` y filtra `laboratorio/tareas`.
+  - Hidrata la grilla con `GET /lab/slow-queries` y aplica
+    `current/create/update`.
+  - Se desuscribe al destruir el componente; las tareas en segundo plano siguen
+    vivas y se recuperan al volver a entrar.
 
 ### Ciclo de vida
 
 `DashboardLayoutComponent` usa un `effect` sobre `auth.user()`
 (`front/src/app/components/dashboard/layout/layout.ts`):
 
-- Si el usuario tiene algún permiso SSE → `mensajes.init()`.
-- Si no tiene ninguno → `mensajes.disconnect()` y no se hace ninguna petición.
-- La conexión se mantiene mientras el usuario navega por el dashboard y se
-  cierra en `SidebarComponent.logout()` (ver [logout.md](./logout.md)).
+- `sse.setEnabled(hasAnySseAccess(user))`.
+- Si el usuario tiene `mensajes_pendientes` → `mensajes.init()`; si no,
+  `mensajes.disconnect()`.
+- En expiración/logout: `mensajes.disconnect()` y `sse.disconnect()`.
+- Como el canal `laboratorio/tareas` es solo-autenticado, cualquier usuario
+  logueado abre la conexión global y recibe los eventos de laboratorio. Los
+  mensajes siguen filtrados por su permiso.
 
 ### Pantalla de mensajes
 
@@ -322,10 +333,11 @@ resultado de su propia consulta hasta que vuelva a buscar o refrescar.
    el store reintenta cada 3 s **solo si el usuario sigue teniendo algún permiso
    SSE**. La redirección a login la provoca el interceptor de las peticiones HTTP
    normales, no el SSE. Al hacer logout se llama a `disconnect()`.
-7. **Filtrado por permisos, no por usuario**: el hub conoce los canales
+7. **Filtrado por permisos/canal, no por usuario**: el hub conoce los canales
    `(module, name)` permitidos de cada cliente, calculados desde el JWT al
-   conectar. Todos los usuarios con el mismo permiso de canal reciben los mismos
-   eventos; no hay filtrado por propietario ni por sala. Si el contenido es
+   conectar. Los canales con permiso llegan solo a quienes lo tienen; los
+   canales solo-autenticados (`laboratorio/tareas`) llegan a cualquier usuario
+   logueado. No hay filtrado por propietario ni por sala. Si el contenido es
    sensible, habría que añadir canales o filtros por usuario.
 8. **nginx**: requiere `proxy_buffering off` (ya está en `deploy/nginx.conf`) y un
    `proxy_read_timeout` amplio para que el stream no se corte.
@@ -339,19 +351,22 @@ No se crea otra ruta: todo viaja por el único `GET /sse/events`.
 1. **Backend**
    - Añadir el canal a `sseChannels` en `back/api/handlers/sse_handler.go`:
      `{Module: "<modulo>", Name: "<recurso>", Permission: "<permiso>"}`.
+     Usa `Permission: ""` si el canal es solo para usuarios autenticados.
    - En `writeCurrent`, enviar el snapshot inicial con
      `type: "current"` para ese `(module, name)`.
    - Tras cada mutación: actualizar BD y llamar
      `SSEHub.Broadcast("<modulo>", "<recurso>", SSEEvent{...})`.
 2. **Frontend**
    - Añadir el canal a `SSE_CHANNELS` en
-     `front/src/app/services/sse-channels.ts` con su permiso.
-   - Crear un store/servicio que use `SSEService.connect('/sse/events')` y
-     filtre por `module` y `name`.
+     `front/src/app/services/sse-channels.ts` con su permiso o `permission: null`
+     si es solo-autenticado.
+   - Crear un store/servicio que se suscriba a `SSEService.events$` y filtre por
+     `module` y `name`.
    - Manejar `current`, `create`, `update`, `delete`.
    - Inicializar en el layout del dashboard si debe vivir en toda la sesión, o en
      el componente si es efímero.
-   - Desconectar en logout.
+   - No cerrar la conexión global desde el store; solo desuscribirse.
+   - El `DashboardLayoutComponent` decide `sse.setEnabled(hasAnySseAccess(user))`.
 3. **Documentación**
    - Añadir el flujo a `AGENTS.md` y su archivo en `docs/flujos/`.
 

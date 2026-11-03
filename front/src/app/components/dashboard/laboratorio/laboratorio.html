@@ -1,0 +1,214 @@
+<div class="page-header">
+  <div class="title">
+    <span class="title-icon"><icon-database size="22" /></span>
+    <div>
+      <h1>Laboratorio</h1>
+      <p class="hint">
+        Simula consultas largas en PostgreSQL de dos formas: una petición directa cancelable
+        desde Angular y tareas en segundo plano actualizadas por SSE.
+      </p>
+    </div>
+  </div>
+  <span class="badge">SOLO DESARROLLO</span>
+</div>
+
+<div class="chips mode-tabs" role="tablist" aria-label="Modo de ejecución">
+  <button
+    type="button"
+    class="chip"
+    [class.chip--active]="executionMode() === 'sync'"
+    [disabled]="syncRunning()"
+    (click)="setExecutionMode('sync')"
+  >
+    Petición directa
+  </button>
+  <button
+    type="button"
+    class="chip"
+    [class.chip--active]="executionMode() === 'async'"
+    [disabled]="syncRunning()"
+    (click)="setExecutionMode('async')"
+  >
+    Tareas en segundo plano
+  </button>
+</div>
+
+<div class="layout" [class.layout--single]="executionMode() === 'async'">
+  <section class="card">
+    <h2>Nueva consulta</h2>
+
+    <div class="field">
+      <span class="label">Tipo de carga</span>
+      <div class="chips" role="tablist" aria-label="Tipo de consulta">
+        <button
+          type="button"
+          class="chip"
+          [class.chip--active]="modo() === 'sleep'"
+          [disabled]="syncRunning()"
+          (click)="setModo('sleep')"
+        >
+          Sleep
+        </button>
+        <button
+          type="button"
+          class="chip"
+          [class.chip--active]="modo() === 'cpu'"
+          [disabled]="syncRunning()"
+          (click)="setModo('cpu')"
+        >
+          CPU
+        </button>
+      </div>
+    </div>
+
+    @if (modo() === 'sleep') {
+      <label class="field">
+        <span class="label">Duración (segundos)</span>
+        <input
+          type="number"
+          min="1"
+          max="600"
+          [value]="segundos()"
+          [disabled]="syncRunning()"
+          (input)="setSegundos($any($event.target).value)"
+        />
+      </label>
+      <p class="hint small">
+        Ejecuta <code>pg_sleep</code> y luego procesa un bloque acotado de filas.
+      </p>
+    } @else {
+      <label class="field">
+        <span class="label">Filas a procesar (máx. 2,000,000)</span>
+        <input
+          type="number"
+          min="1"
+          max="2000000"
+          [value]="filas()"
+          [disabled]="syncRunning()"
+          (input)="setFilas($any($event.target).value)"
+        />
+      </label>
+      <p class="hint small">
+        Consulta con trabajo real de CPU sobre <code>generate_series</code>, acotada por filas.
+      </p>
+    }
+
+    <div class="actions">
+      <button
+        class="btn btn--primary"
+        type="button"
+        [disabled]="executionMode() === 'sync' ? syncRunning() || syncLoading() : asyncLoading()"
+        (click)="start()"
+      >
+        {{ executionMode() === 'sync' ? 'Ejecutar' : 'Iniciar tarea' }}
+      </button>
+      @if (executionMode() === 'sync') {
+        <button class="btn btn--danger" type="button" [disabled]="!syncRunning()" (click)="cancelSync()">
+          Cancelar
+        </button>
+      }
+    </div>
+
+    @if (executionMode() === 'sync') {
+      <p class="hint small">
+        Si recargas o cierras la pestaña, la petición se aborta y la consulta se cancela en
+        PostgreSQL. No queda ningún proceso huérfano.
+      </p>
+    } @else {
+      <p class="hint small">
+        Puedes iniciar varias tareas. Se actualizan por SSE y siguen visibles al refrescar.
+        Todos los usuarios autenticados ven la misma grilla.
+      </p>
+    }
+  </section>
+
+  @if (executionMode() === 'sync') {
+    <section class="card">
+      <h2>Petición directa</h2>
+      @if (syncState(); as state) {
+        <dl class="details">
+          <div>
+            <dt>Estado</dt>
+            <dd><span class="status" [attr.data-estado]="state.estado">{{ estadoLabel(state.estado) }}</span></dd>
+          </div>
+          <div>
+            <dt>Modo</dt>
+            <dd>{{ modoLabel(state.modo) }}</dd>
+          </div>
+          <div>
+            <dt>Tiempo</dt>
+            <dd>{{ syncElapsed() }} s</dd>
+          </div>
+          <div>
+            <dt>Solicitado</dt>
+            <dd>{{ state.modo === 'sleep' ? state.segundos + ' s' : state.filas + ' filas' }}</dd>
+          </div>
+          @if (state.resultado; as result) {
+            <div>
+              <dt>PID PostgreSQL</dt>
+              <dd>{{ result.pid || '—' }}</dd>
+            </div>
+            <div>
+              <dt>Filas procesadas</dt>
+              <dd>{{ result.filas_procesadas }}</dd>
+            </div>
+          }
+        </dl>
+        @if (state.error) {
+          <p class="error">{{ state.error }}</p>
+        }
+      } @else {
+        <p class="empty">Sin peticiones en curso.</p>
+      }
+    </section>
+  }
+</div>
+
+@if (executionMode() === 'async') {
+  <section class="card tasks">
+    <h2>Tareas en segundo plano</h2>
+    @if (tasks().length) {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Inicio</th>
+              <th>Modo</th>
+              <th>Solicitado</th>
+              <th>Procesado</th>
+              <th>Duración</th>
+              <th>Estado</th>
+              <th>PID</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of tasks(); track item.id) {
+              <tr>
+                <td>{{ shortTime(item.iniciado_en) }}</td>
+                <td>{{ modoLabel(item.modo) }}</td>
+                <td>{{ item.modo === 'sleep' ? item.segundos + ' s' : item.filas_solicitadas + ' filas' }}</td>
+                <td>{{ item.filas_procesadas }}</td>
+                <td>{{ segundosTranscurridos(item) }} s</td>
+                <td><span class="status" [attr.data-estado]="item.estado">{{ estadoLabel(item.estado) }}</span></td>
+                <td class="mono">{{ item.pid || '—' }}</td>
+                <td class="actions-cell">
+                  <button
+                    class="btn btn--danger btn--sm"
+                    type="button"
+                    [disabled]="item.estado !== 'ejecutando' || isCancelling(item.id)"
+                    (click)="cancelTask(item)"
+                  >
+                    {{ isCancelling(item.id) ? 'Deteniendo…' : 'Detener' }}
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="empty">Todavía no hay tareas.</p>
+    }
+  </section>
+}

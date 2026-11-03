@@ -79,6 +79,11 @@ export const routes: Routes = [
           import('./components/dashboard/reportes/reportes').then((m) => m.ReportesComponent),
       },
       {
+        path: 'laboratorio',
+        loadComponent: () =>
+          import('./components/dashboard/laboratorio/laboratorio').then((m) => m.LaboratorioComponent),
+      },
+      {
         path: '**',
         loadComponent: () =>
           import('./components/dashboard/home/home').then((m) => m.HomeComponent),

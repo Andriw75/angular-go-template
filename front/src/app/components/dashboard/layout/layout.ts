@@ -7,7 +7,8 @@ import { ToastComponent } from '../../../common/toast/toast';
 import { AuthService } from '../../../services/auth.service';
 import { MensajesStoreService } from '../../../services/mensajes-store.service';
 import { SessionService } from '../../../services/session.service';
-import { hasAnySsePermission } from '../../../services/sse-channels';
+import { SSEService } from '../../../services/sse.service';
+import { hasAnySseAccess } from '../../../services/sse-channels';
 
 @Component({
   selector: 'app-dashboard-layout',
@@ -19,11 +20,14 @@ export class DashboardLayoutComponent {
   constructor() {
     const mensajes = inject(MensajesStoreService);
     const session = inject(SessionService);
+    const sse = inject(SSEService);
     const auth = inject(AuthService);
     const router = inject(Router);
 
     effect(() => {
-      if (hasAnySsePermission(auth.user())) {
+      const user = auth.user();
+      sse.setEnabled(hasAnySseAccess(user));
+      if (user?.permisos?.includes('mensajes_pendientes')) {
         mensajes.init();
       } else {
         mensajes.disconnect();
@@ -34,6 +38,7 @@ export class DashboardLayoutComponent {
       .pipe(takeUntilDestroyed())
       .subscribe(() => {
         mensajes.disconnect();
+        sse.disconnect();
         auth.user.set(null);
         session.clear();
         router.navigate(['/login'], { queryParams: { expired: '1' } });

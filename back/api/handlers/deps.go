@@ -28,4 +28,5 @@ type Dependencies struct {
 	Storage          *storage.Storage
 	SSEHub           *SSEHub
 	InstalacionStore store.InstalacionStore
+	SlowQueryStore   store.SlowQueryStore
 }

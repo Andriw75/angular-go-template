@@ -11,6 +11,7 @@ import { CategoriesIcon } from '../../../common/icons/categories.icon';
 import { ProductsIcon } from '../../../common/icons/products.icon';
 import { ReportIcon } from '../../../common/icons/report.icon';
 import { ReceiptIcon } from '../../../common/icons/receipt.icon';
+import { DatabaseIcon } from '../../../common/icons/database.icon';
 
 export interface IconConfig {
   component: Type<any>;
@@ -123,5 +124,11 @@ export const MENU: MenuItem[] = [
     path: '/dashboard/reportes',
     requiredPermission: 'reportes',
     icon: { component: ReportIcon, inputs: { size: '20' } },
+  },
+  {
+    label: 'Laboratorio',
+    key: 'laboratorio',
+    path: '/dashboard/laboratorio',
+    icon: { component: DatabaseIcon, inputs: { size: '20' } },
   },
 ];

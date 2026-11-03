@@ -16,6 +16,8 @@ var sseChannels = []struct {
 	Permission string
 }{
 	{Module: "mensajes_pendientes", Name: "activos", Permission: "mensajes_pendientes"},
+	// Canal solo-autenticado: cualquier usuario con sesion puede verlo.
+	{Module: "laboratorio", Name: "tareas", Permission: ""},
 }
 
 type SSEHandler struct {
@@ -77,7 +79,7 @@ func allowedSSEChannels(permisos []string) []sseChannel {
 	seen := make(map[sseChannel]struct{}, len(sseChannels))
 
 	for _, ch := range sseChannels {
-		if !tienePermiso(permisos, ch.Permission) {
+		if ch.Permission != "" && !tienePermiso(permisos, ch.Permission) {
 			continue
 		}
 		key := sseChannel{Module: ch.Module, Name: ch.Name}
@@ -110,6 +112,13 @@ func (h *SSEHandler) writeCurrent(w http.ResponseWriter, flusher http.Flusher, c
 			Name:   ch.Name,
 			Type:   "current",
 			Data:   resp,
+		})
+	case "laboratorio":
+		sseWriteEvent(w, flusher, SSEEvent{
+			Module: ch.Module,
+			Name:   ch.Name,
+			Type:   "current",
+			Data:   h.deps.SlowQueryStore.List(),
 		})
 	}
 }

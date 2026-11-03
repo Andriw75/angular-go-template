@@ -31,6 +31,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	ventaHandler := handlers.NewVentaHandler(deps)
 	reporteHandler := handlers.NewReporteHandler(deps)
 	documentoHandler := handlers.NewDocumentoHandler(deps)
+	labHandler := handlers.NewLabHandler(deps)
 	sseHandler := handlers.NewSSEHandler(deps)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -168,6 +169,14 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 		r.Post("/", instalacionHandler.Create)
 		r.Put("/{id}", instalacionHandler.Update)
 		r.Delete("/{id}", instalacionHandler.Delete)
+	})
+
+	r.Route("/lab", func(r chi.Router) {
+		r.Use(authHandler.AuthMiddleware())
+		r.Post("/run", labHandler.Run)
+		r.Get("/slow-queries", labHandler.List)
+		r.Post("/slow-queries", labHandler.Start)
+		r.Post("/slow-queries/{id}/cancel", labHandler.Cancel)
 	})
 
 	return r

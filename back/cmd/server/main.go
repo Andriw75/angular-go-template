@@ -61,6 +61,7 @@ func main() {
 	slog.Info("database ready", "type", db.Type())
 
 	activos := cache.NewActivosStore()
+	sseHub := handlers.NewSSEHub()
 
 	deps := &handlers.Dependencies{
 		Config:           cfg,
@@ -80,8 +81,9 @@ func main() {
 		VentaStore:       database.NewVentaStore(db),
 		DocumentoStore:   database.NewDocumentoStore(db),
 		InstalacionStore: database.NewInstalacionStore(db),
-		SSEHub:           handlers.NewSSEHub(),
+		SSEHub:           sseHub,
 		Storage:          storage.NewStorage(cfg.PrivateImagesDir()),
+		SlowQueryStore:   database.NewLabStore(db, handlers.NewLabNotifier(sseHub), 10, 5, 600, 2_000_000),
 	}
 	seedActivos(deps.MensajeStore, activos)
 
@@ -128,6 +130,8 @@ func main() {
 	slog.Info("shutting down server...")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	deps.SlowQueryStore.CancelAll(shutdownCtx)
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("server forced to shutdown", "error", err)
