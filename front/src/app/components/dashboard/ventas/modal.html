@@ -1,0 +1,72 @@
+<div class="modal" (click)="cancel()">
+  <div class="modal-body" (click)="$event.stopPropagation()">
+    <h3>{{ venta() ? 'Editar Venta' : 'Nueva Venta' }}</h3>
+
+    <div class="form-grid">
+      <label>Serie
+        <select [(ngModel)]="serie">
+          <option value="FAC">FAC</option>
+          <option value="TKT">TKT</option>
+          <option value="NOT">NOT</option>
+        </select>
+      </label>
+      <label>Fecha <input type="date" [(ngModel)]="fecha" /></label>
+      <label>Moneda <input [(ngModel)]="moneda" /></label>
+      <label>Cliente <input [(ngModel)]="clienteNombre" /></label>
+      <label>Documento <input [(ngModel)]="clienteDocumento" /></label>
+      <label>Dirección <input [(ngModel)]="clienteDireccion" /></label>
+    </div>
+
+    <div class="items-header">
+      <strong>Ítems</strong>
+      <select (change)="addProduct($event)">
+        <option value="">+ Agregar producto</option>
+        @for (p of productos(); track p.id) {
+          <option [value]="p.id">{{ p.nombre }} · {{ p.precio.toFixed(2) }}</option>
+        }
+      </select>
+      <button type="button" class="btn btn--secondary" (click)="addItem()">+ Ítem libre</button>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="table">
+        <thead>
+          <tr><th>Descripción</th><th>Cant.</th><th>P. Unit.</th><th>Dscto.</th><th>Imp. %</th><th>Total</th><th></th></tr>
+        </thead>
+        <tbody>
+          @for (it of items; track $index) {
+            <tr>
+              <td><input [(ngModel)]="it.descripcion" placeholder="Descripción" /></td>
+              <td><input type="number" min="0" [(ngModel)]="it.cantidad" /></td>
+              <td><input type="number" min="0" [(ngModel)]="it.precio_unitario" /></td>
+              <td><input type="number" min="0" [(ngModel)]="it.descuento" /></td>
+              <td><input type="number" min="0" [(ngModel)]="it.impuesto_porcentaje" /></td>
+              <td>{{ lineTotal(it).toFixed(2) }}</td>
+              <td><button type="button" class="btn-icon btn-icon--delete" (click)="removeItem($index)">×</button></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="totals">
+      <div><span>Subtotal</span><strong>{{ subtotal().toFixed(2) }}</strong></div>
+      <div><span>Impuesto</span><strong>{{ impuesto().toFixed(2) }}</strong></div>
+      <div class="total"><span>Total</span><strong>{{ moneda }} {{ total().toFixed(2) }}</strong></div>
+    </div>
+
+    <div class="form-group">
+      <label>Observaciones</label>
+      <textarea [(ngModel)]="observaciones" rows="2"></textarea>
+    </div>
+
+    @if (error()) { <div class="form-error">{{ error() }}</div> }
+
+    <div class="modal-actions">
+      <button type="button" class="btn btn--secondary" (click)="cancel()">Cancelar</button>
+      <button type="button" class="btn btn--primary" (click)="save()" [disabled]="saving()">
+        {{ saving() ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </div>
+  </div>
+</div>

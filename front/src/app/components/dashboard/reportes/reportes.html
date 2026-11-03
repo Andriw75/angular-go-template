@@ -1,0 +1,188 @@
+<div class="page-header">
+  <h1>Reportes</h1>
+  <span class="hint">Genera reportes en el navegador o documentos con correlativo en el servidor.</span>
+</div>
+
+<div class="tabs">
+  <button class="tab" [class.tab--active]="source() === 'buses'" (click)="setSource('buses')">Buses</button>
+  <button class="tab" [class.tab--active]="source() === 'ventas'" (click)="setSource('ventas')">Ventas</button>
+</div>
+
+<div class="filters">
+  <input class="filter-input" placeholder="Buscar..." [(ngModel)]="q" />
+  @if (source() === 'buses') {
+    <select class="filter-select" [(ngModel)]="tipo">
+      <option value="">Todos los tipos</option>
+      <option value="BUS">BUS</option>
+      <option value="VAN">VAN</option>
+      <option value="MINIBUS">MINIBUS</option>
+      <option value="MICROBUS">MICROBUS</option>
+    </select>
+    <select class="filter-select" [(ngModel)]="activo">
+      <option value="">Todos</option>
+      <option value="true">Activos</option>
+      <option value="false">Inactivos</option>
+    </select>
+  } @else {
+    <select class="filter-select" [(ngModel)]="serie">
+      <option value="">Todas las series</option>
+      <option value="FAC">FAC</option>
+      <option value="TKT">TKT</option>
+      <option value="NOT">NOT</option>
+    </select>
+    <select class="filter-select" [(ngModel)]="estado">
+      <option value="">Todos</option>
+      <option value="borrador">Borrador</option>
+      <option value="emitido">Emitido</option>
+      <option value="anulado">Anulado</option>
+    </select>
+  }
+  <input class="filter-input" type="date" [(ngModel)]="desde" title="Desde" />
+  <input class="filter-input" type="date" [(ngModel)]="hasta" title="Hasta" />
+  <button class="btn btn--secondary" (click)="countNow()" [disabled]="loading()">Contar</button>
+  <span class="count">{{ count() ?? '—' }} registros aprox.</span>
+</div>
+
+<div class="filters data-mode">
+  <label class="data-mode-label">
+    Datos
+    <select [ngModel]="dataMode()" (ngModelChange)="setDataMode($event)" [disabled]="source() === 'ventas'">
+      <option value="actual">Actuales</option>
+      <option value="generado">Autogenerados</option>
+    </select>
+  </label>
+  @if (dataMode() === 'generado' && source() === 'buses') {
+    <label class="data-mode-label">
+      Cantidad
+      <input type="number" min="1" [max]="maxGenerated" [ngModel]="generatedCount()" (ngModelChange)="setGeneratedCount($event)" />
+    </label>
+    <span class="hint">Se generarán {{ generatedCount() }} registros sintéticos (máx. {{ maxGenerated }}).</span>
+  }
+  @if (source() === 'ventas') {
+    <span class="hint">Los datos autogenerados solo aplican a Buses.</span>
+  }
+</div>
+
+@if (source() === 'ventas') {
+  <div class="filters">
+    <select class="filter-select" [ngModel]="ventaId()" (ngModelChange)="ventaId.set($event)">
+      <option [ngValue]="null">Selecciona una venta emitida</option>
+      @for (v of ventas(); track v.id) {
+        <option [ngValue]="v.id">{{ v.codigo }} · {{ v.cliente_nombre }} · {{ v.total.toFixed(2) }}</option>
+      }
+    </select>
+  </div>
+}
+
+<div class="report-card">
+  <div class="report-grid">
+    <label>
+      Plantilla
+      <select [ngModel]="template()" (ngModelChange)="template.set($event)">
+        @for (t of templates(); track t.value) {
+          <option [value]="t.value">{{ t.label }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      Motor
+      <select [ngModel]="engine()" (ngModelChange)="engine.set($event)">
+        <option value="backend">Servidor</option>
+        <option value="frontend">Navegador</option>
+      </select>
+    </label>
+    <label>
+      Formato
+      <select [ngModel]="format()" (ngModelChange)="format.set($event)">
+        <option value="pdf">PDF</option>
+        <option value="xlsx">Excel</option>
+      </select>
+    </label>
+    <label>
+      Modo
+      <select [ngModel]="mode()" (ngModelChange)="setMode($event)">
+        <option value="report">Reporte</option>
+        <option value="document">Documento con correlativo</option>
+      </select>
+    </label>
+    @if (mode() === 'document') {
+      <label>
+        Política
+        <select [ngModel]="politica()" (ngModelChange)="politica.set($event)">
+          <option value="inmutable">Inmutable</option>
+          <option value="actualizable">Actualizable</option>
+        </select>
+      </label>
+    }
+  </div>
+
+  <div class="actions">
+    <button class="btn btn--primary" (click)="generate()" [disabled]="generating()">
+      {{ generating() ? 'Generando...' : 'Generar' }}
+    </button>
+    @if (generating() && progress() > 0) {
+      <div class="progress"><span [style.width.%]="progress()"></span></div>
+    }
+  </div>
+
+  @if (result(); as doc) {
+    <div class="result">
+      <strong>{{ doc.codigo }}</strong>
+      <span class="badge" [class.badge--activo]="doc.estado === 'emitido'" [class.badge--inactivo]="doc.estado === 'anulado'">
+        {{ doc.estado }}
+      </span>
+      <span>{{ doc.plantilla }} · v{{ doc.version }}</span>
+      <button class="btn btn--secondary" (click)="downloadDocument(doc, 'pdf')">PDF</button>
+      <button class="btn btn--secondary" (click)="downloadDocument(doc, 'xlsx')">Excel</button>
+    </div>
+  }
+</div>
+
+<div class="docs-header">
+  <h2>Documentos generados</h2>
+  <button class="btn btn--ghost" (click)="loadDocuments()" [disabled]="docsLoading()">Actualizar</button>
+</div>
+
+@if (docsLoading()) {
+  <div class="loading">Cargando documentos...</div>
+} @else {
+  <div class="table-wrapper">
+    <table class="table docs-table">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Documento</th>
+          <th>Estado</th>
+          <th>Creado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (doc of documents(); track doc.id) {
+          <tr>
+            <td><strong>{{ doc.codigo }}</strong></td>
+            <td>
+              <strong>{{ typeLabel(doc.tipo) }}</strong>
+              <span class="doc-meta">{{ doc.plantilla }} · v{{ doc.version }}</span>
+            </td>
+            <td>
+              <span class="badge" [class.badge--activo]="doc.estado === 'emitido'" [class.badge--inactivo]="doc.estado === 'anulado'">
+                {{ doc.estado }}
+              </span>
+            </td>
+            <td>{{ shortDate(doc.creado_en) }}</td>
+            <td>
+              <button class="btn-icon" title="PDF" (click)="downloadDocument(doc, 'pdf')">PDF</button>
+              <button class="btn-icon" title="Excel" (click)="downloadDocument(doc, 'xlsx')">XLSX</button>
+              @if (doc.estado !== 'anulado') {
+                <button class="btn-icon btn-icon--delete" title="Anular" (click)="annulDocument(doc)">Anular</button>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="5" class="empty">No hay documentos generados</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

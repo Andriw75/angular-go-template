@@ -1,0 +1,75 @@
+<div class="page-header">
+  <h1>Ventas</h1>
+  <button class="btn btn--primary" (click)="openCreate()">+ Nueva Venta</button>
+</div>
+
+<div class="filters">
+  <input class="filter-input" placeholder="Buscar cliente, código..." [(ngModel)]="q" (keydown.enter)="search()" />
+  <select class="filter-select" [(ngModel)]="serie" (change)="search()">
+    <option value="">Todas las series</option>
+    <option value="FAC">FAC</option>
+    <option value="TKT">TKT</option>
+    <option value="NOT">NOT</option>
+  </select>
+  <select class="filter-select" [(ngModel)]="estado" (change)="search()">
+    <option value="">Todos</option>
+    <option value="borrador">Borrador</option>
+    <option value="emitido">Emitido</option>
+    <option value="anulado">Anulado</option>
+  </select>
+  <button class="btn btn--secondary" (click)="search()">Buscar</button>
+  <button class="btn btn--ghost" (click)="resetFilters()">Limpiar</button>
+</div>
+
+@if (loading()) {
+  <div class="loading">Cargando...</div>
+} @else {
+  <div class="table-wrapper">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Cliente</th>
+          <th>Fecha</th>
+          <th>Total</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (v of ventas(); track v.id) {
+          <tr>
+            <td><strong>{{ v.codigo || '(borrador)' }}</strong></td>
+            <td>{{ v.cliente_nombre }}</td>
+            <td>{{ v.fecha }}</td>
+            <td>{{ v.moneda }} {{ v.total.toFixed(2) }}</td>
+            <td>
+              <span class="badge" [class.badge--activo]="v.estado === 'emitido'" [class.badge--inactivo]="v.estado === 'anulado'">
+                {{ v.estado }}
+              </span>
+            </td>
+            <td>
+              @if (v.estado === 'borrador') {
+                <button class="btn-icon" title="Editar" (click)="openEdit(v)">Editar</button>
+                <button class="btn-icon" title="Emitir" (click)="emitir(v)">Emitir</button>
+                <button class="btn-icon btn-icon--delete" title="Eliminar" (click)="eliminar(v)">Eliminar</button>
+              }
+              @if (v.estado === 'emitido') {
+                <button class="btn-icon btn-icon--delete" title="Anular" (click)="anular(v)">Anular</button>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="6" class="empty">No hay ventas registradas</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination-wrapper">
+    <app-pagination [page]="page()" [totalPages]="totalPages" [total]="total()" (pageChange)="onPageChange($event)" />
+  </div>
+}
+
+@if (showModal()) {
+  <app-venta-modal [venta]="selected()" (close)="showModal.set(false)" (saved)="onSaved()" />
+}

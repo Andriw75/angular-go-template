@@ -13,6 +13,8 @@ type BusFilters struct {
 	Q      string
 	Tipo   string
 	Activo *bool
+	Desde  string
+	Hasta  string
 }
 
 type CategoriaFilters struct {
@@ -24,6 +26,14 @@ type ProductoFilters struct {
 	Q           string
 	CategoriaID int64
 	Activo      *bool
+}
+
+type VentaFilters struct {
+	Q      string
+	Serie  string
+	Estado string
+	Desde  string
+	Hasta  string
 }
 
 type UserStore interface {
@@ -107,4 +117,45 @@ type InstalacionStore interface {
 	Create(i domain.Instalacion) (domain.Instalacion, error)
 	Update(id int64, i domain.Instalacion) error
 	Delete(id int64) error
+}
+
+type DocumentoFilters struct {
+	Q      string
+	Tipo   string
+	Serie  string
+	Estado string
+}
+
+type DocumentoCreateInput struct {
+	Anio             int
+	Tipo             string
+	Serie            string
+	Politica         string
+	Estado           string
+	Plantilla        string
+	PlantillaVersion string
+	ParametrosHash   string
+	ParametrosJSON   string
+	SnapshotJSON     string
+	UserID           int64
+}
+
+type DocumentoStore interface {
+	FindByHash(tipo, hash string) (*domain.Documento, error)
+	FindByID(id int64) (*domain.Documento, error)
+	List(offset, limit int, filters DocumentoFilters) ([]domain.Documento, int, error)
+	CreateWithCorrelativo(input DocumentoCreateInput, build func(codigo string) ([]domain.DocumentoArchivo, error)) (domain.Documento, error)
+	AddVersion(id int64, snapshotJSON string, build func(codigo string, version int) ([]domain.DocumentoArchivo, error)) (domain.Documento, error)
+	Annul(id int64, motivo string, userID int64) (domain.Documento, error)
+}
+
+type VentaStore interface {
+	List(offset, limit int, filters VentaFilters) ([]domain.Venta, int, error)
+	Count(filters VentaFilters) int
+	FindByID(id int64) (*domain.Venta, error)
+	Create(input inputs.VentaInput, userID int64) (domain.Venta, error)
+	Update(id int64, input inputs.VentaInput) (domain.Venta, error)
+	Delete(id int64) error
+	Emit(id int64) (domain.Venta, error)
+	Annul(id int64, motivo string, userID int64) (domain.Venta, error)
 }

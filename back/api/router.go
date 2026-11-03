@@ -28,6 +28,9 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	archivoHandler := handlers.NewArchivoHandler(deps)
 	imagenHandler := handlers.NewImagenHandler(deps)
 	instalacionHandler := handlers.NewInstalacionHandler(deps)
+	ventaHandler := handlers.NewVentaHandler(deps)
+	reporteHandler := handlers.NewReporteHandler(deps)
+	documentoHandler := handlers.NewDocumentoHandler(deps)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -117,6 +120,40 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 			r.Put("/{id}/visibilidad", archivoHandler.UpdateVisibilidad)
 			r.Delete("/{id}", archivoHandler.Delete)
 		})
+	})
+
+	r.Route("/documentos", func(r chi.Router) {
+		r.Use(authHandler.AuthMiddleware("documentos"))
+		r.Get("/", documentoHandler.List)
+		r.Post("/buses", documentoHandler.GenerateBuses)
+		r.Post("/ventas/{id}", documentoHandler.GenerateVenta)
+		r.Get("/jobs/{jobID}", documentoHandler.Job)
+		r.Get("/{id}", documentoHandler.Get)
+		r.Get("/{id}/file", documentoHandler.File)
+		r.Post("/{id}/anular", documentoHandler.Annul)
+	})
+
+	r.Route("/reportes", func(r chi.Router) {
+		r.Use(authHandler.AuthMiddleware("reportes"))
+		r.Get("/buses", reporteHandler.Buses)
+		r.Get("/buses/count", reporteHandler.BusesCount)
+		r.Get("/buses/pdf", reporteHandler.BusesPDF)
+		r.Get("/buses/xlsx", reporteHandler.BusesXLSX)
+		r.Get("/ventas", reporteHandler.Ventas)
+		r.Get("/ventas/count", reporteHandler.VentasCount)
+		r.Get("/ventas/{id}/pdf", reporteHandler.VentaPDF)
+		r.Get("/ventas/{id}/xlsx", reporteHandler.VentaXLSX)
+	})
+
+	r.Route("/ventas", func(r chi.Router) {
+		r.Use(authHandler.AuthMiddleware("ventas"))
+		r.Get("/", ventaHandler.List)
+		r.Post("/", ventaHandler.Create)
+		r.Get("/{id}", ventaHandler.GetByID)
+		r.Put("/{id}", ventaHandler.Update)
+		r.Delete("/{id}", ventaHandler.Delete)
+		r.Post("/{id}/emitir", ventaHandler.Emit)
+		r.Post("/{id}/anular", ventaHandler.Annul)
 	})
 
 	r.Route("/instalaciones", func(r chi.Router) {

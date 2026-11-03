@@ -135,5 +135,103 @@ func schema(d Dialect) []string {
 			creado_en TEXT NOT NULL,
 			actualizado_en TEXT NOT NULL
 		)`, pk, flt, flt, flt, flt, flt),
+
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS ventas (
+			id %s,
+			serie TEXT NOT NULL DEFAULT '',
+			correlativo BIGINT NOT NULL DEFAULT 0,
+			codigo TEXT UNIQUE,
+			cliente_nombre TEXT NOT NULL DEFAULT '',
+			cliente_documento TEXT NOT NULL DEFAULT '',
+			cliente_direccion TEXT NOT NULL DEFAULT '',
+			fecha TEXT NOT NULL,
+			moneda TEXT NOT NULL DEFAULT 'PEN',
+			subtotal %s NOT NULL DEFAULT 0,
+			descuento %s NOT NULL DEFAULT 0,
+			impuesto %s NOT NULL DEFAULT 0,
+			total %s NOT NULL DEFAULT 0,
+			estado TEXT NOT NULL DEFAULT 'borrador',
+			observaciones TEXT NOT NULL DEFAULT '',
+			user_id BIGINT NOT NULL DEFAULT 0,
+			creado_en TEXT NOT NULL,
+			actualizado_en TEXT NOT NULL
+		)`, pk, flt, flt, flt, flt),
+
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS venta_items (
+			id %s,
+			venta_id BIGINT NOT NULL REFERENCES ventas(id) ON DELETE CASCADE,
+			producto_id BIGINT,
+			descripcion TEXT NOT NULL DEFAULT '',
+			cantidad %s NOT NULL DEFAULT 0,
+			precio_unitario %s NOT NULL DEFAULT 0,
+			descuento %s NOT NULL DEFAULT 0,
+			impuesto_porcentaje %s NOT NULL DEFAULT 0,
+			subtotal %s NOT NULL DEFAULT 0,
+			impuesto %s NOT NULL DEFAULT 0,
+			total %s NOT NULL DEFAULT 0
+		)`, pk, flt, flt, flt, flt, flt, flt, flt),
+
+		`CREATE INDEX IF NOT EXISTS idx_venta_items_venta ON venta_items (venta_id)`,
+
+		`CREATE TABLE IF NOT EXISTS venta_secuencias (
+			serie TEXT NOT NULL,
+			anio INTEGER NOT NULL,
+			ultimo BIGINT NOT NULL DEFAULT 0,
+			PRIMARY KEY (serie, anio)
+		)`,
+
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS documentos (
+			id %s,
+			tipo TEXT NOT NULL,
+			serie TEXT NOT NULL,
+			anio INTEGER NOT NULL,
+			correlativo BIGINT NOT NULL,
+			codigo TEXT NOT NULL UNIQUE,
+			politica TEXT NOT NULL DEFAULT 'inmutable',
+			estado TEXT NOT NULL DEFAULT 'emitido',
+			plantilla TEXT NOT NULL,
+			plantilla_version TEXT NOT NULL,
+			parametros_hash TEXT NOT NULL,
+			parametros_json TEXT NOT NULL,
+			snapshot_json TEXT NOT NULL DEFAULT '',
+			version INTEGER NOT NULL DEFAULT 1,
+			user_id BIGINT NOT NULL DEFAULT 0,
+			creado_en TEXT NOT NULL,
+			actualizado_en TEXT NOT NULL,
+			emitido_en TEXT NOT NULL,
+			origen_id BIGINT,
+			UNIQUE (tipo, parametros_hash)
+		)`, pk),
+
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS documento_archivos (
+			id %s,
+			documento_id BIGINT NOT NULL REFERENCES documentos(id) ON DELETE CASCADE,
+			formato TEXT NOT NULL,
+			file_name TEXT NOT NULL,
+			mime TEXT NOT NULL,
+			tamano BIGINT NOT NULL DEFAULT 0,
+			version INTEGER NOT NULL DEFAULT 1,
+			creado_en TEXT NOT NULL,
+			UNIQUE (documento_id, formato, version)
+		)`, pk),
+
+		`CREATE INDEX IF NOT EXISTS idx_documento_archivos_doc ON documento_archivos (documento_id)`,
+
+		`CREATE TABLE IF NOT EXISTS documento_secuencias (
+			tipo TEXT NOT NULL,
+			serie TEXT NOT NULL,
+			anio INTEGER NOT NULL,
+			ultimo BIGINT NOT NULL DEFAULT 0,
+			PRIMARY KEY (tipo, serie, anio)
+		)`,
+
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS documento_eventos (
+			id %s,
+			documento_id BIGINT NOT NULL REFERENCES documentos(id) ON DELETE CASCADE,
+			accion TEXT NOT NULL,
+			detalle TEXT NOT NULL DEFAULT '',
+			user_id BIGINT NOT NULL DEFAULT 0,
+			creado_en TEXT NOT NULL
+		)`, pk),
 	}
 }

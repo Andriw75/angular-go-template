@@ -57,6 +57,7 @@ resume y enlaza. No numerar archivos; el orden se controla con esta tabla.
 | Archivos e imágenes           | Documentado | [docs/flujos/archivos.md](docs/flujos/archivos.md)                       |
 | Buses                         | Documentado | [docs/flujos/buses.md](docs/flujos/buses.md)                             |
 | Tienda (categorías/productos) | Documentado | [docs/flujos/tienda.md](docs/flujos/tienda.md)                           |
+| Ventas y reportes             | Documentado | [docs/flujos/reportes.md](docs/flujos/reportes.md)                       |
 | Instalaciones / mapas         | Documentado | [docs/flujos/instalaciones-mapas.md](docs/flujos/instalaciones-mapas.md) |
 
 ## Convenciones de trabajo

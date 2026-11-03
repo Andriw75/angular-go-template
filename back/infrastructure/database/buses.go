@@ -39,6 +39,14 @@ func busWhere(f store.BusFilters) (string, []any) {
 		conds = append(conds, `activo = ?`)
 		args = append(args, boolInt(*f.Activo))
 	}
+	if f.Desde != "" {
+		conds = append(conds, `fecha_compra >= ?`)
+		args = append(args, f.Desde)
+	}
+	if f.Hasta != "" {
+		conds = append(conds, `fecha_compra <= ?`)
+		args = append(args, f.Hasta)
+	}
 
 	if len(conds) == 0 {
 		return "", nil

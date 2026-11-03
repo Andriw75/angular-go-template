@@ -22,6 +22,8 @@ type Dependencies struct {
 	ProductoStore    store.ProductoStore
 	ImagenStore      store.ImagenStore
 	ArchivoStore     store.ArchivoStore
+	VentaStore       store.VentaStore
+	DocumentoStore   store.DocumentoStore
 	Storage          *storage.Storage
 	SSEHub           *SSEHub
 	InstalacionStore store.InstalacionStore

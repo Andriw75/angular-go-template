@@ -71,6 +71,8 @@ func main() {
 		ProductoStore:    database.NewProductoStore(db),
 		ImagenStore:      database.NewImagenStore(db),
 		ArchivoStore:     database.NewArchivoStore(db),
+		VentaStore:       database.NewVentaStore(db),
+		DocumentoStore:   database.NewDocumentoStore(db),
 		InstalacionStore: database.NewInstalacionStore(db),
 		SSEHub:           handlers.NewSSEHub(),
 		Storage:          storage.NewStorage(cfg.PrivateImagesDir()),
@@ -82,6 +84,7 @@ func main() {
 		cfg.PrivateImagesDir(),
 		cfg.PublicFilesDir(),
 		cfg.PrivateFilesDir(),
+		cfg.DocumentosDir(),
 	}
 	if err := deps.Storage.EnsureDirsFor(dirs...); err != nil {
 		slog.Error("failed to create storage dirs", "error", err)

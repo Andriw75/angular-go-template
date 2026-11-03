@@ -28,6 +28,8 @@ type Config struct {
 	JWTLoadUserOnRenew   bool
 	PublicDir            string
 	XAccelRedirectPrefix string
+	ReportSyncTimeout    int
+	JobTTLMinutes        int
 }
 
 func LoadConfig() (*Config, error) {
@@ -53,6 +55,8 @@ func LoadConfig() (*Config, error) {
 		JWTLoadUserOnRenew:   getEnvBool("JWT_LOAD_USER_ON_RENEW", true),
 		PublicDir:            getEnv("PUBLIC_DIR", ""),
 		XAccelRedirectPrefix: getEnv("X_ACCEL_REDIRECT_PREFIX", ""),
+		ReportSyncTimeout:    getEnvInt("REPORT_SYNC_TIMEOUT_SECONDS", 60),
+		JobTTLMinutes:        getEnvInt("JOB_TTL_MINUTES", 30),
 	}
 	return cfg, nil
 }
@@ -88,6 +92,11 @@ func (c *Config) PublicFilesDir() string {
 // PrivateFilesDir es la carpeta de archivos restringidos; solo la sirve Go.
 func (c *Config) PrivateFilesDir() string {
 	return c.FilesDir()
+}
+
+// DocumentosDir es la carpeta privada de documentos generados.
+func (c *Config) DocumentosDir() string {
+	return filepath.Join(c.FilesDir(), "documentos")
 }
 
 // FilesDir es la carpeta privada de archivos. Vive dentro de PUBLIC_DIR para

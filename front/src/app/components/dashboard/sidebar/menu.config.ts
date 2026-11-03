@@ -8,6 +8,8 @@ import { FileIcon } from '../../../common/icons/file.icon';
 import { StoreIcon } from '../../../common/icons/store.icon';
 import { CategoriesIcon } from '../../../common/icons/categories.icon';
 import { ProductsIcon } from '../../../common/icons/products.icon';
+import { ReportIcon } from '../../../common/icons/report.icon';
+import { ReceiptIcon } from '../../../common/icons/receipt.icon';
 
 export interface IconConfig {
   component: Type<any>;
@@ -75,6 +77,7 @@ export const MENU: MenuItem[] = [
         key: 'archivos-guia',
         path: '/dashboard/archivos/guia',
         requiredPermission: 'archivos',
+        icon: { component: FileIcon, inputs: { size: '18' } },
       },
     ],
   },
@@ -98,6 +101,20 @@ export const MENU: MenuItem[] = [
         requiredPermission: 'shop',
         icon: { component: ProductsIcon, inputs: { size: '18' } },
       },
+      {
+        label: 'Ventas',
+        key: 'ventas',
+        path: '/dashboard/ventas',
+        requiredPermission: 'ventas',
+        icon: { component: ReceiptIcon, inputs: { size: '18' } },
+      },
     ],
+  },
+  {
+    label: 'Reportes',
+    key: 'reportes',
+    path: '/dashboard/reportes',
+    requiredPermission: 'reportes',
+    icon: { component: ReportIcon, inputs: { size: '20' } },
   },
 ];

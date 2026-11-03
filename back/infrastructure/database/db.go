@@ -89,6 +89,9 @@ func (d *DB) Seed(ctx context.Context, crypt interface {
 		{"mensajes_pendientes", "Mensajes pendientes"},
 		{"shop", "Gestion de tienda"},
 		{"archivos", "Gestion de archivos"},
+		{"ventas", "Gestion de ventas"},
+		{"reportes", "Generacion de reportes"},
+		{"documentos", "Gestion de documentos generados"},
 	}
 
 	for _, p := range perms {
@@ -98,11 +101,29 @@ func (d *DB) Seed(ctx context.Context, crypt interface {
 		}
 	}
 
+	assignAll := func(userID int64) error {
+		assign := d.rebind(`INSERT INTO user_permissions (user_id, permission_id)
+			SELECT ?, id FROM permissions WHERE nombre = ?
+			ON CONFLICT (user_id, permission_id) DO NOTHING`)
+		for _, p := range perms {
+			if _, err := d.ExecContext(ctx, assign, userID, p.nombre); err != nil {
+				return fmt.Errorf("assign permission %s: %w", p.nombre, err)
+			}
+		}
+		return nil
+	}
+
 	var count int
 	if err := d.QueryRowContext(ctx, `SELECT COUNT(*) FROM users`).Scan(&count); err != nil {
 		return fmt.Errorf("count users: %w", err)
 	}
 	if count > 0 {
+		// Reconciliar permisos nuevos para el admin seed, sin tocar otros usuarios.
+		var adminID int64
+		err := d.QueryRowContext(ctx, d.rebind(`SELECT id FROM users WHERE username = ?`), "admin").Scan(&adminID)
+		if err == nil {
+			return assignAll(adminID)
+		}
 		return nil
 	}
 
@@ -117,14 +138,7 @@ func (d *DB) Seed(ctx context.Context, crypt interface {
 	if err := d.QueryRowContext(ctx, q, "admin", "admin@example.com", hash, 1, now, now).Scan(&userID); err != nil {
 		return fmt.Errorf("seed admin: %w", err)
 	}
-
-	assign := d.rebind(`INSERT INTO user_permissions (user_id, permission_id) SELECT ?, id FROM permissions WHERE nombre = ?`)
-	for _, p := range perms {
-		if _, err := d.ExecContext(ctx, assign, userID, p.nombre); err != nil {
-			return fmt.Errorf("assign permission %s: %w", p.nombre, err)
-		}
-	}
-	return nil
+	return assignAll(userID)
 }
 
 func (d *DB) Close() error { return d.DB.Close() }
