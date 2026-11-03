@@ -3,6 +3,8 @@ import { Observable, Subject } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface SSEEvent<T = any> {
+  module: string;
+  name: string;
   type: string;
   data: T;
 }

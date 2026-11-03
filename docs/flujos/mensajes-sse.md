@@ -8,6 +8,11 @@ Este documento tiene dos partes:
 La idea es que, al clonar el template, puedas eliminar o reutilizar el módulo sin
 arrastrar dependencias raras.
 
+> **Pendiente de actualización visual:** el diagrama HTML/GIF/PNG de este flujo
+> todavía muestra la conexión directa anterior (`/mensajes_pendientes/events`).
+> Debe regenerarse para reflejar el SSE global filtrado por permisos descrito
+> aquí.
+
 ---
 
 # Parte 1 — SSE como concepto reutilizable
@@ -35,20 +40,33 @@ haciéndose por REST normal: **SSE solo notifica, no reemplaza a la API**.
 
 ## Contrato de este template
 
-- Un solo tipo de mensaje: `SSEEvent { type, data }`.
-- El `type` viaja **dentro** del JSON, no como campo `event:` de SSE.
+- Un único sobre de evento:
+  ```json
+  { "module": "...", "name": "...", "type": "current|create|update|delete", "data": ... }
+  ```
+  - `module`: módulo de negocio (`mensajes_pendientes`).
+  - `name`: recurso o canal dentro del módulo (`activos`). Un módulo puede
+    emitir varios `name`.
+  - `type`: qué ocurrió con ese recurso.
+  - `data`: payload.
+- Todo viaja **dentro** del JSON, no como campo `event:` de SSE.
+- Hay **un solo** `GET /sse/events` para toda la aplicación.
 - Autenticación por cookie HttpOnly: el frontend usa
   `new EventSource(url, { withCredentials: true })`.
-- La ruta SSE vive bajo `AuthMiddleware("permiso")`, igual que el resto de la API.
+- La ruta vive bajo `AuthMiddleware()` (solo autenticación). El handler decide
+  qué canales puede recibir el usuario según sus permisos; si no tiene ninguno,
+  responde `403`.
 
 ## Piezas reutilizables vs específicas
 
 | Pieza                              | Dónde vive                                | ¿Reutilizable? |
 | ---------------------------------- | ----------------------------------------- | -------------- |
 | `SSEHub`                           | `back/api/handlers/sse.go`                | Sí, genérico   |
+| `SSEHandler.Events`                | `back/api/handlers/sse_handler.go`        | Sí, SSE global |
+| `sseChannels`                      | `back/api/handlers/sse_handler.go`        | Configurable por módulo |
 | `SSEService`                       | `front/src/app/services/sse.service.ts`   | Sí, genérico   |
+| `SSE_CHANNELS`                     | `front/src/app/services/sse-channels.ts`  | Configurable por módulo |
 | `ActivosStore`                     | `back/infrastructure/cache/activos.go`    | No, es de mensajes |
-| `MensajeHandler.Events`            | `back/api/handlers/mensaje.go`            | No, endpoint de mensajes |
 | `MensajesStoreService`             | `front/src/app/services/mensajes-store.service.ts` | No, estado de mensajes |
 | Eventos `current/create/update/delete` | Backend + store de mensajes           | No, contrato del módulo |
 
@@ -75,7 +93,8 @@ paquete `handlers`. Si solo se usa en mensajes, dejarlo donde está.
 ## Resumen del módulo
 
 - **Activas**: mensajes en estado `pendiente` o `asignado`. Viven en una caché en
-  memoria (`ActivosStore`) y se sincronizan por SSE a todos los clientes.
+  memoria (`ActivosStore`) y se sincronizan por SSE a todos los clientes con
+  permiso sobre el canal.
 - **Pasadas**: mensajes `finalizado`. Se consultan a la BD con paginación normal.
 - Cuando alguien crea, asigna o finaliza un mensaje, la BD se actualiza y el
   servidor emite un evento a **todos** los clientes conectados.
@@ -84,33 +103,38 @@ paquete `handlers`. Si solo se usa en mensajes, dejarlo donde está.
 
 ### Ruta
 
-`GET /mensajes_pendientes/events` bajo `AuthMiddleware("mensajes_pendientes")`
-(`back/api/router.go:69`). Solo pueden conectarse usuarios con ese permiso.
+`GET /sse/events` bajo `AuthMiddleware()` (`back/api/router.go`). Es la única
+ruta SSE de la aplicación.
 
 ### Handler `Events`
 
-`back/api/handlers/mensaje.go:25`:
+`back/api/handlers/sse_handler.go`:
 
 1. Verifica que `ResponseWriter` soporte `http.Flusher`.
-2. Escribe cabeceras `text/event-stream`, `no-cache`, `keep-alive`.
-3. Envía un evento `current` con el snapshot completo de `ActivosStore`.
-4. Registra el cliente en `SSEHub`.
-5. Itera leyendo eventos del canal y escribiendo `data: <json>\n\n`.
-6. Al cortarse el contexto (cliente desconectado), sale y se desregistra.
+2. Lee `claims.Permisos` del usuario autenticado.
+3. Calcula los canales permitidos desde `sseChannels` (module + name + permiso).
+4. Si no hay ningún canal permitido → `403` y no abre el stream.
+5. Escribe cabeceras `text/event-stream`, `no-cache`, `keep-alive`.
+6. Registra el cliente en `SSEHub` con sus canales permitidos.
+7. Envía un evento `type: "current"` por cada canal permitido con su snapshot.
+8. Itera leyendo eventos del canal y escribiendo `data: <json>\n\n`.
+9. Al cortarse el contexto (cliente desconectado), sale y se desregistra.
 
 ### `SSEHub`
 
 `back/api/handlers/sse.go`:
 
-- `clients map[chan SSEEvent]struct{}`.
-- `Register()` crea un canal **bufferizado de 64**.
-- `Broadcast()` envía a todos los canales con `select` no bloqueante: si un
-  cliente está lento y su buffer está lleno, **se descarta el evento** para ese
-  cliente.
+- `clients map[*sseClient]struct{}`; cada cliente guarda sus canales
+  `(module, name)` permitidos.
+- `Register(channels)` crea un canal **bufferizado de 64** y registra el set de
+  canales.
+- `Broadcast(module, name, event)` envía solo a los clientes suscritos a ese
+  canal, con `select` no bloqueante: si un cliente está lento y su buffer está
+  lleno, **se descarta el evento** para ese cliente.
 - `Unregister()` elimina y cierra el canal.
 
-No hay identidad por usuario ni canales por sala: **todos los conectados reciben
-todos los eventos**.
+El hub no filtra por identidad de usuario: filtra por canales permitidos, que el
+handler calculó a partir de los permisos del JWT al conectar.
 
 ### `ActivosStore`
 
@@ -131,16 +155,17 @@ todos los eventos**.
 | Finalizar          | `Update`          | `Delete`               | `delete` (`{id}`) |
 | Eliminar           | `Delete`          | `Delete`               | `delete` (`{id}`) |
 
-Payloads:
+Todos los eventos de mensajes usan `module: "mensajes_pendientes"` y
+`name: "activos"`. Payloads:
 
 ```
-data: {"type":"current","data":[ ... ]}
+data: {"module":"mensajes_pendientes","name":"activos","type":"current","data":[ ... ]}
 
-data: {"type":"create","data":{ ... }}
+data: {"module":"mensajes_pendientes","name":"activos","type":"create","data":{ ... }}
 
-data: {"type":"update","data":{ ... }}
+data: {"module":"mensajes_pendientes","name":"activos","type":"update","data":{ ... }}
 
-data: {"type":"delete","data":{"id":12}}
+data: {"module":"mensajes_pendientes","name":"activos","type":"delete","data":{"id":12}}
 ```
 
 ### Consultas
@@ -151,13 +176,22 @@ data: {"type":"delete","data":{"id":12}}
 
 ## Frontend
 
+### `SSE_CHANNELS` y `hasAnySsePermission`
+
+`front/src/app/services/sse-channels.ts`:
+
+- Lista de canales SSE con su `module`, `name` y `permission`.
+- Debe coincidir con `sseChannels` del backend.
+- `hasAnySsePermission(user)` devuelve `true` solo si el usuario tiene al menos
+  un permiso de los canales configurados.
+
 ### `SSEService`
 
 `front/src/app/services/sse.service.ts`:
 
 - Cierra cualquier conexión previa y abre una nueva con
-  `EventSource(API_URL + path, { withCredentials: true })`.
-- `onmessage`: parsea JSON y emite `{ type, data }`.
+  `EventSource(API_URL + '/sse/events', { withCredentials: true })`.
+- `onmessage`: parsea JSON y emite `{ module, name, type, data }`.
 - `onerror`: emite error y cierra la conexión.
 - `disconnect()`: cierra y limpia la referencia.
 
@@ -165,25 +199,30 @@ data: {"type":"delete","data":{"id":12}}
 
 `front/src/app/services/mensajes-store.service.ts`:
 
-- `init()` evita conexiones duplicadas (`if (this.sseSub) return`).
-- Conecta a `/mensajes_pendientes/events`.
-- Aplica los eventos al signal `activos`:
+- `init()`:
+  - Si `hasAnySsePermission(auth.user())` es `false`, llama a `disconnect()` y
+    **no abre ninguna conexión**.
+  - Evita conexiones duplicadas (`if (this.sseSub) return`).
+  - Conecta al único `/sse/events`.
+- Filtra por `module === 'mensajes_pendientes' && name === 'activos'` y aplica:
   - `current`: reemplaza la lista completa.
-  - `create`: inserta al inicio.
-  - `update`: reemplaza el mensaje por `id`.
+  - `create`: inserta al inicio (deduplicando por `id`).
+  - `update`: reemplaza el mensaje por `id`; si no existe, lo agrega.
   - `delete`: lo quita por `id`.
-- `onerror`: limpia la suscripción y reintenta en 3 s.
-- `disconnect()`: cancela la suscripción, cierra el `EventSource` y vacía la lista.
+- `onerror`: limpia la suscripción y reintenta en 3 s **solo si sigue teniendo
+  permiso**.
+- `disconnect()`: cancela el timer de reintento, cierra la suscripción y el
+  `EventSource`, y vacía la lista.
 
 ### Ciclo de vida
 
-`DashboardLayoutComponent` llama a `MensajesStoreService.init()` en su
-constructor (`front/src/app/components/dashboard/layout/layout.ts`). Por eso:
+`DashboardLayoutComponent` usa un `effect` sobre `auth.user()`
+(`front/src/app/components/dashboard/layout/layout.ts`):
 
-- La conexión SSE se abre al entrar a **cualquier** ruta del dashboard, no solo
-  a la página de mensajes.
-- Se mantiene mientras el usuario navega por el dashboard.
-- Se cierra en `SidebarComponent.logout()` (ver [logout.md](./logout.md)).
+- Si el usuario tiene algún permiso SSE → `mensajes.init()`.
+- Si no tiene ninguno → `mensajes.disconnect()` y no se hace ninguna petición.
+- La conexión se mantiene mientras el usuario navega por el dashboard y se
+  cierra en `SidebarComponent.logout()` (ver [logout.md](./logout.md)).
 
 ### Pantalla de mensajes
 
@@ -221,7 +260,8 @@ adaptar o crear módulos.
 
 - Fuente: caché en memoria (`ActivosStore`).
 - Inicio: al entrar al dashboard (layout).
-- Actualización: el servidor hace broadcast; todos los clientes se enteran.
+- Actualización: el servidor hace broadcast; se enteran los clientes suscritos
+  al canal.
 - Filtros y paginación: en cliente, sobre el estado completo.
 - Ejemplo: mensajes pendientes → activas.
 
@@ -279,12 +319,14 @@ resultado de su propia consulta hasta que vuelva a buscar o refrescar.
 5. **Cambios directos en BD**: si se modifica `mensajes_pendientes` por SQL, la
    caché y los clientes no se enteran. Todo cambio debe pasar por la API.
 6. **Token expirado o revocado**: el `EventSource` recibe `401`, emite error y
-   reintenta cada 3 s. La redirección a login la provoca el interceptor de las
-   peticiones HTTP normales, no el SSE. Al hacer logout se llama a
-   `disconnect()`.
-7. **Sin filtrado por usuario**: el hub no conoce identidad. Todos los usuarios
-   con permiso `mensajes_pendientes` reciben todos los eventos. Si el contenido
-   es sensible, habría que filtrar por cliente o crear canales por usuario/sala.
+   el store reintenta cada 3 s **solo si el usuario sigue teniendo algún permiso
+   SSE**. La redirección a login la provoca el interceptor de las peticiones HTTP
+   normales, no el SSE. Al hacer logout se llama a `disconnect()`.
+7. **Filtrado por permisos, no por usuario**: el hub conoce los canales
+   `(module, name)` permitidos de cada cliente, calculados desde el JWT al
+   conectar. Todos los usuarios con el mismo permiso de canal reciben los mismos
+   eventos; no hay filtrado por propietario ni por sala. Si el contenido es
+   sensible, habría que añadir canales o filtros por usuario.
 8. **nginx**: requiere `proxy_buffering off` (ya está en `deploy/nginx.conf`) y un
    `proxy_read_timeout` amplio para que el stream no se corte.
 
@@ -292,14 +334,21 @@ resultado de su propia consulta hasta que vuelva a buscar o refrescar.
 
 # Parte 5 — Cómo agregar SSE a otro módulo
 
+No se crea otra ruta: todo viaja por el único `GET /sse/events`.
+
 1. **Backend**
-   - Registrar `GET /<modulo>/events` bajo `AuthMiddleware("permiso")`.
-   - Enviar un snapshot inicial (`type: "current"`).
-   - Registrar el canal en `SSEHub` y transmitir cambios.
-   - Tras cada mutación: actualizar BD y hacer `Broadcast`.
+   - Añadir el canal a `sseChannels` en `back/api/handlers/sse_handler.go`:
+     `{Module: "<modulo>", Name: "<recurso>", Permission: "<permiso>"}`.
+   - En `writeCurrent`, enviar el snapshot inicial con
+     `type: "current"` para ese `(module, name)`.
+   - Tras cada mutación: actualizar BD y llamar
+     `SSEHub.Broadcast("<modulo>", "<recurso>", SSEEvent{...})`.
 2. **Frontend**
-   - Crear un store/servicio que use `SSEService.connect('/<modulo>/events')`.
-   - Manejar `current`, `create`, `update`, `delete` (o los eventos del módulo).
+   - Añadir el canal a `SSE_CHANNELS` en
+     `front/src/app/services/sse-channels.ts` con su permiso.
+   - Crear un store/servicio que use `SSEService.connect('/sse/events')` y
+     filtre por `module` y `name`.
+   - Manejar `current`, `create`, `update`, `delete`.
    - Inicializar en el layout del dashboard si debe vivir en toda la sesión, o en
      el componente si es efímero.
    - Desconectar en logout.
@@ -315,10 +364,12 @@ resultado de su propia consulta hasta que vuelva a buscar o refrescar.
 | Backend  | `back/api/router.go`                                             |
 | Backend  | `back/api/handlers/mensaje.go`                                   |
 | Backend  | `back/api/handlers/sse.go`                                       |
+| Backend  | `back/api/handlers/sse_handler.go`                               |
 | Backend  | `back/infrastructure/cache/activos.go`                           |
 | Backend  | `back/cmd/server/main.go`                                        |
 | Backend  | `back/infrastructure/database/mensajes.go`                       |
 | Frontend | `front/src/app/services/sse.service.ts`                          |
+| Frontend | `front/src/app/services/sse-channels.ts`                         |
 | Frontend | `front/src/app/services/mensajes-store.service.ts`               |
 | Frontend | `front/src/app/services/mensajes.service.ts`                     |
 | Frontend | `front/src/app/components/dashboard/layout/layout.ts`            |

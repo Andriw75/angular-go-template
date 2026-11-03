@@ -54,7 +54,7 @@ const FLUJOS: FlujoDemo[] = [
     slug: 'mensajes-sse',
     title: 'Mensajes en vivo con SSE',
     question: '¿Cómo llega un cambio a todos los dashboards?',
-    description: 'Conexión, snapshot, broadcast, reconexión y límites del hub.',
+    description: 'SSE global filtrado por permisos, snapshot por canal (module/name), reconexión y límites. Diagrama visual pendiente de actualizar.',
     category: 'Datos',
     type: 'sequence',
     file: 'mensajes-sse.html',

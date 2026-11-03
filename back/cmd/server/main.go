@@ -108,7 +108,7 @@ func main() {
 		ReadTimeout:       30 * time.Second,
 		IdleTimeout:       120 * time.Second,
 		MaxHeaderBytes:    1 << 20,
-		// WriteTimeout se deja en 0 porque /mensajes_pendientes/events es SSE
+		// WriteTimeout se deja en 0 porque /sse/events es un stream SSE
 		// (un stream de larga duración). Los handlers que lo necesiten pueden
 		// fijar deadlines por respuesta con http.NewResponseController.
 	}

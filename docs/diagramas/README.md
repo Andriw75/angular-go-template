@@ -23,6 +23,12 @@ Se abren desde el sidebar en **Flujos** (`/dashboard/flujos`) o directo en
 | Vida de un documento generado | ¿Qué estados y versiones tiene un documento? | Ciclo de vida | [documentos.html](../../front/public/flujos/documentos.html) | [documentos.png](img/documentos.png) | [reportes.md](../flujos/reportes.md) |
 | Instalaciones en el mapa | ¿Cómo se gestionan instalaciones desde el mapa? | Flujo | [instalaciones-mapas.html](../../front/public/flujos/instalaciones-mapas.html) | [instalaciones-mapas.png](img/instalaciones-mapas.png) | [instalaciones-mapas.md](../flujos/instalaciones-mapas.md) |
 
+> **Pendiente de actualización:** el HTML, PNG y GIF de **Mensajes en vivo con
+> SSE** todavía muestran el flujo anterior (conexión directa a
+> `/mensajes_pendientes/events`). El flujo vigente es un único `GET /sse/events`
+> filtrado por permisos; ver [mensajes-sse.md](../flujos/mensajes-sse.md). Hay
+> que regenerar el diagrama y sus capturas.
+
 ## Demostraciones animadas
 
 Cinco flujos del núcleo tienen una grabación del movimiento del diagrama:

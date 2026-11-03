@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -22,44 +21,13 @@ func NewMensajeHandler(deps *Dependencies) *MensajeHandler {
 	return &MensajeHandler{deps: deps}
 }
 
-func (h *MensajeHandler) Events(w http.ResponseWriter, r *http.Request) {
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		writeJSONError(w, http.StatusInternalServerError, "streaming unsupported")
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-
-	// Send current active state immediately on connect
-	activos := h.deps.ActivosStore.GetAll()
-	currentResp := make([]outputs.MensajeResponse, 0, len(activos))
-	for i := range activos {
-		currentResp = append(currentResp, outputs.ToMensajeResponse(&activos[i]))
-	}
-	currentEvent, _ := json.Marshal(SSEEvent{Type: "current", Data: currentResp})
-	_, _ = fmt.Fprintf(w, "data: %s\n\n", currentEvent)
-	flusher.Flush()
-
-	ch := h.deps.SSEHub.Register()
-	defer h.deps.SSEHub.Unregister(ch)
-
-	ctx := r.Context()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case event := <-ch:
-			data, err := json.Marshal(event)
-			if err != nil {
-				continue
-			}
-			_, _ = fmt.Fprintf(w, "data: %s\n\n", data)
-			flusher.Flush()
-		}
-	}
+func (h *MensajeHandler) broadcast(eventType string, data any) {
+	h.deps.SSEHub.Broadcast("mensajes_pendientes", "activos", SSEEvent{
+		Module: "mensajes_pendientes",
+		Name:   "activos",
+		Type:   eventType,
+		Data:   data,
+	})
 }
 
 func (h *MensajeHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +82,7 @@ func (h *MensajeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	h.deps.ActivosStore.Set(created)
 
 	resp := outputs.ToMensajeResponse(&created)
-	h.deps.SSEHub.Broadcast(SSEEvent{Type: "create", Data: resp})
+	h.broadcast("create", resp)
 	writeJSON(w, http.StatusCreated, resp)
 }
 
@@ -149,10 +117,10 @@ func (h *MensajeHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	if updated.Estado == "finalizado" {
 		h.deps.ActivosStore.Delete(id)
-		h.deps.SSEHub.Broadcast(SSEEvent{Type: "delete", Data: map[string]int64{"id": id}})
+		h.broadcast("delete", map[string]int64{"id": id})
 	} else {
 		h.deps.ActivosStore.Set(updated)
-		h.deps.SSEHub.Broadcast(SSEEvent{Type: "update", Data: resp})
+		h.broadcast("update", resp)
 	}
 
 	writeJSON(w, http.StatusOK, resp)
@@ -171,7 +139,7 @@ func (h *MensajeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.deps.ActivosStore.Delete(id)
-	h.deps.SSEHub.Broadcast(SSEEvent{Type: "delete", Data: map[string]int64{"id": id}})
+	h.broadcast("delete", map[string]int64{"id": id})
 	writeJSON(w, http.StatusOK, map[string]string{"message": "deleted"})
 }
 

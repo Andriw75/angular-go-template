@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, effect, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterOutlet } from '@angular/router';
 import { SidebarComponent } from '../sidebar/sidebar';
@@ -7,6 +7,7 @@ import { ToastComponent } from '../../../common/toast/toast';
 import { AuthService } from '../../../services/auth.service';
 import { MensajesStoreService } from '../../../services/mensajes-store.service';
 import { SessionService } from '../../../services/session.service';
+import { hasAnySsePermission } from '../../../services/sse-channels';
 
 @Component({
   selector: 'app-dashboard-layout',
@@ -21,7 +22,13 @@ export class DashboardLayoutComponent {
     const auth = inject(AuthService);
     const router = inject(Router);
 
-    mensajes.init();
+    effect(() => {
+      if (hasAnySsePermission(auth.user())) {
+        mensajes.init();
+      } else {
+        mensajes.disconnect();
+      }
+    });
 
     session.expired$
       .pipe(takeUntilDestroyed())
