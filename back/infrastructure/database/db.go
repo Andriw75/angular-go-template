@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -74,14 +73,6 @@ func (d *DB) Migrate(ctx context.Context) error {
 	for _, stmt := range schema(d.dialect) {
 		if _, err := d.ExecContext(ctx, stmt); err != nil {
 			return fmt.Errorf("migrate: %w", err)
-		}
-	}
-
-	// Migración incremental para bases creadas antes de esta versión.
-	if _, err := d.ExecContext(ctx, `ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0`); err != nil {
-		msg := strings.ToLower(err.Error())
-		if !strings.Contains(msg, "duplicate column") && !strings.Contains(msg, "already exists") {
-			return fmt.Errorf("migrate must_change_password: %w", err)
 		}
 	}
 	return nil
