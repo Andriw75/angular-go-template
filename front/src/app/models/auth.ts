@@ -4,6 +4,7 @@ export interface UserResponse {
   email: string;
   activo: boolean;
   permisos: string[];
+  must_change_password: boolean;
 }
 
 export interface Permission {

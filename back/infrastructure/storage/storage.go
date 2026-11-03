@@ -98,9 +98,20 @@ func (s *Storage) RemoveImages(filenames ...string) {
 }
 
 // RemoveIn borra archivos de una carpeta concreta (best-effort).
+// safeName evita que un nombre proveniente de la BD escape del directorio.
+func safeName(name string) bool {
+	if name == "" || name == "." || name == ".." {
+		return false
+	}
+	if strings.ContainsAny(name, `/\`) || strings.ContainsRune(name, 0) {
+		return false
+	}
+	return name == filepath.Base(name)
+}
+
 func (s *Storage) RemoveIn(dir string, filenames ...string) {
 	for _, name := range filenames {
-		if name == "" {
+		if !safeName(name) {
 			continue
 		}
 		if err := os.Remove(filepath.Join(dir, name)); err != nil && !os.IsNotExist(err) {
@@ -112,7 +123,7 @@ func (s *Storage) RemoveIn(dir string, filenames ...string) {
 // MoveFile mueve un archivo entre carpetas. Si el origen no existe, no hace
 // nada (se asume que ya está en el destino o no existe).
 func (s *Storage) MoveFile(srcDir, dstDir, filename string) error {
-	if filename == "" {
+	if !safeName(filename) {
 		return nil
 	}
 
@@ -138,7 +149,7 @@ func (s *Storage) MoveFile(srcDir, dstDir, filename string) error {
 // MoveFileIfMissing mueve el archivo solo si no existe en el destino. Útil para
 // reparaciones defensivas sin sobrescribir una copia válida.
 func (s *Storage) MoveFileIfMissing(srcDir, dstDir, filename string) error {
-	if filename == "" {
+	if !safeName(filename) {
 		return nil
 	}
 	if _, err := os.Stat(filepath.Join(dstDir, filename)); err == nil {

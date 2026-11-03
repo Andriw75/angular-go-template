@@ -13,6 +13,7 @@ type Dependencies struct {
 	JWTManager       *auth.JWTManager
 	CryptManager     *auth.CryptManager
 	JWTStore         *auth.JWTStore
+	LoginLimiter     *auth.LoginLimiter
 	UserStore        store.UserStore
 	PermisoStore     store.PermisoStore
 	BusStore         store.BusStore

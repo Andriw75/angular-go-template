@@ -37,10 +37,24 @@ vigila `.env`. `npm start` es un alias de `ng serve`.
 - `DB_TYPE=sqlite|postgres` (ya no existe `USE_MOCK`).
 - SQLite por defecto en `back/data/template.db` (`DB_PATH`).
 - PostgreSQL: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE`.
-- Al arrancar se crean las tablas y se siembra el usuario `admin` / `REDACTED_DEFAULT_ADMIN_PASSWORD`.
+- Al arrancar se crean las tablas y se siembran los permisos base. **No hay
+  usuario por defecto.** El primer admin se define con
+  `BOOTSTRAP_ADMIN_USERNAME` / `BOOTSTRAP_ADMIN_PASSWORD` en `.env` y debe
+  cambiar la contraseña en el primer login.
 - Público en `PUBLIC_DIR/public` (nginx): imágenes de entidades activas y
   archivos `publico`. Restringido en `PUBLIC_DIR/archivos` (bloqueado en nginx,
   servido por Go): imágenes de entidades inactivas y archivos `autenticado`/`propietario`.
+
+## Seguridad
+
+- Reglas y decisiones: [SECURITY.md](SECURITY.md).
+- No hay credenciales por defecto. El primer admin se define con
+  `BOOTSTRAP_ADMIN_USERNAME` / `BOOTSTRAP_ADMIN_PASSWORD` y debe cambiar la
+  contraseña en el primer login.
+- `JWT_SECRET` es obligatorio (32+ caracteres); el backend no arranca sin él.
+- Login con rate limit en nginx y en Go (`LOGIN_MAX_ATTEMPTS`, etc.).
+- Antes de cerrar un cambio en `back/`: `go build ./...`, `go vet ./...` y
+  `govulncheck ./...`. En `front/`: `npm audit --omit=dev` y `npm run build`.
 
 ## Documentación por flujo
 

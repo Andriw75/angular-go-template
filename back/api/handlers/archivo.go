@@ -1,14 +1,20 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log/slog"
 	"mime"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -16,13 +22,92 @@ import (
 	"back/domain/outputs"
 )
 
-const maxArchivoUploadSize = 100 << 20
+const (
+	maxArchivoUploadSize = 100 << 20 // límite total por petición
+	maxArchivoFileBytes  = 100 << 20 // límite por archivo
+	maxArchivoFiles      = 20
+)
 
 var allowedArchivoExts = map[string]bool{
 	".jpg": true, ".jpeg": true, ".png": true, ".webp": true, ".gif": true,
 	".pdf": true, ".doc": true, ".docx": true, ".xls": true, ".xlsx": true,
 	".txt": true, ".csv": true, ".zip": true, ".rar": true,
 	".mp4": true, ".mp3": true, ".webm": true,
+}
+
+// allowedArchivoMimes valida el contenido real (magic bytes), no solo la
+// extensión. Los formatos legacy de Office son OLE/octet-stream; docx/xlsx son
+// ZIP por dentro.
+var allowedArchivoMimes = map[string]map[string]bool{
+	".jpg":  {"image/jpeg": true},
+	".jpeg": {"image/jpeg": true},
+	".png":  {"image/png": true},
+	".webp": {"image/webp": true},
+	".gif":  {"image/gif": true},
+	".pdf":  {"application/pdf": true},
+	".doc":  {"application/x-ole-storage": true, "application/octet-stream": true, "application/vnd.ms-office": true},
+	".docx": {"application/zip": true},
+	".xls":  {"application/x-ole-storage": true, "application/octet-stream": true, "application/vnd.ms-office": true},
+	".xlsx": {"application/zip": true},
+	".txt":  {"text/plain": true, "application/octet-stream": true},
+	".csv":  {"text/plain": true, "text/csv": true, "application/octet-stream": true},
+	".zip":  {"application/zip": true},
+	".rar":  {"application/vnd.rar": true, "application/x-rar-compressed": true, "application/octet-stream": true},
+	".mp4":  {"video/mp4": true},
+	".mp3":  {"audio/mpeg": true, "audio/mp3": true},
+	".webm": {"video/webm": true},
+}
+
+func secureFileName(prefix, ext string) (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s_%d_%s%s", prefix, time.Now().UnixMilli(), hex.EncodeToString(b), ext), nil
+}
+
+func validateUploadContent(fh *multipart.FileHeader, ext string) error {
+	if fh.Size > maxArchivoFileBytes {
+		return fmt.Errorf("el archivo supera el límite de %d MB", maxArchivoFileBytes>>20)
+	}
+	allowed := allowedArchivoMimes[ext]
+	if len(allowed) == 0 {
+		return fmt.Errorf("extensión %q no permitida", ext)
+	}
+
+	src, err := fh.Open()
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	head := make([]byte, 512)
+	n, err := io.ReadFull(src, head)
+	if err != nil && err != io.ErrUnexpectedEOF {
+		return err
+	}
+	detected := http.DetectContentType(head[:n])
+	if !allowed[detected] {
+		return fmt.Errorf("el contenido del archivo no coincide con la extensión %q", ext)
+	}
+	return nil
+}
+
+func cleanOriginalName(name string) string {
+	name = filepath.Base(name)
+	name = strings.Map(func(r rune) rune {
+		if r < 32 || r == 127 {
+			return -1
+		}
+		return r
+	}, name)
+	if len(name) > 200 {
+		name = name[:200]
+	}
+	if name == "" || name == "." {
+		name = "archivo"
+	}
+	return name
 }
 
 type ArchivoHandler struct {
@@ -58,14 +143,20 @@ func (h *ArchivoHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ArchivoHandler) Upload(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(maxArchivoUploadSize); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "error al parsear formulario")
+	// Límite duro aunque nginx ya limite el body: protege si Go se expone directo.
+	r.Body = http.MaxBytesReader(w, r.Body, maxArchivoUploadSize+(10<<20))
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "error al parsear formulario o archivo demasiado grande")
 		return
 	}
 
 	files := r.MultipartForm.File["files"]
 	if len(files) == 0 {
 		writeJSONError(w, http.StatusBadRequest, "files requerido")
+		return
+	}
+	if len(files) > maxArchivoFiles {
+		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("máximo %d archivos por carga", maxArchivoFiles))
 		return
 	}
 
@@ -97,15 +188,28 @@ func (h *ArchivoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var created []domain.Archivo
-	for i, fh := range files {
+	for _, fh := range files {
 		ext := strings.ToLower(filepath.Ext(fh.Filename))
 		if !allowedArchivoExts[ext] {
 			rollback()
 			writeJSONError(w, http.StatusBadRequest, "extension "+ext+" no permitida")
 			return
 		}
+		if err := validateUploadContent(fh, ext); err != nil {
+			rollback()
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 
-		name := "archivo_" + strconv.FormatInt(int64(i), 10) + "_" + fh.Filename
+		// Nombre generado por el servidor: nunca se usa el nombre original como
+		// ruta en disco.
+		name, err := secureFileName("archivo", ext)
+		if err != nil {
+			rollback()
+			writeJSONError(w, http.StatusInternalServerError, "error al generar nombre de archivo")
+			return
+		}
+
 		src, err := fh.Open()
 		if err != nil {
 			rollback()
@@ -121,31 +225,22 @@ func (h *ArchivoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		buf := make([]byte, 32*1024)
-		for {
-			nr, rerr := src.Read(buf)
-			if nr > 0 {
-				if _, werr := dst.Write(buf[:nr]); werr != nil {
-					dst.Close()
-					src.Close()
-					rollback()
-					writeJSONError(w, http.StatusInternalServerError, "error al escribir archivo")
-					return
-				}
-			}
-			if rerr != nil {
-				break
-			}
-		}
-		dst.Close()
+		written, copyErr := io.Copy(dst, io.LimitReader(src, maxArchivoFileBytes+1))
+		closeErr := dst.Close()
 		src.Close()
+		if copyErr != nil || closeErr != nil || written > maxArchivoFileBytes {
+			_ = os.Remove(filepath.Join(filesDir, name))
+			rollback()
+			writeJSONError(w, http.StatusBadRequest, "archivo demasiado grande o error al guardar")
+			return
+		}
 
 		mimeType := mime.TypeByExtension(ext)
 		if mimeType == "" {
 			mimeType = "application/octet-stream"
 		}
 
-		archivo, err := h.deps.ArchivoStore.Create(name, fh.Filename, mimeType, fh.Size, vis, userID)
+		archivo, err := h.deps.ArchivoStore.Create(name, cleanOriginalName(fh.Filename), mimeType, written, vis, userID)
 		if err != nil {
 			_ = os.Remove(filepath.Join(filesDir, name))
 			rollback()
@@ -161,7 +256,7 @@ func (h *ArchivoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 
 func (h *ArchivoHandler) Serve(w http.ResponseWriter, r *http.Request) {
 	filename := chi.URLParam(r, "filename")
-	if filename == "" {
+	if !safeFileName(filename) {
 		http.NotFound(w, r)
 		return
 	}
@@ -193,6 +288,11 @@ func (h *ArchivoHandler) Serve(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.NotFound(w, r)
 		return
+	}
+
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if !isImageFileName(filename) {
+		w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": archivo.Nombre}))
 	}
 
 	prefix := h.deps.Config.XAccelRedirectPrefix

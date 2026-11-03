@@ -15,26 +15,8 @@ type UserStore struct {
 }
 
 func NewUserStore(crypt *auth.CryptManager) *UserStore {
-	s := &UserStore{store: NewMockStore[domain.User](nil), crypt: crypt}
-
-	hash, err := crypt.Hash("REDACTED_DEFAULT_ADMIN_PASSWORD")
-	if err != nil {
-		panic(err)
-	}
-
-	now := time.Now()
-	s.store.Insert(1, domain.User{
-		ID:            1,
-		Username:      "admin",
-		Email:         "admin@example.com",
-		Password:      hash,
-		Activo:        true,
-		Permisos:      []string{"buses", "usuarios", "mensajes_pendientes", "shop", "archivos"},
-		CreadoEn:      now,
-		ActualizadoEn: now,
-	})
-
-	return s
+	// Sin usuarios sembrados: las credenciales por defecto no existen.
+	return &UserStore{store: NewMockStore[domain.User](nil), crypt: crypt}
 }
 
 func (s *UserStore) Create(input inputs.UserInput) (domain.User, error) {
@@ -44,13 +26,14 @@ func (s *UserStore) Create(input inputs.UserInput) (domain.User, error) {
 	}
 	now := time.Now()
 	user := domain.User{
-		Username:      input.Username,
-		Email:         input.Email,
-		Password:      hash,
-		Activo:        input.Activo,
-		Permisos:      input.Permisos,
-		CreadoEn:      now,
-		ActualizadoEn: now,
+		Username:           input.Username,
+		Email:              input.Email,
+		Password:           hash,
+		Activo:             input.Activo,
+		Permisos:           input.Permisos,
+		MustChangePassword: input.MustChangePassword,
+		CreadoEn:           now,
+		ActualizadoEn:      now,
 	}
 	return s.store.Create(user)
 }
@@ -79,8 +62,23 @@ func (s *UserStore) Update(id int64, input inputs.UserUpdateInput) error {
 			return err
 		}
 		existing.Password = hash
+		existing.MustChangePassword = true
+	}
+	if input.MustChangePassword != nil {
+		existing.MustChangePassword = *input.MustChangePassword
 	}
 
+	existing.ActualizadoEn = time.Now()
+	return s.store.Update(id, existing)
+}
+
+func (s *UserStore) UpdatePassword(id int64, hash string, mustChange bool) error {
+	existing, err := s.store.FindByID(id)
+	if err != nil {
+		return err
+	}
+	existing.Password = hash
+	existing.MustChangePassword = mustChange
 	existing.ActualizadoEn = time.Now()
 	return s.store.Update(id, existing)
 }

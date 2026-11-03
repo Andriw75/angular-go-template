@@ -39,6 +39,7 @@ type VentaFilters struct {
 type UserStore interface {
 	Create(input inputs.UserInput) (domain.User, error)
 	Update(id int64, input inputs.UserUpdateInput) error
+	UpdatePassword(id int64, hash string, mustChange bool) error
 	Delete(id int64) error
 	FindByUsername(username string) (*domain.User, error)
 	FindByID(id int64) (*domain.User, error)

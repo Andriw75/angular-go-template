@@ -22,6 +22,14 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
           router.navigate(['/login']);
         }
       }
+      if (
+        err instanceof HttpErrorResponse &&
+        err.status === 403 &&
+        err.error?.code === 'password_change_required' &&
+        router.url !== '/change-password'
+      ) {
+        router.navigate(['/change-password']);
+      }
       return throwError(() => err);
     }),
   );

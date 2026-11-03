@@ -43,6 +43,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 			r.Use(authHandler.AuthMiddleware())
 			r.Post("/logout", authHandler.Logout)
 			r.Get("/me", authHandler.Me)
+			r.Post("/change-password", authHandler.ChangePassword)
 		})
 	})
 

@@ -24,6 +24,13 @@ export class AuthService {
     });
   }
 
+  changePassword(currentPassword: string, newPassword: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.api}/auth/change-password`, {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
+  }
+
   logout(): Observable<void> {
     return this.http.post<void>(`${this.api}/auth/logout`, {});
   }

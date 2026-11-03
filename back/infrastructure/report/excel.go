@@ -2,12 +2,37 @@ package report
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/xuri/excelize/v2"
 
 	"back/domain/outputs"
 )
+
+// safeCell neutraliza la inyección de fórmulas en exportaciones. Aunque
+// excelize escribe strings como shared strings (no como fórmulas), aplicar el
+// prefijo mantiene el archivo seguro si en el futuro se añade CSV.
+func safeCell(v any) any {
+	s, ok := v.(string)
+	if !ok {
+		return v
+	}
+	s = strings.Map(func(r rune) rune {
+		if r < 32 && r != '\n' {
+			return ' '
+		}
+		return r
+	}, s)
+	if s == "" {
+		return s
+	}
+	switch s[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		return "'" + s
+	}
+	return s
+}
 
 func newWorkbook() *excelize.File {
 	f := excelize.NewFile()
@@ -90,7 +115,7 @@ func GenerateBusesExcel(report outputs.ReporteBuses) ([]byte, error) {
 	_ = f.SetCellValue("Resumen", "A2", "Generado")
 	_ = f.SetCellValue("Resumen", "B2", time.Now().Format("2006-01-02 15:04"))
 	_ = f.SetCellValue("Resumen", "A3", "Filtros")
-	_ = f.SetCellValue("Resumen", "B3", fmt.Sprintf("%v", report.Filtros))
+	_ = f.SetCellValue("Resumen", "B3", safeCell(fmt.Sprintf("%v", report.Filtros)))
 	_ = f.MergeCell("Resumen", "B3", "D3")
 	_ = f.SetCellValue("Resumen", "A5", "Indicador")
 	_ = f.SetCellValue("Resumen", "B5", "Valor")
@@ -122,8 +147,9 @@ func GenerateBusesExcel(report outputs.ReporteBuses) ([]byte, error) {
 	_ = cell
 	for r, b := range report.Data {
 		row := r + 2
-		values := []any{b.Placa, b.Nombre, b.Marca, b.Modelo, b.Anio, b.Capacidad, b.Tipo,
-			b.Precio, b.Peso, b.Color, estadoBus(b.Activo), b.FechaCompra}
+		values := []any{safeCell(b.Placa), safeCell(b.Nombre), safeCell(b.Marca), safeCell(b.Modelo),
+			b.Anio, b.Capacidad, safeCell(b.Tipo), b.Precio, b.Peso, safeCell(b.Color),
+			safeCell(estadoBus(b.Activo)), safeCell(b.FechaCompra)}
 		for c, v := range values {
 			cell, _ := excelize.CoordinatesToCellName(c+1, row)
 			_ = f.SetCellValue("Buses", cell, v)
@@ -156,7 +182,7 @@ func GenerateBusesExcel(report outputs.ReporteBuses) ([]byte, error) {
 	_ = f.SetCellStyle("Por tipo", "A1", "D1", headerStyle(f))
 	for i, t := range report.PorTipo {
 		row := i + 2
-		_ = f.SetCellValue("Por tipo", fmt.Sprintf("A%d", row), t.Tipo)
+		_ = f.SetCellValue("Por tipo", fmt.Sprintf("A%d", row), safeCell(t.Tipo))
 		_ = f.SetCellValue("Por tipo", fmt.Sprintf("B%d", row), t.Cantidad)
 		_ = f.SetCellValue("Por tipo", fmt.Sprintf("C%d", row), t.PrecioTotal)
 		_ = f.SetCellValue("Por tipo", fmt.Sprintf("D%d", row), t.CapacidadPromedio)
@@ -180,15 +206,15 @@ func GenerateVentaExcel(venta outputs.VentaResponse) ([]byte, error) {
 	title, _ := f.NewStyle(&excelize.Style{Font: &excelize.Font{Bold: true, Size: 18, Color: "1E293B"}})
 	_ = f.SetCellStyle("Factura", "A1", "F1", title)
 	_ = f.SetCellValue("Factura", "A2", "Código")
-	_ = f.SetCellValue("Factura", "B2", venta.Codigo)
+	_ = f.SetCellValue("Factura", "B2", safeCell(venta.Codigo))
 	_ = f.SetCellValue("Factura", "A3", "Fecha")
-	_ = f.SetCellValue("Factura", "B3", venta.Fecha)
+	_ = f.SetCellValue("Factura", "B3", safeCell(venta.Fecha))
 	_ = f.SetCellValue("Factura", "A4", "Cliente")
-	_ = f.SetCellValue("Factura", "B4", venta.ClienteNombre)
+	_ = f.SetCellValue("Factura", "B4", safeCell(venta.ClienteNombre))
 	_ = f.SetCellValue("Factura", "A5", "Documento")
-	_ = f.SetCellValue("Factura", "B5", venta.ClienteDocumento)
+	_ = f.SetCellValue("Factura", "B5", safeCell(venta.ClienteDocumento))
 	_ = f.SetCellValue("Factura", "A6", "Dirección")
-	_ = f.SetCellValue("Factura", "B6", venta.ClienteDireccion)
+	_ = f.SetCellValue("Factura", "B6", safeCell(venta.ClienteDireccion))
 
 	headers := []string{"Descripción", "Cantidad", "P. Unit.", "Descuento", "Impuesto", "Total"}
 	for i, h := range headers {
@@ -198,7 +224,7 @@ func GenerateVentaExcel(venta outputs.VentaResponse) ([]byte, error) {
 	_ = f.SetCellStyle("Factura", "A8", "F8", headerStyle(f))
 	for i, it := range venta.Items {
 		row := 9 + i
-		_ = f.SetCellValue("Factura", fmt.Sprintf("A%d", row), it.Descripcion)
+		_ = f.SetCellValue("Factura", fmt.Sprintf("A%d", row), safeCell(it.Descripcion))
 		_ = f.SetCellValue("Factura", fmt.Sprintf("B%d", row), it.Cantidad)
 		_ = f.SetCellValue("Factura", fmt.Sprintf("C%d", row), it.PrecioUnitario)
 		_ = f.SetCellValue("Factura", fmt.Sprintf("D%d", row), it.Descuento)

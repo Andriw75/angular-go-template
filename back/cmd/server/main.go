@@ -32,6 +32,11 @@ func main() {
 	jwtStore := auth.NewJWTStore()
 	jwtManager := auth.NewJWTManager(cfg.JWTSecret, cfg.JWTExpirationMin, cfg.JWTRenewMin)
 	cryptManager := auth.NewCryptManager()
+	loginLimiter := auth.NewLoginLimiter(
+		cfg.LoginMaxAttempts,
+		time.Duration(cfg.LoginWindowMinutes)*time.Minute,
+		time.Duration(cfg.LoginBlockMinutes)*time.Minute,
+	)
 
 	if cfg.JWTStoreEnabled {
 		jwtManager.Store = jwtStore
@@ -49,7 +54,7 @@ func main() {
 		slog.Error("failed to migrate database", "error", err)
 		os.Exit(1)
 	}
-	if err := db.Seed(ctx, cryptManager); err != nil {
+	if err := db.Seed(ctx, cryptManager, cfg); err != nil {
 		slog.Error("failed to seed database", "error", err)
 		os.Exit(1)
 	}
@@ -62,6 +67,7 @@ func main() {
 		JWTManager:       jwtManager,
 		CryptManager:     cryptManager,
 		JWTStore:         jwtStore,
+		LoginLimiter:     loginLimiter,
 		UserStore:        database.NewUserStore(db, cryptManager),
 		PermisoStore:     database.NewPermisoStore(db),
 		BusStore:         database.NewBusStore(db),
@@ -96,8 +102,15 @@ func main() {
 	router := api.NewRouter(deps)
 
 	srv := &http.Server{
-		Addr:    cfg.ServerPort,
-		Handler: router,
+		Addr:              cfg.ServerPort,
+		Handler:           router,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		MaxHeaderBytes:    1 << 20,
+		// WriteTimeout se deja en 0 porque /mensajes_pendientes/events es SSE
+		// (un stream de larga duración). Los handlers que lo necesiten pueden
+		// fijar deadlines por respuesta con http.NewResponseController.
 	}
 
 	go func() {

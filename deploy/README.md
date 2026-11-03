@@ -74,7 +74,10 @@ DB_SSLMODE=disable
 ```
 
 > Al arrancar, el backend crea las tablas si no existen y siembra los permisos
-> base y el usuario `admin` / `REDACTED_DEFAULT_ADMIN_PASSWORD`. No hay modo mock.
+> base. **No crea ningún usuario por defecto**: define
+> `BOOTSTRAP_ADMIN_USERNAME` / `BOOTSTRAP_ADMIN_PASSWORD` en `.env` para el
+> primer administrador. La contraseña debe tener 12+ caracteres y se fuerza el
+> cambio en el primer login. No hay modo mock.
 >
 > `PUBLIC_DIR` llega **hasta `template`**. Lo público vive en
 > `PUBLIC_DIR/public` y lo sirve nginx:

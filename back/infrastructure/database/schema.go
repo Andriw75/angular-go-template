@@ -19,6 +19,7 @@ func schema(d Dialect) []string {
 			email TEXT NOT NULL,
 			password TEXT NOT NULL,
 			activo INTEGER NOT NULL DEFAULT 1,
+			must_change_password INTEGER NOT NULL DEFAULT 0,
 			creado_en TEXT NOT NULL,
 			actualizado_en TEXT NOT NULL
 		)`, pk),

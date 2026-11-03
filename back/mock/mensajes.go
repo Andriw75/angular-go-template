@@ -43,7 +43,7 @@ func (s *MensajeStore) seed() {
 		}
 
 		if i > 10 && i <= 12 {
-			u := "admin"
+			u := "operador"
 			m.UsuarioAcargo = &u
 			t := horaSol.Add(5 * time.Minute)
 			m.HoraUsuarioAsignado = &t

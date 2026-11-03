@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -74,12 +76,20 @@ func (d *DB) Migrate(ctx context.Context) error {
 			return fmt.Errorf("migrate: %w", err)
 		}
 	}
+
+	// Migración incremental para bases creadas antes de esta versión.
+	if _, err := d.ExecContext(ctx, `ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0`); err != nil {
+		msg := strings.ToLower(err.Error())
+		if !strings.Contains(msg, "duplicate column") && !strings.Contains(msg, "already exists") {
+			return fmt.Errorf("migrate must_change_password: %w", err)
+		}
+	}
 	return nil
 }
 
 func (d *DB) Seed(ctx context.Context, crypt interface {
 	Hash(string) (string, error)
-}) error {
+}, cfg *services.Config) error {
 	perms := []struct {
 		nombre      string
 		descripcion string
@@ -118,24 +128,36 @@ func (d *DB) Seed(ctx context.Context, crypt interface {
 		return fmt.Errorf("count users: %w", err)
 	}
 	if count > 0 {
-		// Reconciliar permisos nuevos para el admin seed, sin tocar otros usuarios.
+		// Reconciliar permisos nuevos para el admin bootstrap, sin tocar otros usuarios.
 		var adminID int64
-		err := d.QueryRowContext(ctx, d.rebind(`SELECT id FROM users WHERE username = ?`), "admin").Scan(&adminID)
+		err := d.QueryRowContext(ctx, d.rebind(`SELECT id FROM users WHERE username = ?`), cfg.BootstrapAdminUsername).Scan(&adminID)
 		if err == nil {
 			return assignAll(adminID)
 		}
 		return nil
 	}
 
-	hash, err := crypt.Hash("REDACTED_DEFAULT_ADMIN_PASSWORD")
+	// No se crea ningún usuario por defecto. El primer administrador se define
+	// explícitamente con BOOTSTRAP_ADMIN_PASSWORD y debe cambiar la contraseña.
+	if cfg.BootstrapAdminPassword == "" {
+		slog.Warn("base de datos sin usuarios y BOOTSTRAP_ADMIN_PASSWORD vacío: no se creó ningún administrador")
+		return nil
+	}
+	if err := services.ValidatePasswordForUser(cfg.BootstrapAdminUsername, cfg.BootstrapAdminPassword); err != nil {
+		return fmt.Errorf("bootstrap admin password: %w", err)
+	}
+
+	hash, err := crypt.Hash(cfg.BootstrapAdminPassword)
 	if err != nil {
 		return fmt.Errorf("hash admin password: %w", err)
 	}
 	now := formatTime(time.Now())
 
-	q := d.rebind(`INSERT INTO users (username, email, password, activo, creado_en, actualizado_en) VALUES (?, ?, ?, ?, ?, ?) RETURNING id`)
+	q := d.rebind(`INSERT INTO users (username, email, password, activo, must_change_password, creado_en, actualizado_en) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`)
 	var userID int64
-	if err := d.QueryRowContext(ctx, q, "admin", "admin@example.com", hash, 1, now, now).Scan(&userID); err != nil {
+	if err := d.QueryRowContext(ctx, q,
+		cfg.BootstrapAdminUsername, cfg.BootstrapAdminEmail, hash, 1, 1, now, now,
+	).Scan(&userID); err != nil {
 		return fmt.Errorf("seed admin: %w", err)
 	}
 	return assignAll(userID)

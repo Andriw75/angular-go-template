@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -30,10 +31,22 @@ type Config struct {
 	XAccelRedirectPrefix string
 	ReportSyncTimeout    int
 	JobTTLMinutes        int
+
+	// Bootstrap del primer administrador. Si BootstrapAdminPassword está vacío
+	// no se crea ningún usuario automáticamente.
+	BootstrapAdminUsername string
+	BootstrapAdminPassword string
+	BootstrapAdminEmail    string
+
+	// Protección contra fuerza bruta en el login.
+	LoginMaxAttempts   int
+	LoginWindowMinutes int
+	LoginBlockMinutes  int
 }
 
 func LoadConfig() (*Config, error) {
-	godotenv.Load()
+	// .env es opcional: en producción se esperan variables de entorno reales.
+	_ = godotenv.Load()
 
 	cfg := &Config{
 		ServerPort:           getEnv("SERVER_PORT", ":8080"),
@@ -41,11 +54,11 @@ func LoadConfig() (*Config, error) {
 		DBHost:               getEnv("DB_HOST", "localhost"),
 		DBPort:               getEnvInt("DB_PORT", 5432),
 		DBUser:               getEnv("DB_USER", "postgres"),
-		DBPassword:           getEnv("DB_PASSWORD", "postgres"),
+		DBPassword:           getEnv("DB_PASSWORD", ""),
 		DBName:               getEnv("DB_NAME", "template"),
 		DBPath:               getEnv("DB_PATH", filepath.Join("data", "template.db")),
 		DBSSLMode:            getEnv("DB_SSLMODE", "disable"),
-		JWTSecret:            getEnv("JWT_SECRET", "REDACTED_DEFAULT_JWT_SECRET"),
+		JWTSecret:            getEnv("JWT_SECRET", ""),
 		JWTExpirationMin:     getEnvInt("JWT_EXPIRATION_MINUTES", 15),
 		JWTRenewMin:          getEnvInt("JWT_RENEW_MINUTES", 5),
 		CookieName:           getEnv("COOKIE_NAME", "access_token_go"),
@@ -57,8 +70,49 @@ func LoadConfig() (*Config, error) {
 		XAccelRedirectPrefix: getEnv("X_ACCEL_REDIRECT_PREFIX", ""),
 		ReportSyncTimeout:    getEnvInt("REPORT_SYNC_TIMEOUT_SECONDS", 60),
 		JobTTLMinutes:        getEnvInt("JOB_TTL_MINUTES", 30),
+
+		BootstrapAdminUsername: getEnv("BOOTSTRAP_ADMIN_USERNAME", "admin"),
+		BootstrapAdminPassword: getEnv("BOOTSTRAP_ADMIN_PASSWORD", ""),
+		BootstrapAdminEmail:    getEnv("BOOTSTRAP_ADMIN_EMAIL", "admin@example.com"),
+
+		LoginMaxAttempts:   getEnvInt("LOGIN_MAX_ATTEMPTS", 5),
+		LoginWindowMinutes: getEnvInt("LOGIN_WINDOW_MINUTES", 15),
+		LoginBlockMinutes:  getEnvInt("LOGIN_BLOCK_MINUTES", 15),
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, err
 	}
 	return cfg, nil
+}
+
+// Validate falla rápido ante configuraciones inseguras. Es mejor no arrancar
+// que arrancar con un JWT predecible.
+func (c *Config) Validate() error {
+	if len(c.JWTSecret) < 32 {
+		return fmt.Errorf("JWT_SECRET es obligatorio y debe tener al menos 32 caracteres; genera uno con: go run ./cmd/generate_secrets.go")
+	}
+	if c.CORSOrigin == "" {
+		return fmt.Errorf("CORS_ORIGIN es obligatorio")
+	}
+	if c.DBType != "sqlite" && c.DBType != "postgres" {
+		return fmt.Errorf("DB_TYPE no soportado: %q (usa sqlite o postgres)", c.DBType)
+	}
+	if c.BootstrapAdminPassword != "" {
+		if err := ValidatePasswordForUser(c.BootstrapAdminUsername, c.BootstrapAdminPassword); err != nil {
+			return fmt.Errorf("BOOTSTRAP_ADMIN_PASSWORD inválida: %w", err)
+		}
+	}
+	if c.LoginMaxAttempts < 1 {
+		c.LoginMaxAttempts = 5
+	}
+	if c.LoginWindowMinutes < 1 {
+		c.LoginWindowMinutes = 15
+	}
+	if c.LoginBlockMinutes < 1 {
+		c.LoginBlockMinutes = 15
+	}
+	return nil
 }
 
 // PublicPath es la carpeta pública servida por nginx.

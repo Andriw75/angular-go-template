@@ -3,8 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"mime"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -24,7 +26,35 @@ var imageExts = map[string]bool{
 	".gif":  true,
 }
 
-const maxUploadSize = 64 << 20
+const (
+	maxUploadSize     = 64 << 20
+	maxImageFileBytes = 32 << 20
+)
+
+func validateImageContent(fh *multipart.FileHeader) error {
+	if fh.Size > maxImageFileBytes {
+		return fmt.Errorf("la imagen supera el límite de %d MB", maxImageFileBytes>>20)
+	}
+
+	src, err := fh.Open()
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	head := make([]byte, 512)
+	n, err := io.ReadFull(src, head)
+	if err != nil && err != io.ErrUnexpectedEOF {
+		return err
+	}
+
+	switch http.DetectContentType(head[:n]) {
+	case "image/jpeg", "image/png", "image/webp", "image/gif":
+		return nil
+	default:
+		return fmt.Errorf("el contenido de la imagen no es válido")
+	}
+}
 
 // ImageIsPublic indica si la imagen debe servirse por nginx. Para productos
 // exige producto activo y categoría activa; para categorías, categoría activa.
@@ -104,8 +134,9 @@ func RemoveImageFileNames(deps *Dependencies, filenames []string) {
 }
 
 func uploadImagesForEntity(deps *Dependencies, tipo string, entidadID int64, w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "error al parsear formulario")
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize+(10<<20))
+	if err := r.ParseMultipartForm(16 << 20); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "error al parsear formulario o archivo demasiado grande")
 		return
 	}
 
@@ -113,6 +144,16 @@ func uploadImagesForEntity(deps *Dependencies, tipo string, entidadID int64, w h
 	if len(files) == 0 {
 		writeJSONError(w, http.StatusBadRequest, "images requerido")
 		return
+	}
+	if len(files) > maxArchivoFiles {
+		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("máximo %d imágenes por carga", maxArchivoFiles))
+		return
+	}
+	for _, fh := range files {
+		if err := validateImageContent(fh); err != nil {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 	}
 
 	public, err := ImageIsPublic(deps, tipo, entidadID)
@@ -218,7 +259,7 @@ func NewImagenHandler(deps *Dependencies) *ImagenHandler {
 // una petición pública aquí, se responde desde la carpeta pública como respaldo.
 func (h *ImagenHandler) Serve(w http.ResponseWriter, r *http.Request) {
 	filename := chi.URLParam(r, "filename")
-	if filename == "" {
+	if !safeFileName(filename) {
 		http.NotFound(w, r)
 		return
 	}
@@ -267,6 +308,7 @@ func (h *ImagenHandler) Serve(w http.ResponseWriter, r *http.Request) {
 	if ct := mime.TypeByExtension(strings.ToLower(filepath.Ext(filename))); ct != "" {
 		w.Header().Set("Content-Type", ct)
 	}
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	if public {
 		w.Header().Set("Cache-Control", "public, max-age=60")
 	} else {

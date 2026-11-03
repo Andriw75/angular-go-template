@@ -23,6 +23,9 @@ export class LoginComponent implements OnInit {
     if (this.route.snapshot.queryParamMap.get('expired') === '1') {
       this.error.set('La sesión ha caducado. Vuelve a iniciar sesión.');
     }
+    if (this.route.snapshot.queryParamMap.get('changed') === '1') {
+      this.error.set('Contraseña actualizada. Inicia sesión con la nueva.');
+    }
   }
 
   handleSubmit(e: Event): void {
@@ -45,7 +48,7 @@ export class LoginComponent implements OnInit {
     this.auth.login(user, pass).subscribe({
       next: (u) => {
         this.auth.user.set(u);
-        this.router.navigate(['/dashboard']);
+        this.router.navigate([u.must_change_password ? '/change-password' : '/dashboard']);
       },
       error: () => {
         this.isLoading.set(false);

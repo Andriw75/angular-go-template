@@ -10,6 +10,7 @@ import (
 
 	"back/domain/inputs"
 	"back/domain/outputs"
+	"back/services"
 )
 
 type UserHandler struct {
@@ -47,7 +48,7 @@ func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var input inputs.UserInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&input); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -56,6 +57,13 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "username, email and password are required")
 		return
 	}
+	if err := services.ValidatePasswordForUser(input.Username, input.Password); err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	// Las cuentas creadas por un administrador deben cambiar la contraseña
+	// inicial en el primer acceso.
+	input.MustChangePassword = true
 
 	created, err := h.deps.UserStore.Create(input)
 	if err != nil {
@@ -75,9 +83,22 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input inputs.UserUpdateInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&input); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
+	}
+
+	if input.Password != nil && *input.Password != "" {
+		username := ""
+		if input.Username != nil {
+			username = *input.Username
+		} else if existing, err := h.deps.UserStore.FindByID(id); err == nil {
+			username = existing.Username
+		}
+		if err := services.ValidatePasswordForUser(username, *input.Password); err != nil {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 	}
 
 	if err := h.deps.UserStore.Update(id, input); err != nil {

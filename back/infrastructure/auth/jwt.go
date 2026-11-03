@@ -17,11 +17,12 @@ type JWTManager struct {
 }
 
 type Claims struct {
-	UserID   int64    `json:"user_id"`
-	Username string   `json:"username"`
-	Email    string   `json:"email"`
-	Activo   bool     `json:"activo"`
-	Permisos []string `json:"permisos"`
+	UserID             int64    `json:"user_id"`
+	Username           string   `json:"username"`
+	Email              string   `json:"email"`
+	Activo             bool     `json:"activo"`
+	Permisos           []string `json:"permisos"`
+	MustChangePassword bool     `json:"must_change_password"`
 	jwt.RegisteredClaims
 }
 
@@ -45,14 +46,15 @@ func generateJTI() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func (m *JWTManager) Generate(userID int64, username, email string, activo bool, permisos []string) (string, error) {
+func (m *JWTManager) Generate(userID int64, username, email string, activo bool, permisos []string, mustChangePassword bool) (string, error) {
 	now := time.Now()
 	claims := &Claims{
-		UserID:   userID,
-		Username: username,
-		Email:    email,
-		Activo:   activo,
-		Permisos: permisos,
+		UserID:             userID,
+		Username:           username,
+		Email:              email,
+		Activo:             activo,
+		Permisos:           permisos,
+		MustChangePassword: mustChangePassword,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(m.duration)),
 			IssuedAt:  jwt.NewNumericDate(now),

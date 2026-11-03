@@ -3,14 +3,15 @@ package domain
 import "time"
 
 type User struct {
-	ID             int64     `json:"id"`
-	Username       string    `json:"username"`
-	Email          string    `json:"email"`
-	Password       string    `json:"-"`
-	Activo         bool      `json:"activo"`
-	Permisos       []string  `json:"permisos"`
-	CreadoEn       time.Time `json:"creado_en"`
-	ActualizadoEn  time.Time `json:"actualizado_en"`
+	ID                 int64     `json:"id"`
+	Username           string    `json:"username"`
+	Email              string    `json:"email"`
+	Password           string    `json:"-"`
+	Activo             bool      `json:"activo"`
+	Permisos           []string  `json:"permisos"`
+	MustChangePassword bool      `json:"must_change_password"`
+	CreadoEn           time.Time `json:"creado_en"`
+	ActualizadoEn      time.Time `json:"actualizado_en"`
 }
 
 func (u *User) SetID(id int64) { u.ID = id }

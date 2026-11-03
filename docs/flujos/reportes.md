@@ -27,7 +27,7 @@ Nuevos permisos sembrados:
 | `ventas` | CRUD de ventas |
 | `documentos` | Historial, descarga, anulación y generación de documentos |
 
-El seed reconcilia al usuario `admin` para que reciba los permisos nuevos en instalaciones existentes.
+El seed reconcilia al usuario definido en `BOOTSTRAP_ADMIN_USERNAME` para que reciba los permisos nuevos en instalaciones existentes.
 
 ## Contrato de datos
 

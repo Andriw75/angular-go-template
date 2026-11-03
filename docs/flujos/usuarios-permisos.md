@@ -30,9 +30,10 @@ Permisos sembrados (`back/infrastructure/database/db.go`):
 | `shop`                 | Gestión de tienda        |
 | `archivos`             | Gestión de archivos      |
 
-El seed crea el usuario `admin` / `REDACTED_DEFAULT_ADMIN_PASSWORD` con todos los permisos **solo
-si la tabla `users` está vacía**. Los permisos se aseguran siempre con
-`ON CONFLICT (nombre) DO NOTHING`.
+El seed **no crea usuarios por defecto**. Si la tabla `users` está vacía, el
+primer administrador se crea solo cuando `BOOTSTRAP_ADMIN_PASSWORD` está
+definido; recibe todos los permisos y debe cambiar la contraseña en el primer
+login. Los permisos se aseguran siempre con `ON CONFLICT (nombre) DO NOTHING`.
 
 ## Backend
 
