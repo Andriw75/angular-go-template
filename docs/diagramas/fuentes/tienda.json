@@ -1,0 +1,166 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Tienda: categorías, productos e imágenes",
+    "subtitle": "Dos CRUD relacionados y la publicación de sus imágenes",
+    "locale": "es",
+    "output": "front/public/flujos/tienda.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Andriw75/angular-go-template",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "db02384130585abab33e03fed6a4e89cb46b9cfa"
+    }
+  },
+  "lanes": [
+    { "id": "persona", "label": "Persona y pantalla" },
+    { "id": "api", "label": "API Go" },
+    { "id": "datos", "label": "Datos y archivos" }
+  ],
+  "mainPath": ["usuario", "menu", "categorias", "modal", "api", "db"],
+  "nodes": [
+    {
+      "id": "usuario",
+      "lane": "persona",
+      "col": 0,
+      "type": "external",
+      "label": "Usuario",
+      "sublabel": "permiso shop",
+      "icon": "person"
+    },
+    {
+      "id": "menu",
+      "lane": "persona",
+      "col": 1,
+      "type": "frontend",
+      "label": "Tienda",
+      "sublabel": "Categorías y Productos",
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/components/dashboard/sidebar/menu.config.ts", "line": 75, "end_line": 110 }
+      ]
+    },
+    {
+      "id": "categorias",
+      "lane": "persona",
+      "col": 2,
+      "type": "frontend",
+      "label": "Listado de categorías",
+      "sublabel": "q + activo",
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/components/dashboard/shop/categorias/list.ts", "line": 47, "end_line": 100 }
+      ]
+    },
+    {
+      "id": "productos",
+      "lane": "persona",
+      "col": 3,
+      "type": "frontend",
+      "label": "Listado de productos",
+      "sublabel": "categoria_id + activo",
+      "icon": "frontend",
+      "yOffset": 110,
+      "sources": [
+        { "path": "front/src/app/components/dashboard/shop/productos/list.ts", "line": 63, "end_line": 116 }
+      ]
+    },
+    {
+      "id": "modal",
+      "lane": "persona",
+      "col": 4,
+      "type": "frontend",
+      "label": "Modal + imágenes",
+      "sublabel": "ImageManager al editar",
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/components/dashboard/shop/categorias/modal.ts", "line": 64, "end_line": 65 },
+        { "path": "front/src/app/common/image-manager/image-manager.ts", "line": 207, "end_line": 253 }
+      ]
+    },
+    {
+      "id": "api",
+      "lane": "api",
+      "col": 4,
+      "type": "backend",
+      "label": "API /categorias + /productos",
+      "sublabel": "CRUD e imágenes",
+      "icon": "backend",
+      "yOffset": 90,
+      "sources": [
+        { "path": "back/api/handlers/categoria.go", "line": 123, "end_line": 250 },
+        { "path": "back/api/handlers/producto.go", "line": 136, "end_line": 259 }
+      ]
+    },
+    {
+      "id": "db",
+      "lane": "datos",
+      "col": 5,
+      "type": "database",
+      "label": "Base de datos",
+      "sublabel": "categorias, productos, imagenes",
+      "icon": "database",
+      "sources": [
+        { "path": "back/infrastructure/database/schema.go", "line": 64, "end_line": 90 }
+      ]
+    },
+    {
+      "id": "files",
+      "lane": "datos",
+      "col": 4,
+      "type": "cloud",
+      "label": "Carpeta de imágenes",
+      "sublabel": "pública o privada",
+      "tag": "según estado",
+      "icon": "cloud",
+      "yOffset": 160,
+      "sources": [
+        { "path": "back/api/handlers/imagen.go", "line": 31, "end_line": 88 }
+      ]
+    }
+  ],
+  "edges": [
+    { "from": "usuario", "to": "menu", "label": "abre Tienda", "variant": "default" },
+    { "from": "menu", "to": "categorias", "label": "Categorías", "variant": "emphasis", "role": "main" },
+    { "from": "categorias", "to": "productos", "label": "filtra por categoría", "variant": "dashed", "role": "branch" },
+    { "from": "categorias", "to": "modal", "label": "crear o editar", "variant": "default", "role": "main" },
+    { "from": "productos", "to": "modal", "label": "crear o editar", "variant": "default", "role": "branch" },
+    { "from": "modal", "to": "api", "label": "guarda entidad", "variant": "emphasis", "role": "main" },
+    { "from": "api", "to": "db", "label": "persiste", "variant": "default", "role": "main" },
+    { "from": "api", "to": "files", "label": "ubica imágenes", "variant": "dashed", "role": "branch" },
+    { "from": "api", "to": "categorias", "label": "recarga listado", "variant": "default", "role": "return" },
+    { "from": "categorias", "to": "api", "label": "DELETE /categorias", "variant": "security", "role": "branch" },
+    { "from": "api", "to": "files", "label": "borra de ambas", "variant": "dashed", "role": "branch" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Imágenes después de guardar",
+      "items": [
+        "El gestor aparece solo al editar, porque necesita el id de la entidad.",
+        "Activas: nginx sirve la imagen pública.",
+        "Inactivas: la API la sirve y exige permiso shop."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Borrado con productos",
+      "items": [
+        "Primero se consulta si la categoría tiene productos.",
+        "Sin cascade la API responde 409; con cascade elimina productos, imágenes y archivos.",
+        "La operación no es transaccional: un fallo intermedio puede dejar estado parcial."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Límites",
+      "items": [
+        "El listado pide imágenes por cada fila: N+1.",
+        "No hay unicidad de nombre de categoría.",
+        "Precio y stock negativos se bloquean en el modal, no en el backend."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Vida de un documento generado",
+    "subtitle": "Hash, correlativo, versiones y anulación",
+    "locale": "es",
+    "output": "front/public/flujos/documentos.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Andriw75/angular-go-template",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "db02384130585abab33e03fed6a4e89cb46b9cfa"
+    }
+  },
+  "mainPath": ["solicitud", "hash", "existe", "nuevo", "emitido"],
+  "states": [
+    {
+      "id": "solicitud",
+      "type": "start",
+      "label": "Solicitud",
+      "sublabel": "tipo + plantilla",
+      "tag": "entrada",
+      "step": "01",
+      "sources": [
+        { "path": "back/api/handlers/documento.go", "line": 1, "end_line": 120 }
+      ]
+    },
+    {
+      "id": "hash",
+      "type": "active",
+      "label": "Hash calculado",
+      "sublabel": "sha256 canónico",
+      "tag": "idempotencia",
+      "step": "02",
+      "sources": [
+        { "path": "back/services/documentos.go", "line": 1, "end_line": 160 }
+      ]
+    },
+    {
+      "id": "existe",
+      "type": "decision",
+      "label": "¿Ya existe?",
+      "sublabel": "mismo tipo + hash",
+      "tag": "unique",
+      "step": "03"
+    },
+    {
+      "id": "nuevo",
+      "type": "active",
+      "label": "Nuevo",
+      "sublabel": "correlativo",
+      "tag": "FAC / TKT / NOT / GEN",
+      "step": "04",
+      "sources": [
+        { "path": "back/infrastructure/database/documentos.go", "line": 1, "end_line": 120 }
+      ]
+    },
+    {
+      "id": "emitido",
+      "type": "success",
+      "label": "Emitido",
+      "sublabel": "snapshot + archivos",
+      "tag": "con archivos",
+      "step": "05",
+      "sources": [
+        { "path": "back/infrastructure/database/schema.go", "line": 157, "end_line": 205 }
+      ]
+    },
+    {
+      "id": "inmutable",
+      "type": "success",
+      "label": "Existente",
+      "sublabel": "mismo documento",
+      "tag": "inmutable"
+    },
+    {
+      "id": "regenerado",
+      "type": "active",
+      "label": "Regenerado",
+      "sublabel": "nueva versión",
+      "tag": "actualizable",
+      "sources": [
+        { "path": "back/services/documentos.go", "line": 160, "end_line": 260 }
+      ]
+    },
+    {
+      "id": "anulado",
+      "type": "failure",
+      "label": "Anulado",
+      "sublabel": "conserva todo",
+      "tag": "terminal",
+      "sources": [
+        { "path": "back/api/handlers/documento.go", "line": 120, "end_line": 216 }
+      ]
+    },
+    {
+      "id": "error",
+      "type": "failure",
+      "label": "Error",
+      "sublabel": "rollback",
+      "tag": "sin documento"
+    },
+    {
+      "id": "job",
+      "type": "waiting",
+      "label": "Job en curso",
+      "sublabel": "202 + TTL 30 min",
+      "tag": "asíncrono",
+      "sources": [
+        { "path": "back/services/jobs.go", "line": 1, "end_line": 96 }
+      ]
+    }
+  ],
+  "transitions": [
+    { "id": "solicitud-hash", "from": "solicitud", "to": "hash", "label": "hash" },
+    { "id": "hash-existe", "from": "hash", "to": "existe", "label": "hash" },
+    { "id": "existe-inmutable", "from": "existe", "to": "inmutable", "label": "inmutable", "variant": "security" },
+    { "id": "existe-regenerado", "from": "existe", "to": "regenerado", "label": "actualizable" },
+    { "id": "existe-nuevo", "from": "existe", "to": "nuevo", "label": "nuevo" },
+    { "id": "nuevo-emitido", "from": "nuevo", "to": "emitido", "label": "emite", "variant": "emphasis" },
+    { "id": "emitido-regenerado", "from": "emitido", "to": "regenerado", "label": "nueva versión" },
+    { "id": "regenerado-emitido", "from": "regenerado", "to": "emitido", "label": "versión lista" },
+    { "id": "emitido-anulado", "from": "emitido", "to": "anulado", "label": "anular", "variant": "security" },
+    { "id": "nuevo-error", "from": "nuevo", "to": "error", "label": "falla", "variant": "security" },
+    { "id": "error-solicitud", "from": "error", "to": "solicitud", "label": "reintentar", "variant": "dashed" },
+    { "id": "emitido-job", "from": "emitido", "to": "job", "label": "supera 60 s", "variant": "dashed" },
+    { "id": "job-emitido", "from": "job", "to": "emitido", "label": "termina", "variant": "dashed" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Idempotencia",
+      "items": [
+        "hash = sha256(tipo + versión de plantilla + JSON canónico).",
+        "Unique (tipo, parametros_hash).",
+        "Mismo hash inmutable devuelve el existente; actualizable regenera."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Correlativo y snapshot",
+      "items": [
+        "El correlativo se asigna al emitir, no al crear un borrador de venta.",
+        "Códigos: FAC, TKT, NOT y GEN para datos sintéticos.",
+        "El snapshot permite regenerar el archivo perdido con el mismo código."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Estados y límites",
+      "items": [
+        "Ventas: borrador → emitido → anulado; solo los borradores se editan o eliminan.",
+        "Los documentos emitidos se anulan, no se borran.",
+        "Si el proceso se reinicia, el job en memoria se pierde; el documento persistido sigue disponible."
+      ]
+    }
+  ]
+}

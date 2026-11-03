@@ -60,6 +60,13 @@ resume y enlaza. No numerar archivos; el orden se controla con esta tabla.
 | Ventas y reportes             | Documentado | [docs/flujos/reportes.md](docs/flujos/reportes.md)                       |
 | Instalaciones / mapas         | Documentado | [docs/flujos/instalaciones-mapas.md](docs/flujos/instalaciones-mapas.md) |
 
+## Diagramas de flujo
+
+Los diagramas visuales de negocio viven en `front/public/flujos/` y se abren
+desde el sidebar en **Flujos** (`/dashboard/flujos`). El índice con HTML, PNG,
+GIF y fuentes está en
+[docs/diagramas/README.md](docs/diagramas/README.md).
+
 ## Convenciones de trabajo
 
 - Antes de dar por terminado un cambio en `back/`, ejecutar `go build ./...` y

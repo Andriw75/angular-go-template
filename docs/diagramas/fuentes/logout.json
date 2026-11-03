@@ -1,0 +1,235 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Cierre de sesión y revocación",
+    "subtitle": "Cierre manual, revocación de tokens y permisos que cambian en caliente",
+    "locale": "es",
+    "output": "front/public/flujos/logout.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Andriw75/angular-go-template",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "db02384130585abab33e03fed6a4e89cb46b9cfa"
+    }
+  },
+  "lanes": [
+    { "id": "persona", "label": "Persona y pantalla" },
+    { "id": "api", "label": "API Go" },
+    { "id": "sesion", "label": "Sesión y permisos", "variant": "exception" },
+    { "id": "datos", "label": "Datos" }
+  ],
+  "mainPath": ["usuario", "menu", "api", "control", "registro"],
+  "nodes": [
+    {
+      "id": "usuario",
+      "lane": "persona",
+      "col": 0,
+      "type": "external",
+      "label": "Usuario",
+      "sublabel": "pulsa Cerrar sesión",
+      "icon": "person"
+    },
+    {
+      "id": "menu",
+      "lane": "persona",
+      "col": 1,
+      "type": "frontend",
+      "label": "Menú lateral",
+      "sublabel": "corta SSE y contador",
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/components/dashboard/sidebar/sidebar.ts", "line": 34, "end_line": 49 }
+      ]
+    },
+    {
+      "id": "acceso",
+      "lane": "persona",
+      "col": 5,
+      "type": "frontend",
+      "label": "Pantalla de acceso",
+      "sublabel": "sin usuario en memoria",
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/guards/login.guard.ts", "line": 6, "end_line": 20 }
+      ]
+    },
+    {
+      "id": "admin",
+      "lane": "persona",
+      "col": 1,
+      "type": "external",
+      "label": "Administrador",
+      "sublabel": "edita permisos o estado",
+      "icon": "person",
+      "yOffset": 150
+    },
+    {
+      "id": "api",
+      "lane": "api",
+      "col": 2,
+      "type": "backend",
+      "label": "API Go",
+      "sublabel": "POST /auth/logout",
+      "icon": "backend",
+      "sources": [
+        { "path": "back/api/handlers/auth.go", "line": 74, "end_line": 91 }
+      ]
+    },
+    {
+      "id": "control",
+      "lane": "api",
+      "col": 3,
+      "type": "security",
+      "label": "Control de sesión",
+      "sublabel": "cookie + claims",
+      "icon": "security",
+      "sources": [
+        { "path": "back/api/handlers/auth.go", "line": 111, "end_line": 170 }
+      ]
+    },
+    {
+      "id": "me",
+      "lane": "api",
+      "col": 5,
+      "type": "security",
+      "label": "GET /auth/me",
+      "sublabel": "401 sin cookie",
+      "icon": "security",
+      "sources": [
+        { "path": "back/api/handlers/auth.go", "line": 93, "end_line": 109 }
+      ]
+    },
+    {
+      "id": "update",
+      "lane": "api",
+      "col": 2,
+      "type": "backend",
+      "label": "PUT /users/{id}",
+      "sublabel": "permisos o activo",
+      "icon": "backend",
+      "yOffset": 150,
+      "sources": [
+        { "path": "back/api/handlers/user.go", "line": 70, "end_line": 94 }
+      ]
+    },
+    {
+      "id": "registro",
+      "lane": "sesion",
+      "col": 4,
+      "type": "security",
+      "label": "Registro de sesiones",
+      "sublabel": "elimina el jti",
+      "icon": "security",
+      "sources": [
+        { "path": "back/infrastructure/auth/jwt_store.go", "line": 30, "end_line": 52 }
+      ]
+    },
+    {
+      "id": "revoca",
+      "lane": "sesion",
+      "col": 3,
+      "type": "security",
+      "label": "RemoveUserTokens",
+      "sublabel": "todas las sesiones",
+      "icon": "security",
+      "yOffset": 150,
+      "sources": [
+        { "path": "back/api/handlers/user.go", "line": 89, "end_line": 91 }
+      ]
+    },
+    {
+      "id": "siguiente",
+      "lane": "sesion",
+      "col": 4,
+      "type": "security",
+      "label": "Siguiente request",
+      "sublabel": "jti ausente",
+      "icon": "waiting",
+      "yOffset": 150
+    },
+    {
+      "id": "renueva",
+      "lane": "sesion",
+      "col": 5,
+      "type": "security",
+      "label": "Token nuevo",
+      "sublabel": "recarga usuario y permisos",
+      "icon": "success",
+      "yOffset": 110,
+      "sources": [
+        { "path": "back/api/handlers/auth.go", "line": 137, "end_line": 156 }
+      ]
+    },
+    {
+      "id": "expira",
+      "lane": "sesion",
+      "col": 5,
+      "type": "security",
+      "label": "401 session expired",
+      "sublabel": "sin recarga",
+      "icon": "failure",
+      "yOffset": 190
+    },
+    {
+      "id": "db",
+      "lane": "datos",
+      "col": 3,
+      "type": "database",
+      "label": "Base de datos",
+      "sublabel": "usuarios y permisos",
+      "icon": "database",
+      "yOffset": 20,
+      "sources": [
+        { "path": "back/infrastructure/database/users.go", "line": 62, "end_line": 105 }
+      ]
+    }
+  ],
+  "edges": [
+    { "from": "usuario", "to": "menu", "label": "Cerrar sesión", "variant": "default" },
+    { "from": "menu", "to": "api", "label": "POST /auth/logout", "variant": "emphasis", "role": "main" },
+    { "from": "api", "to": "control", "label": "valida cookie", "variant": "security", "role": "main" },
+    { "from": "control", "to": "registro", "label": "remove(jti)", "variant": "security", "role": "main" },
+    { "from": "control", "to": "menu", "label": "200 + cookie vacía", "variant": "default", "role": "return" },
+    { "from": "menu", "to": "acceso", "label": "user = null + navigate", "variant": "default", "role": "main" },
+    { "from": "acceso", "to": "me", "label": "loginGuard consulta", "variant": "dashed", "role": "branch" },
+    { "from": "me", "to": "acceso", "label": "401", "variant": "security", "role": "error" },
+    { "from": "admin", "to": "update", "label": "cambia permisos", "variant": "default", "role": "branch" },
+    { "from": "update", "to": "db", "label": "guarda cambios", "variant": "default", "role": "branch" },
+    { "from": "update", "to": "revoca", "label": "permisos/activo", "variant": "security", "role": "branch" },
+    { "from": "revoca", "to": "siguiente", "label": "invalida jti", "variant": "security", "role": "branch" },
+    { "from": "siguiente", "to": "renueva", "label": "LOAD=true + activo", "variant": "default", "role": "branch" },
+    { "from": "siguiente", "to": "expira", "label": "LOAD=false o inactivo", "variant": "security", "role": "error" },
+    { "from": "renueva", "to": "me", "label": "nueva cookie", "variant": "default", "role": "return" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Cierre normal",
+      "items": [
+        "El navegador corta SSE, detiene el contador y limpia auth.user.",
+        "La API elimina el jti del registro en memoria y borra la cookie.",
+        "Al llegar a /login, loginGuard consulta /auth/me y recibe 401."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Revocación por permisos",
+      "items": [
+        "PUT /users/{id} ejecuta RemoveUserTokens si cambian permisos o activo.",
+        "Con LOAD=true la siguiente request recarga el usuario y emite un JWT nuevo.",
+        "Con LOAD=false o usuario inactivo responde 401 session expired."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Límites conocidos",
+      "items": [
+        "Eliminar un usuario no revoca sus tokens.",
+        "Cambios directos en BD no disparan RemoveUserTokens.",
+        "El registro es por proceso: en multi-instancia la revocación no es global."
+      ]
+    }
+  ]
+}

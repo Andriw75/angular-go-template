@@ -18,6 +18,11 @@ export const routes: Routes = [
         loadComponent: () => import('./components/dashboard/home/home').then((m) => m.HomeComponent),
       },
       {
+        path: 'flujos',
+        loadComponent: () =>
+          import('./components/dashboard/flujos/flujos').then((m) => m.FlujosComponent),
+      },
+      {
         path: 'buses',
         loadComponent: () =>
           import('./components/dashboard/buses/list').then((m) => m.BusesListComponent),

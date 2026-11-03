@@ -1,0 +1,127 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Vida del contador de sesión",
+    "subtitle": "Del token activo al auto-logout, con aviso, crítico y renovación",
+    "locale": "es",
+    "output": "front/public/flujos/sesion-contador.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Andriw75/angular-go-template",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "db02384130585abab33e03fed6a4e89cb46b9cfa"
+    }
+  },
+  "mainPath": ["activa", "aviso", "critica", "expirada"],
+  "states": [
+    {
+      "id": "activa",
+      "type": "active",
+      "label": "Sesión activa",
+      "sublabel": "cuenta desde expiresAt",
+      "tag": "normal",
+      "step": "01",
+      "sources": [
+        { "path": "front/src/app/services/session.service.ts", "line": 37, "end_line": 50 }
+      ]
+    },
+    {
+      "id": "aviso",
+      "type": "waiting",
+      "label": "Aviso",
+      "sublabel": "≤ 60 segundos",
+      "tag": "ámbar",
+      "step": "02"
+    },
+    {
+      "id": "critica",
+      "type": "waiting",
+      "label": "Crítico",
+      "sublabel": "≤ 10 segundos",
+      "tag": "rojo",
+      "step": "03"
+    },
+    {
+      "id": "expirada",
+      "type": "failure",
+      "label": "Expirada",
+      "sublabel": "0 segundos",
+      "tag": "auto-logout",
+      "step": "04",
+      "sources": [
+        { "path": "front/src/app/components/dashboard/layout/layout.ts", "line": 1, "end_line": 35 }
+      ]
+    },
+    {
+      "id": "renovada",
+      "type": "active",
+      "label": "Token renovado",
+      "sublabel": "nuevo expiresAt",
+      "tag": "sliding",
+      "sources": [
+        { "path": "back/api/handlers/auth.go", "line": 172, "end_line": 206 }
+      ]
+    },
+    {
+      "id": "segundo_plano",
+      "type": "waiting",
+      "label": "Pestaña en segundo plano",
+      "sublabel": "timer frenado",
+      "tag": "visibilitychange"
+    },
+    {
+      "id": "cerrada",
+      "type": "neutral",
+      "label": "Sesión cerrada",
+      "sublabel": "logout o 401",
+      "tag": "terminal",
+      "sources": [
+        { "path": "front/src/app/interceptors/error.interceptor.ts", "line": 10, "end_line": 24 }
+      ]
+    }
+  ],
+  "transitions": [
+    { "id": "activa-aviso", "from": "activa", "to": "aviso", "label": "quedan 60 s" },
+    { "id": "aviso-critica", "from": "aviso", "to": "critica", "label": "quedan 10 s" },
+    { "id": "critica-expirada", "from": "critica", "to": "expirada", "label": "llega a 0" },
+    { "id": "activa-renovada", "from": "activa", "to": "renovada", "label": "respuesta con header", "variant": "emphasis" },
+    { "id": "renovada-activa", "from": "renovada", "to": "activa", "label": "reinicia cuenta", "variant": "default" },
+    { "id": "activa-segundo", "from": "activa", "to": "segundo_plano", "label": "pierde foco", "variant": "dashed" },
+    { "id": "segundo-activa", "from": "segundo_plano", "to": "activa", "label": "vuelve a la pestaña", "variant": "dashed" },
+    { "id": "activa-cerrada", "from": "activa", "to": "cerrada", "label": "logout" },
+    { "id": "aviso-cerrada", "from": "aviso", "to": "cerrada", "label": "logout" },
+    { "id": "critica-cerrada", "from": "critica", "to": "cerrada", "label": "logout o 401", "variant": "security" },
+    { "id": "expirada-cerrada", "from": "expirada", "to": "cerrada", "label": "redirige a /login", "variant": "security" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "El backend solo informa",
+      "items": [
+        "X-Session-Expires-In viaja en login, /auth/me y rutas autenticadas.",
+        "El valor se calcula después de una posible renovación.",
+        "Mostrar el contador y auto-cerrar es decisión exclusiva del frontend."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Renovación deslizante",
+      "items": [
+        "El middleware renueva cada 5 minutos si hay actividad.",
+        "El contador mide el token actual, no la sesión total.",
+        "Solo llega a 0 si pasan 15 minutos sin renovación."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Límites",
+      "items": [
+        "Pestañas en segundo plano pueden frenar el timer; se recalcula al volver.",
+        "No hay sincronización multi-pestaña.",
+        "Al expirar no se llama a /auth/logout: el token ya no sirve."
+      ]
+    }
+  ]
+}

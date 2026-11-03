@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Acceso y restauración de sesión",
+    "subtitle": "Qué ocurre al iniciar sesión y al refrescar la aplicación",
+    "locale": "es",
+    "output": "front/public/flujos/login.html",
+    "column_fit": "spread",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Andriw75/angular-go-template",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "db02384130585abab33e03fed6a4e89cb46b9cfa"
+    }
+  },
+  "participants": [
+    { "id": "usuario", "type": "external", "label": "Usuario", "sublabel": "persona", "icon": "person" },
+    {
+      "id": "navegador",
+      "type": "frontend",
+      "label": "Navegador",
+      "sublabel": "SPA Angular",
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/components/login/login.ts", "line": 31, "end_line": 49 },
+        { "path": "front/src/app/services/auth.service.ts", "line": 18, "end_line": 29 }
+      ]
+    },
+    {
+      "id": "dashboard",
+      "type": "frontend",
+      "label": "Dashboard",
+      "sublabel": "guards + signal",
+      "icon": "active",
+      "sources": [
+        { "path": "front/src/app/guards/auth.guard.ts", "line": 6, "end_line": 22 },
+        { "path": "front/src/app/guards/login.guard.ts", "line": 6, "end_line": 20 }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "API Go",
+      "sublabel": "auth + JWT",
+      "icon": "backend",
+      "sources": [
+        { "path": "back/api/handlers/auth.go", "line": 36, "end_line": 72 },
+        { "path": "back/infrastructure/auth/jwt.go", "line": 48, "end_line": 81 }
+      ]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "Base de datos",
+      "sublabel": "usuarios y permisos",
+      "icon": "database",
+      "sources": [
+        { "path": "back/infrastructure/database/users.go", "line": 152, "end_line": 160 }
+      ]
+    },
+    {
+      "id": "cookie",
+      "type": "security",
+      "label": "Cookie HttpOnly",
+      "sublabel": "JWT + expiración",
+      "icon": "security",
+      "sources": [
+        { "path": "back/api/handlers/auth.go", "line": 58, "end_line": 66 }
+      ]
+    }
+  ],
+  "segments": [
+    { "from": 150, "to": 340, "label": "Credenciales y emisión del JWT" },
+    { "from": 346, "to": 530, "label": "Navegación y restauración" }
+  ],
+  "messages": [
+    { "from": "usuario", "to": "navegador", "y": 160, "label": "usuario y contraseña", "variant": "default" },
+    {
+      "from": "navegador",
+      "to": "api",
+      "y": 186,
+      "label": "POST /auth/token",
+      "variant": "emphasis",
+      "note": "form-urlencoded y withCredentials"
+    },
+    {
+      "from": "api",
+      "to": "db",
+      "y": 216,
+      "label": "buscar usuario",
+      "variant": "default",
+      "note": "bcrypt.CompareHashAndPassword"
+    },
+    { "from": "db", "to": "api", "y": 271, "label": "usuario + permisos", "variant": "return" },
+    {
+      "from": "api",
+      "to": "cookie",
+      "y": 301,
+      "label": "Set-Cookie",
+      "variant": "security",
+      "note": "HttpOnly, SameSite Strict, Path /"
+    },
+    {
+      "from": "api",
+      "to": "navegador",
+      "y": 331,
+      "label": "200 UserResponse",
+      "variant": "return",
+      "note": "X-Session-Expires-In"
+    },
+    { "from": "navegador", "to": "dashboard", "y": 375, "label": "auth.user.set(u) + navigate", "variant": "default" },
+    {
+      "from": "dashboard",
+      "to": "api",
+      "y": 405,
+      "label": "GET /auth/me (solo tras F5)",
+      "variant": "dashed",
+      "note": "el signal vive solo en memoria"
+    },
+    { "from": "api", "to": "dashboard", "y": 460, "label": "200 UserResponse", "variant": "return" },
+    { "from": "dashboard", "to": "usuario", "y": 490, "label": "dashboard visible", "variant": "return" }
+  ],
+  "activations": [
+    { "participant": "navegador", "from": 160, "to": 381, "type": "frontend" },
+    { "participant": "api", "from": 186, "to": 337, "type": "backend" },
+    { "participant": "db", "from": 210, "to": 277, "type": "database" },
+    { "participant": "cookie", "from": 295, "to": 337, "type": "security" },
+    { "participant": "dashboard", "from": 370, "to": 522, "type": "frontend" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Regla clave",
+      "items": [
+        "La contraseña viaja en el cuerpo y no se guarda en el navegador.",
+        "Lo que persiste es un JWT en una cookie HttpOnly, inaccesible para JavaScript.",
+        "El JWT lleva user_id, permisos, jti y expiración."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "F5 o pestaña nueva",
+      "items": [
+        "El signal auth.user se pierde al recargar.",
+        "El guard consulta GET /auth/me para restaurar la sesión desde la cookie.",
+        "Si la cookie no es válida, el guard redirige a /login."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Errores esperados",
+      "items": [
+        "400 si falta usuario o contraseña.",
+        "401 invalid credentials si bcrypt no coincide.",
+        "403 en una ruta protegida si el permiso no está en el JWT."
+      ]
+    }
+  ]
+}

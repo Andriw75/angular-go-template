@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Mensajes en vivo con SSE",
+    "subtitle": "Cómo un cambio llega a todos los dashboards conectados",
+    "locale": "es",
+    "output": "front/public/flujos/mensajes-sse.html",
+    "column_fit": "spread",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Andriw75/angular-go-template",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "db02384130585abab33e03fed6a4e89cb46b9cfa"
+    }
+  },
+  "participants": [
+    { "id": "usuario_a", "type": "external", "label": "Usuario A", "sublabel": "crea o cambia", "icon": "person" },
+    {
+      "id": "app_a",
+      "type": "frontend",
+      "label": "Navegador A",
+      "sublabel": "dashboard + SSE",
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/services/mensajes-store.service.ts", "line": 15, "end_line": 58 },
+        { "path": "front/src/app/services/sse.service.ts", "line": 1, "end_line": 40 }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "API Go",
+      "sublabel": "REST + SSEHub",
+      "icon": "backend",
+      "sources": [
+        { "path": "back/api/handlers/mensaje.go", "line": 25, "end_line": 63 },
+        { "path": "back/api/handlers/mensaje.go", "line": 94, "end_line": 176 }
+      ]
+    },
+    {
+      "id": "cache",
+      "type": "database",
+      "label": "Caché activa",
+      "sublabel": "ActivosStore en memoria",
+      "icon": "database",
+      "sources": [
+        { "path": "back/infrastructure/cache/activos.go", "line": 19, "end_line": 30 }
+      ]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "Base de datos",
+      "sublabel": "mensajes_pendientes",
+      "icon": "database",
+      "sources": [
+        { "path": "back/infrastructure/database/mensajes.go", "line": 23, "end_line": 95 }
+      ]
+    },
+    {
+      "id": "usuarios_bc",
+      "type": "external",
+      "label": "Usuarios B/C",
+      "sublabel": "otros dashboards",
+      "icon": "person"
+    }
+  ],
+  "segments": [
+    { "from": 150, "to": 320, "label": "Crear y notificar" },
+    { "from": 326, "to": 560, "label": "Conectar y reconectar" }
+  ],
+  "messages": [
+    { "from": "usuario_a", "to": "app_a", "y": 160, "label": "crear mensaje", "variant": "default" },
+    {
+      "from": "app_a",
+      "to": "api",
+      "y": 186,
+      "label": "POST /mensajes_pendientes",
+      "variant": "emphasis",
+      "note": "REST normal; el SSE solo notifica"
+    },
+    { "from": "api", "to": "db", "y": 216, "label": "INSERT", "variant": "default" },
+    { "from": "api", "to": "cache", "y": 244, "label": "Set en caché", "variant": "default" },
+    {
+      "from": "api",
+      "to": "usuarios_bc",
+      "y": 272,
+      "label": "evento create",
+      "variant": "dashed",
+      "note": "SSEHub.Broadcast a todos los conectados"
+    },
+    {
+      "from": "api",
+      "to": "app_a",
+      "y": 330,
+      "label": "201 Created",
+      "variant": "return",
+      "note": "la respuesta no espera al SSE"
+    },
+    {
+      "from": "app_a",
+      "to": "api",
+      "y": 390,
+      "label": "GET /mensajes_pendientes/events",
+      "variant": "dashed",
+      "note": "EventSource con cookie HttpOnly"
+    },
+    { "from": "api", "to": "app_a", "y": 450, "label": "current + stream", "variant": "return" },
+    { "from": "api", "to": "usuarios_bc", "y": 480, "label": "update / delete", "variant": "dashed" },
+    {
+      "from": "usuarios_bc",
+      "to": "api",
+      "y": 510,
+      "label": "reconexión cada 3 s",
+      "variant": "dashed",
+      "note": "si se corta, recibe un snapshot current"
+    }
+  ],
+  "activations": [
+    { "participant": "app_a", "from": 160, "to": 456, "type": "frontend" },
+    { "participant": "api", "from": 186, "to": 516, "type": "backend" },
+    { "participant": "db", "from": 210, "to": 250, "type": "database" },
+    { "participant": "cache", "from": 238, "to": 278, "type": "database" },
+    { "participant": "usuarios_bc", "from": 265, "to": 516, "type": "external" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Qué transporta SSE",
+      "items": [
+        "Un solo contrato: SSEEvent { type, data }.",
+        "El type viaja dentro del JSON, no como campo event:.",
+        "El canal es unidireccional: servidor a cliente; las escrituras siguen siendo REST."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Dos patrones de actualización",
+      "items": [
+        "Mensajes activas: caché en memoria + broadcast a todos.",
+        "Buses, tienda, archivos y pasadas: consulta bajo demanda con paginación de servidor.",
+        "Los filtros de mensajes activas se resuelven en cliente."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Límites del diseño",
+      "items": [
+        "El hub no conoce identidad: todos reciben todos los eventos.",
+        "Buffer de 64; si un cliente se atrasa, pierde eventos y se resincroniza al reconectar.",
+        "Sin replay ni Last-Event-ID; el estado vive por proceso."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+<div class="page-header">
+  <div>
+    <h1>Flujos</h1>
+    <p class="hint">
+      Diagramas de negocio del sistema: actores, operaciones, decisiones y casos límite.
+      Sin componentes de Angular ni nombres de clases.
+    </p>
+  </div>
+  <span class="count">{{ filtered().length }} flujos</span>
+</div>
+
+<div class="chips" role="tablist" aria-label="Categorías de flujos">
+  @for (item of categories; track item) {
+    <button
+      type="button"
+      class="chip"
+      [class.chip--active]="category() === item"
+      (click)="setCategory(item)"
+    >
+      {{ item }}
+    </button>
+  }
+</div>
+
+<div class="flujos-layout">
+  <aside class="flujos-list" aria-label="Lista de flujos">
+    @for (flujo of filtered(); track flujo.slug) {
+      <button
+        type="button"
+        class="flujo-card"
+        [class.flujo-card--active]="selected().slug === flujo.slug"
+        (click)="select(flujo)"
+      >
+        <span class="flujo-type" [attr.data-type]="flujo.type">{{ typeLabel(flujo.type) }}</span>
+        <span class="flujo-title">{{ flujo.title }}</span>
+        <span class="flujo-question">{{ flujo.question }}</span>
+      </button>
+    }
+  </aside>
+
+  <section class="preview" aria-label="Vista previa del flujo">
+    <div class="preview-header">
+      <div class="preview-copy">
+        <span class="flujo-type" [attr.data-type]="selected().type">{{ typeLabel(selected().type) }}</span>
+        <h2>{{ selected().title }}</h2>
+        <p>{{ selected().description }}</p>
+      </div>
+      <button type="button" class="open-button" (click)="openFull(selected().file)">
+        Abrir en pestaña
+      </button>
+    </div>
+
+    <iframe
+      class="preview-frame"
+      [src]="previewUrl()"
+      [title]="selected().title"
+      loading="lazy"
+      referrerpolicy="no-referrer"
+    ></iframe>
+  </section>
+</div>

@@ -1,5 +1,6 @@
 import { type Type } from '@angular/core';
 import { HomeIcon } from '../../../common/icons/home.icon';
+import { FlowIcon } from '../../../common/icons/flow.icon';
 import { UsersIcon } from '../../../common/icons/users.icon';
 import { BusIcon } from '../../../common/icons/bus.icon';
 import { MapIcon } from '../../../common/icons/map.icon';
@@ -31,6 +32,12 @@ export const MENU: MenuItem[] = [
     key: 'home',
     path: '/dashboard',
     icon: { component: HomeIcon, inputs: { size: '20' } },
+  },
+  {
+    label: 'Flujos',
+    key: 'flujos',
+    path: '/dashboard/flujos',
+    icon: { component: FlowIcon, inputs: { size: '20' } },
   },
   {
     label: 'Buses',

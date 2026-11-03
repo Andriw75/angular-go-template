@@ -1,0 +1,203 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Usuarios, permisos y JWT",
+    "subtitle": "Cómo se asignan permisos y cómo llegan a una sesión activa",
+    "locale": "es",
+    "output": "front/public/flujos/usuarios-permisos.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Andriw75/angular-go-template",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "db02384130585abab33e03fed6a4e89cb46b9cfa"
+    }
+  },
+  "lanes": [
+    { "id": "admin", "label": "Administrador y pantalla" },
+    { "id": "api", "label": "API Go" },
+    { "id": "sesion", "label": "Sesión y JWT", "variant": "exception" },
+    { "id": "datos", "label": "Datos" }
+  ],
+  "phases": [
+    { "id": "edicion", "label": "Edición", "fromCol": 0, "toCol": 2 },
+    { "id": "propagacion", "label": "Propagación al token", "fromCol": 3, "toCol": 5, "variant": "security" }
+  ],
+  "mainPath": ["admin", "lista", "modal", "api", "db"],
+  "nodes": [
+    {
+      "id": "admin",
+      "lane": "admin",
+      "col": 0,
+      "type": "external",
+      "label": "Administrador",
+      "sublabel": "permiso usuarios",
+      "icon": "person"
+    },
+    {
+      "id": "lista",
+      "lane": "admin",
+      "col": 1,
+      "type": "frontend",
+      "label": "Listado de usuarios",
+      "sublabel": "GET /users",
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/components/dashboard/usuarios/list.ts", "line": 1, "end_line": 80 }
+      ]
+    },
+    {
+      "id": "modal",
+      "lane": "admin",
+      "col": 2,
+      "type": "frontend",
+      "label": "Modal de usuario",
+      "sublabel": "solo envía el diff",
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/components/dashboard/usuarios/modal.ts", "line": 1, "end_line": 120 }
+      ]
+    },
+    {
+      "id": "menu",
+      "lane": "admin",
+      "col": 4,
+      "type": "frontend",
+      "label": "Menú lateral",
+      "sublabel": "oculta entradas",
+      "icon": "frontend",
+      "yOffset": 150,
+      "sources": [
+        { "path": "front/src/app/components/dashboard/sidebar/sidebar.ts", "line": 52, "end_line": 63 },
+        { "path": "front/src/app/components/dashboard/sidebar/menu.config.ts", "line": 28, "end_line": 100 }
+      ]
+    },
+    {
+      "id": "api",
+      "lane": "api",
+      "col": 3,
+      "type": "backend",
+      "label": "API /users",
+      "sublabel": "exige permiso usuarios",
+      "icon": "backend",
+      "sources": [
+        { "path": "back/api/handlers/user.go", "line": 23, "end_line": 112 },
+        { "path": "back/api/router.go", "line": 47, "end_line": 53 }
+      ]
+    },
+    {
+      "id": "catalogo",
+      "lane": "api",
+      "col": 2,
+      "type": "backend",
+      "label": "GET /permisos",
+      "sublabel": "catálogo fijo",
+      "icon": "backend",
+      "yOffset": 170,
+      "sources": [
+        { "path": "back/api/handlers/permiso.go", "line": 1, "end_line": 12 }
+      ]
+    },
+    {
+      "id": "revoca",
+      "lane": "api",
+      "col": 4,
+      "type": "security",
+      "label": "RemoveUserTokens",
+      "sublabel": "si permisos o activo",
+      "icon": "security",
+      "yOffset": 120,
+      "sources": [
+        { "path": "back/api/handlers/user.go", "line": 89, "end_line": 91 }
+      ]
+    },
+    {
+      "id": "siguiente",
+      "lane": "sesion",
+      "col": 4,
+      "type": "security",
+      "label": "Siguiente request",
+      "sublabel": "jti ausente",
+      "icon": "waiting"
+    },
+    {
+      "id": "renueva",
+      "lane": "sesion",
+      "col": 5,
+      "type": "security",
+      "label": "Token nuevo",
+      "sublabel": "permisos actuales",
+      "icon": "success",
+      "yOffset": 70,
+      "sources": [
+        { "path": "back/api/handlers/auth.go", "line": 137, "end_line": 156 }
+      ]
+    },
+    {
+      "id": "bloquea",
+      "lane": "sesion",
+      "col": 5,
+      "type": "security",
+      "label": "403 forbidden",
+      "sublabel": "sin el permiso",
+      "icon": "failure",
+      "yOffset": 160
+    },
+    {
+      "id": "db",
+      "lane": "datos",
+      "col": 3,
+      "type": "database",
+      "label": "Base de datos",
+      "sublabel": "users + user_permissions",
+      "icon": "database",
+      "sources": [
+        { "path": "back/infrastructure/database/users.go", "line": 62, "end_line": 105 },
+        { "path": "back/infrastructure/database/db.go", "line": 85, "end_line": 125 }
+      ]
+    }
+  ],
+  "edges": [
+    { "from": "admin", "to": "lista", "label": "abre Usuarios", "variant": "default" },
+    { "from": "lista", "to": "modal", "label": "crear o editar", "variant": "default" },
+    { "from": "modal", "to": "catalogo", "label": "carga permisos", "variant": "dashed", "role": "branch" },
+    { "from": "modal", "to": "api", "label": "POST/PUT /users", "variant": "emphasis", "role": "main" },
+    { "from": "api", "to": "db", "label": "guarda usuario", "variant": "default", "role": "main" },
+    { "from": "api", "to": "revoca", "label": "permisos/activo", "variant": "security", "role": "branch" },
+    { "from": "revoca", "to": "siguiente", "label": "invalida jti", "variant": "security", "role": "branch" },
+    { "from": "siguiente", "to": "renueva", "label": "LOAD=true + activo", "variant": "default", "role": "branch" },
+    { "from": "siguiente", "to": "bloquea", "label": "sin permiso", "variant": "security", "role": "error" },
+    { "from": "api", "to": "lista", "label": "respuesta", "variant": "default", "role": "return" },
+    { "from": "api", "to": "menu", "label": "permisos del JWT", "variant": "dashed", "role": "branch" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Catálogo actual",
+      "items": [
+        "Ocho permisos planos: buses, usuarios, mensajes_pendientes, shop, archivos, ventas, reportes, documentos.",
+        "No hay roles ni jerarquías; la relación usuario-permiso es N:M.",
+        "Agregar un permiso exige tocar el seed y reiniciar."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "El JWT es una foto",
+      "items": [
+        "Los permisos se copian al token al iniciar sesión.",
+        "Si cambian, RemoveUserTokens fuerza la renovación en la siguiente request.",
+        "La revocación aplica aunque el usuario no refresque la página."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "UI no es autorización",
+      "items": [
+        "El sidebar solo oculta entradas; una ruta directa puede instanciarse.",
+        "El backend responde 403 si falta el permiso.",
+        "Eliminar un usuario no revoca sus tokens; cambios directos en BD tampoco."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,187 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Instalaciones en el mapa",
+    "subtitle": "Cargar todo, filtrar en cliente y operar desde el mapa o la lista",
+    "locale": "es",
+    "output": "front/public/flujos/instalaciones-mapas.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Andriw75/angular-go-template",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "db02384130585abab33e03fed6a4e89cb46b9cfa"
+    }
+  },
+  "lanes": [
+    { "id": "persona", "label": "Persona y pantalla" },
+    { "id": "mapa", "label": "Mapa y estado" },
+    { "id": "api", "label": "API Go" },
+    { "id": "datos", "label": "Datos" }
+  ],
+  "mainPath": ["usuario", "menu", "mapa", "modal", "api", "db"],
+  "nodes": [
+    {
+      "id": "usuario",
+      "lane": "persona",
+      "col": 0,
+      "type": "external",
+      "label": "Usuario",
+      "sublabel": "sesión iniciada",
+      "icon": "person"
+    },
+    {
+      "id": "menu",
+      "lane": "persona",
+      "col": 1,
+      "type": "frontend",
+      "label": "Mapas",
+      "sublabel": "sin permiso específico",
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/components/dashboard/sidebar/menu.config.ts", "line": 55, "end_line": 75 }
+      ]
+    },
+    {
+      "id": "mapa",
+      "lane": "mapa",
+      "col": 2,
+      "type": "frontend",
+      "label": "Mapa Leaflet",
+      "sublabel": "tiles OSM + marcadores",
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/components/dashboard/mapas/mapa.ts", "line": 1, "end_line": 120 },
+        { "path": "front/src/app/services/maps.service.ts", "line": 1, "end_line": 13 }
+      ]
+    },
+    {
+      "id": "store",
+      "lane": "mapa",
+      "col": 3,
+      "type": "frontend",
+      "label": "Store de instalaciones",
+      "sublabel": "filtros en cliente",
+      "icon": "database",
+      "yOffset": 110,
+      "sources": [
+        { "path": "front/src/app/services/instalaciones-store.service.ts", "line": 1, "end_line": 115 }
+      ]
+    },
+    {
+      "id": "lista",
+      "lane": "mapa",
+      "col": 3,
+      "type": "frontend",
+      "label": "Lista lateral",
+      "sublabel": "chips + tarjetas",
+      "icon": "frontend",
+      "yOffset": 190,
+      "sources": [
+        { "path": "front/src/app/components/dashboard/mapas/lista.ts", "line": 1, "end_line": 84 }
+      ]
+    },
+    {
+      "id": "modal",
+      "lane": "persona",
+      "col": 4,
+      "type": "frontend",
+      "label": "Modal de instalación",
+      "sublabel": "lat/lng + campos",
+      "icon": "frontend",
+      "yOffset": 90,
+      "sources": [
+        { "path": "front/src/app/components/dashboard/mapas/instalacion-modal.ts", "line": 1, "end_line": 120 }
+      ]
+    },
+    {
+      "id": "api",
+      "lane": "api",
+      "col": 4,
+      "type": "backend",
+      "label": "API /instalaciones",
+      "sublabel": "CRUD sin paginación",
+      "icon": "backend",
+      "yOffset": 180,
+      "sources": [
+        { "path": "back/api/handlers/instalacion.go", "line": 1, "end_line": 185 }
+      ]
+    },
+    {
+      "id": "vacio",
+      "lane": "api",
+      "col": 5,
+      "type": "external",
+      "label": "Mapa vacío",
+      "sublabel": "sin seed en modo BD",
+      "icon": "neutral",
+      "yOffset": 60
+    },
+    {
+      "id": "db",
+      "lane": "datos",
+      "col": 5,
+      "type": "database",
+      "label": "Tabla instalaciones",
+      "sublabel": "tipo, estado, zona",
+      "icon": "database",
+      "sources": [
+        { "path": "back/infrastructure/database/instalaciones.go", "line": 1, "end_line": 120 }
+      ]
+    },
+    {
+      "id": "error",
+      "lane": "datos",
+      "col": 5,
+      "type": "security",
+      "label": "404 / 400 / 401",
+      "sublabel": "error de operación",
+      "icon": "failure",
+      "yOffset": 140
+    }
+  ],
+  "edges": [
+    { "from": "usuario", "to": "menu", "label": "abre Mapas", "variant": "default" },
+    { "from": "menu", "to": "mapa", "label": "GET /instalaciones", "variant": "emphasis", "role": "main" },
+    { "from": "mapa", "to": "store", "label": "carga completa", "variant": "default", "role": "main" },
+    { "from": "store", "to": "mapa", "label": "filtra y renderiza", "variant": "dashed", "role": "return" },
+    { "from": "mapa", "to": "lista", "label": "muestra tarjetas", "variant": "default", "role": "branch" },
+    { "from": "mapa", "to": "modal", "label": "clic derecho / editar", "variant": "default", "role": "main" },
+    { "from": "lista", "to": "modal", "label": "selecciona", "variant": "default", "role": "branch" },
+    { "from": "modal", "to": "api", "label": "POST / PUT / DELETE", "variant": "emphasis", "role": "main" },
+    { "from": "api", "to": "db", "label": "persiste", "variant": "default", "role": "main" },
+    { "from": "api", "to": "mapa", "label": "actualiza store", "variant": "default", "role": "return" },
+    { "from": "api", "to": "error", "label": "fallo", "variant": "security", "role": "error" },
+    { "from": "db", "to": "vacio", "label": "arranque", "variant": "dashed", "role": "branch" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Sin permiso específico",
+      "items": [
+        "La ruta usa AuthMiddleware() sin permiso adicional.",
+        "Cualquier usuario logueado puede ver y modificar instalaciones.",
+        "El menú Mapas no declara requiredPermission."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Estado en cliente",
+      "items": [
+        "GET /instalaciones devuelve todo el listado en una sola llamada.",
+        "Búsqueda, tipo, estado y zona se filtran localmente.",
+        "Seleccionar una tarjeta hace flyTo al marcador; cambiar filtros usa fitBounds."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Límites",
+      "items": [
+        "Sin paginación ni clustering: miles de marcadores degradan el mapa.",
+        "El backend no valida tipo, estado, zona ni rangos de lat/lng.",
+        "Sin geocodificación y sin control de concurrencia; el mapa arranca vacío."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Archivos e imágenes: público y privado",
+    "subtitle": "Quién guarda cada archivo y quién lo sirve al navegador",
+    "locale": "es",
+    "output": "front/public/flujos/archivos.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Andriw75/angular-go-template",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "db02384130585abab33e03fed6a4e89cb46b9cfa"
+    }
+  },
+  "stages": [
+    { "label": "Origen" },
+    { "label": "Subida" },
+    { "label": "Decisión" },
+    { "label": "Almacén" },
+    { "label": "Servido" }
+  ],
+  "nodes": [
+    {
+      "id": "usuario",
+      "type": "external",
+      "label": "Usuario",
+      "sublabel": "sube o abre un archivo",
+      "stage": 0,
+      "row": 1,
+      "icon": "person"
+    },
+    {
+      "id": "panel",
+      "type": "frontend",
+      "label": "Panel de archivos",
+      "sublabel": "multipart o URL",
+      "stage": 1,
+      "row": 1,
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/components/dashboard/archivos/list.ts", "line": 1, "end_line": 80 },
+        { "path": "front/src/app/services/archivos.service.ts", "line": 28, "end_line": 52 }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "API Go",
+      "sublabel": "valida y mueve",
+      "stage": 2,
+      "row": 1,
+      "icon": "backend",
+      "sources": [
+        { "path": "back/api/handlers/archivo.go", "line": 60, "end_line": 160 },
+        { "path": "back/api/handlers/imagen.go", "line": 106, "end_line": 152 }
+      ]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "Base de datos",
+      "sublabel": "archivos + imagenes",
+      "stage": 2,
+      "row": 0,
+      "icon": "database",
+      "sources": [
+        { "path": "back/infrastructure/database/schema.go", "line": 85, "end_line": 115 }
+      ]
+    },
+    {
+      "id": "publico",
+      "type": "cloud",
+      "label": "Carpeta pública",
+      "sublabel": "PUBLIC_DIR/public",
+      "tag": "nginx",
+      "stage": 3,
+      "row": 0,
+      "icon": "cloud",
+      "sources": [
+        { "path": "back/services/config.go", "line": 77, "end_line": 89 }
+      ]
+    },
+    {
+      "id": "privado",
+      "type": "security",
+      "label": "Carpeta privada",
+      "sublabel": "PUBLIC_DIR/archivos",
+      "tag": "solo API",
+      "stage": 3,
+      "row": 2,
+      "icon": "security",
+      "sources": [
+        { "path": "back/services/config.go", "line": 92, "end_line": 105 }
+      ]
+    },
+    {
+      "id": "nginx",
+      "type": "cloud",
+      "label": "nginx",
+      "sublabel": "/template/public/",
+      "tag": "sin API",
+      "stage": 4,
+      "row": 0,
+      "icon": "cloud",
+      "sources": [
+        { "path": "deploy/nginx.conf", "line": 27, "end_line": 32 }
+      ]
+    },
+    {
+      "id": "api_serve",
+      "type": "backend",
+      "label": "API de archivos",
+      "sublabel": "/archivos/{filename}",
+      "stage": 4,
+      "row": 1,
+      "icon": "security",
+      "sources": [
+        { "path": "back/api/handlers/archivo.go", "line": 162, "end_line": 236 }
+      ]
+    },
+    {
+      "id": "navegador",
+      "type": "frontend",
+      "label": "Navegador",
+      "sublabel": "elige MEDIA_URL o API_URL",
+      "stage": 4,
+      "row": 3,
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/services/archivos.service.ts", "line": 44, "end_line": 52 }
+      ]
+    }
+  ],
+  "flows": [
+    { "id": "sube", "from": "usuario", "to": "panel", "label": "archivo o imagen", "variant": "default" },
+    { "id": "registra", "from": "panel", "to": "api", "label": "multipart + visibilidad", "variant": "emphasis" },
+    { "id": "metadata", "from": "api", "to": "db", "label": "metadata", "variant": "default" },
+    { "id": "publica", "from": "api", "to": "publico", "label": "público o activo", "variant": "emphasis" },
+    { "id": "restringe", "from": "api", "to": "privado", "label": "restringido", "variant": "security" },
+    { "id": "estatico", "from": "publico", "to": "nginx", "label": "estático", "variant": "default" },
+    { "id": "protegido", "from": "privado", "to": "api_serve", "label": "con permiso", "variant": "security" },
+    { "id": "resuelve", "from": "db", "to": "api_serve", "label": "resuelve visibilidad", "variant": "dashed" },
+    { "id": "url_publica", "from": "nginx", "to": "navegador", "label": "URL pública", "variant": "default" },
+    { "id": "url_privada", "from": "api_serve", "to": "navegador", "label": "URL restringida", "variant": "security" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Regla de publicación",
+      "items": [
+        "Imagen de producto: pública solo si el producto y su categoría están activos.",
+        "Imagen de categoría: pública solo si la categoría está activa.",
+        "Archivo genérico: público si visibilidad=publico; autenticado/propietario lo sirve la API."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Movimiento de archivos",
+      "items": [
+        "Al cambiar visibilidad o estado, el archivo se mueve entre carpetas.",
+        "Al arrancar, syncPlacement recorre la BD y corrige la ubicación.",
+        "Si un movimiento falla, el handler de servido intenta corregirlo en el siguiente acceso."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Límites",
+      "items": [
+        "Una copia pública ya cacheada puede seguir viéndose tras pasar a restringida.",
+        "OptionalAuthMiddleware no consulta JWTStore ni activo.",
+        "El almacenamiento es local y no hay enlaces firmados ni lectura única."
+      ]
+    }
+  ]
+}

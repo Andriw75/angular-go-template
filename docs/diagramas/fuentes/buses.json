@@ -1,0 +1,170 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Buses: listar, filtrar y mantener",
+    "subtitle": "El CRUD de referencia del dashboard, con paginación de servidor",
+    "locale": "es",
+    "output": "front/public/flujos/buses.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Andriw75/angular-go-template",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "db02384130585abab33e03fed6a4e89cb46b9cfa"
+    }
+  },
+  "lanes": [
+    { "id": "persona", "label": "Persona y pantalla" },
+    { "id": "api", "label": "API Go" },
+    { "id": "datos", "label": "Datos" }
+  ],
+  "mainPath": ["usuario", "menu", "lista", "modal", "api", "db"],
+  "nodes": [
+    {
+      "id": "usuario",
+      "lane": "persona",
+      "col": 0,
+      "type": "external",
+      "label": "Usuario",
+      "sublabel": "permiso buses",
+      "icon": "person"
+    },
+    {
+      "id": "menu",
+      "lane": "persona",
+      "col": 1,
+      "type": "frontend",
+      "label": "Menú Buses",
+      "sublabel": "entrada del sidebar",
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/components/dashboard/sidebar/menu.config.ts", "line": 28, "end_line": 60 }
+      ]
+    },
+    {
+      "id": "lista",
+      "lane": "persona",
+      "col": 2,
+      "type": "frontend",
+      "label": "Listado",
+      "sublabel": "count + página",
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/components/dashboard/buses/list.ts", "line": 51, "end_line": 61 }
+      ]
+    },
+    {
+      "id": "filtros",
+      "lane": "persona",
+      "col": 3,
+      "type": "frontend",
+      "label": "Filtros y página",
+      "sublabel": "q, tipo, activo",
+      "icon": "waiting",
+      "sources": [
+        { "path": "front/src/app/components/dashboard/buses/list.ts", "line": 94, "end_line": 105 }
+      ]
+    },
+    {
+      "id": "modal",
+      "lane": "persona",
+      "col": 4,
+      "type": "frontend",
+      "label": "Modal de bus",
+      "sublabel": "crear o enviar diff",
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/components/dashboard/buses/modal.ts", "line": 96, "end_line": 120 }
+      ]
+    },
+    {
+      "id": "vacio",
+      "lane": "persona",
+      "col": 3,
+      "type": "external",
+      "label": "Tabla vacía",
+      "sublabel": "sin seed en modo BD",
+      "icon": "neutral",
+      "yOffset": 160
+    },
+    {
+      "id": "api",
+      "lane": "api",
+      "col": 4,
+      "type": "backend",
+      "label": "API /buses",
+      "sublabel": "CRUD + filtros",
+      "icon": "backend",
+      "yOffset": 90,
+      "sources": [
+        { "path": "back/api/handlers/bus.go", "line": 27, "end_line": 58 },
+        { "path": "back/api/handlers/bus.go", "line": 76, "end_line": 126 }
+      ]
+    },
+    {
+      "id": "error",
+      "lane": "api",
+      "col": 5,
+      "type": "security",
+      "label": "400 / 401 / 403 / 404",
+      "sublabel": "error de operación",
+      "icon": "failure",
+      "yOffset": 150
+    },
+    {
+      "id": "db",
+      "lane": "datos",
+      "col": 5,
+      "type": "database",
+      "label": "Tabla buses",
+      "sublabel": "sin UNIQUE de placa",
+      "icon": "database",
+      "sources": [
+        { "path": "back/infrastructure/database/buses.go", "line": 66, "end_line": 95 },
+        { "path": "back/infrastructure/database/buses.go", "line": 106, "end_line": 158 }
+      ]
+    }
+  ],
+  "edges": [
+    { "from": "usuario", "to": "menu", "label": "abre Buses", "variant": "default" },
+    { "from": "menu", "to": "lista", "label": "GET count + list", "variant": "emphasis", "role": "main" },
+    { "from": "lista", "to": "filtros", "label": "busca o pagina", "variant": "default", "role": "main" },
+    { "from": "filtros", "to": "lista", "label": "nueva página", "variant": "dashed", "role": "return" },
+    { "from": "lista", "to": "modal", "label": "crear o editar", "variant": "default", "role": "main" },
+    { "from": "modal", "to": "api", "label": "POST / PUT / DELETE", "variant": "emphasis", "role": "main" },
+    { "from": "api", "to": "db", "label": "INSERT / UPDATE / DELETE", "variant": "default", "role": "main" },
+    { "from": "api", "to": "lista", "label": "200 + total", "variant": "default", "role": "return" },
+    { "from": "api", "to": "error", "label": "fallo", "variant": "security", "role": "error" },
+    { "from": "db", "to": "vacio", "label": "arranque", "variant": "dashed", "role": "branch" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Patrón bajo demanda",
+      "items": [
+        "loadWithCount usa forkJoin para traer total y página en una sola pasada.",
+        "Al cambiar de página solo se pide la página; search reinicia a la primera.",
+        "Los filtros q, tipo y activo se resuelven en el servidor."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Operaciones",
+      "items": [
+        "Crear exige placa, nombre y fecha_compra; ultimo_mantenimiento es opcional.",
+        "Editar envía solo los campos que cambiaron; null limpia el mantenimiento.",
+        "Eliminar es borrado físico y recarga el listado."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Límites",
+      "items": [
+        "No hay unicidad de placa ni soft delete.",
+        "Count y list son dos requests; pueden desfasarse ante cambios concurrentes.",
+        "El orden es fijo por id y la tabla arranca vacía en modo BD."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,208 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Reportes y documentos",
+    "subtitle": "Del filtro al PDF o Excel, en navegador o servidor",
+    "locale": "es",
+    "output": "front/public/flujos/reportes.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Andriw75/angular-go-template",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "db02384130585abab33e03fed6a4e89cb46b9cfa"
+    }
+  },
+  "lanes": [
+    { "id": "persona", "label": "Persona y pantalla" },
+    { "id": "api", "label": "API y servicios" },
+    { "id": "motores", "label": "Motores de salida" },
+    { "id": "documentos", "label": "Documentos" }
+  ],
+  "mainPath": ["usuario", "pantalla", "fuente", "datos", "json", "servidor", "archivo"],
+  "nodes": [
+    {
+      "id": "usuario",
+      "lane": "persona",
+      "col": 0,
+      "type": "external",
+      "label": "Usuario",
+      "sublabel": "permiso reportes",
+      "icon": "person"
+    },
+    {
+      "id": "pantalla",
+      "lane": "persona",
+      "col": 1,
+      "type": "frontend",
+      "label": "Pantalla de reportes",
+      "sublabel": "fuente, filtros, plantilla",
+      "icon": "frontend",
+      "sources": [
+        { "path": "front/src/app/components/dashboard/reportes/reportes.ts", "line": 1, "end_line": 120 }
+      ]
+    },
+    {
+      "id": "fuente",
+      "lane": "persona",
+      "col": 2,
+      "type": "frontend",
+      "label": "Fuente de datos",
+      "sublabel": "Buses o Ventas",
+      "icon": "decision",
+      "sources": [
+        { "path": "front/src/app/components/dashboard/reportes/reportes.html", "line": 1, "end_line": 70 }
+      ]
+    },
+    {
+      "id": "navegador",
+      "lane": "motores",
+      "col": 4,
+      "type": "frontend",
+      "label": "Motor navegador",
+      "sublabel": "jsPDF + ExcelJS",
+      "icon": "frontend",
+      "yOffset": 70,
+      "sources": [
+        { "path": "front/src/app/services/report-export.service.ts", "line": 1, "end_line": 120 }
+      ]
+    },
+    {
+      "id": "datos",
+      "lane": "api",
+      "col": 3,
+      "type": "backend",
+      "label": "Datos del reporte",
+      "sublabel": "actuales o generados",
+      "icon": "backend",
+      "sources": [
+        { "path": "back/api/handlers/reporte.go", "line": 1, "end_line": 148 },
+        { "path": "back/services/reportes.go", "line": 1, "end_line": 201 }
+      ]
+    },
+    {
+      "id": "json",
+      "lane": "api",
+      "col": 3,
+      "type": "backend",
+      "label": "JSON común",
+      "sublabel": "resumen + data",
+      "icon": "backend",
+      "yOffset": 140,
+      "sources": [
+        { "path": "back/domain/outputs/reporte.go", "line": 1, "end_line": 36 }
+      ]
+    },
+    {
+      "id": "servidor",
+      "lane": "motores",
+      "col": 4,
+      "type": "backend",
+      "label": "Motor servidor",
+      "sublabel": "fpdf + excelize",
+      "icon": "backend",
+      "yOffset": 160,
+      "sources": [
+        { "path": "back/infrastructure/report/pdf.go", "line": 1, "end_line": 120 },
+        { "path": "back/infrastructure/report/excel.go", "line": 1, "end_line": 100 }
+      ]
+    },
+    {
+      "id": "archivo",
+      "lane": "documentos",
+      "col": 5,
+      "type": "cloud",
+      "label": "PDF o Excel",
+      "sublabel": "descarga o previsualización",
+      "icon": "flag",
+      "sources": [
+        { "path": "front/src/app/services/report-export.service.ts", "line": 1, "end_line": 60 }
+      ]
+    },
+    {
+      "id": "documento",
+      "lane": "documentos",
+      "col": 5,
+      "type": "security",
+      "label": "Documento persistido",
+      "sublabel": "correlativo + snapshot",
+      "icon": "security",
+      "yOffset": 140,
+      "sources": [
+        { "path": "back/services/documentos.go", "line": 1, "end_line": 160 },
+        { "path": "back/api/handlers/documento.go", "line": 1, "end_line": 120 }
+      ]
+    },
+    {
+      "id": "job",
+      "lane": "documentos",
+      "col": 5,
+      "type": "backend",
+      "label": "Job asíncrono",
+      "sublabel": "202 + polling cada 2 s",
+      "icon": "waiting",
+      "yOffset": 230,
+      "sources": [
+        { "path": "back/services/jobs.go", "line": 1, "end_line": 96 }
+      ]
+    },
+    {
+      "id": "db",
+      "lane": "api",
+      "col": 2,
+      "type": "database",
+      "label": "Base de datos",
+      "sublabel": "buses, ventas, documentos",
+      "icon": "database",
+      "yOffset": 210,
+      "sources": [
+        { "path": "back/infrastructure/database/documentos.go", "line": 1, "end_line": 120 }
+      ]
+    }
+  ],
+  "edges": [
+    { "from": "usuario", "to": "pantalla", "label": "abre Reportes", "variant": "default" },
+    { "from": "pantalla", "to": "fuente", "label": "elige Buses/Ventas", "variant": "default" },
+    { "from": "fuente", "to": "datos", "label": "filtros + cantidad", "variant": "emphasis", "role": "main" },
+    { "from": "datos", "to": "db", "label": "consulta o sintetiza", "variant": "dashed", "role": "branch" },
+    { "from": "datos", "to": "json", "label": "normaliza", "variant": "emphasis", "role": "main" },
+    { "from": "json", "to": "navegador", "label": "genera en navegador", "variant": "default", "role": "branch" },
+    { "from": "json", "to": "servidor", "label": "genera en servidor", "variant": "emphasis", "role": "main" },
+    { "from": "navegador", "to": "archivo", "label": "descarga directa", "variant": "default", "role": "branch" },
+    { "from": "servidor", "to": "archivo", "label": "PDF / XLSX", "variant": "default", "role": "main" },
+    { "from": "servidor", "to": "documento", "label": "persiste", "variant": "security", "role": "branch" },
+    { "from": "documento", "to": "job", "label": "supera 60 s", "variant": "dashed", "role": "branch" },
+    { "from": "job", "to": "documento", "label": "polling", "variant": "dashed", "role": "return" },
+    { "from": "pantalla", "to": "archivo", "label": "previsualiza", "variant": "default", "role": "branch" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Dos motores, un JSON",
+      "items": [
+        "Navegador: jsPDF + jspdf-autotable o ExcelJS.",
+        "Servidor: go-pdf/fpdf o excelize/v2.",
+        "El mismo JSON alimenta los cuatro formatos."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Datos actuales o generados",
+      "items": [
+        "Solo Buses admite datos autogenerados, hasta 1000 por solicitud.",
+        "Los datos sintéticos no se insertan en la tabla buses.",
+        "Si se emite un documento con datos generados, usa la serie GEN."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Documentos y jobs",
+      "items": [
+        "El hash incluye tipo, versión de plantilla y parámetros canónicos.",
+        "Inmutable devuelve el existente; actualizable crea una nueva versión.",
+        "Si la generación supera 60 s, responde 202 y el job vive 30 min en memoria."
+      ]
+    }
+  ]
+}
