@@ -83,6 +83,7 @@ func clientIP(r *http.Request) string {
 }
 
 func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
 	username := strings.TrimSpace(r.FormValue("username"))
 	password := r.FormValue("password")
 
