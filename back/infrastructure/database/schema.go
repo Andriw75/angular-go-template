@@ -200,6 +200,8 @@ func schema(d Dialect) []string {
 			creado_en TEXT NOT NULL,
 			actualizado_en TEXT NOT NULL,
 			emitido_en TEXT NOT NULL,
+			anulado_en TEXT,
+			motivo_anulacion TEXT NOT NULL DEFAULT '',
 			origen_id BIGINT,
 			UNIQUE (tipo, parametros_hash)
 		)`, pk),

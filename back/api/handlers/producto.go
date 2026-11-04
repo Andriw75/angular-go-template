@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -76,7 +75,7 @@ func (h *ProductoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	producto, err := h.deps.ProductoStore.FindByID(id)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "producto not found")
+		writeError(w, r, err)
 		return
 	}
 
@@ -96,7 +95,7 @@ func (h *ProductoHandler) UploadImages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := h.deps.ProductoStore.FindByID(id); err != nil {
-		writeJSONError(w, http.StatusNotFound, "producto not found")
+		writeError(w, r, err)
 		return
 	}
 	uploadImagesForEntity(h.deps, "producto", id, w, r)
@@ -109,7 +108,7 @@ func (h *ProductoHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := h.deps.ProductoStore.FindByID(id); err != nil {
-		writeJSONError(w, http.StatusNotFound, "producto not found")
+		writeError(w, r, err)
 		return
 	}
 	deleteImageForEntity(h.deps, "producto", id, imagenID, w)
@@ -122,7 +121,7 @@ func (h *ProductoHandler) ReorderImages(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if _, err := h.deps.ProductoStore.FindByID(id); err != nil {
-		writeJSONError(w, http.StatusNotFound, "producto not found")
+		writeError(w, r, err)
 		return
 	}
 	reorderImagesForEntity(h.deps, "producto", id, w, r)
@@ -141,11 +140,11 @@ func (h *ProductoHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if input.Nombre == "" {
-		writeJSONError(w, http.StatusBadRequest, "nombre is required")
+		writeError(w, r, domain.Validation("nombre is required"))
 		return
 	}
 	if input.CategoriaID <= 0 || !h.validateCategoria(input.CategoriaID) {
-		writeJSONError(w, http.StatusBadRequest, "invalid categoria_id")
+		writeError(w, r, domain.Validation("invalid categoria_id"))
 		return
 	}
 
@@ -160,8 +159,7 @@ func (h *ProductoHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	created, err := h.deps.ProductoStore.Create(producto)
 	if err != nil {
-		slog.Error("failed to create producto", "error", err)
-		writeJSONError(w, http.StatusInternalServerError, "failed to create producto")
+		writeError(w, r, err)
 		return
 	}
 
@@ -189,12 +187,12 @@ func (h *ProductoHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	existing, err := h.deps.ProductoStore.FindByID(id)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "producto not found")
+		writeError(w, r, err)
 		return
 	}
 
 	if input.CategoriaID != nil && (*input.CategoriaID <= 0 || !h.validateCategoria(*input.CategoriaID)) {
-		writeJSONError(w, http.StatusBadRequest, "invalid categoria_id")
+		writeError(w, r, domain.Validation("invalid categoria_id"))
 		return
 	}
 
@@ -218,8 +216,7 @@ func (h *ProductoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.deps.ProductoStore.Update(id, *existing); err != nil {
-		slog.Error("failed to update producto", "error", err)
-		writeJSONError(w, http.StatusInternalServerError, "failed to update producto")
+		writeError(w, r, err)
 		return
 	}
 
@@ -248,7 +245,7 @@ func (h *ProductoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	// Baja en el store primero; si falla, no se toca nada.
 	if err := h.deps.ProductoStore.Delete(id); err != nil {
-		writeJSONError(w, http.StatusNotFound, "producto not found")
+		writeError(w, r, err)
 		return
 	}
 	h.deps.ImagenStore.DeleteByEntidad("producto", id)

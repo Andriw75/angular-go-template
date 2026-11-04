@@ -37,7 +37,7 @@ export interface BusInput {
 
 export interface PaginatedResponse<T> {
   data: T[];
-  total: number;
   offset: number;
   limit: number;
+  has_more: boolean;
 }

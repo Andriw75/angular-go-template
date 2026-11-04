@@ -18,7 +18,7 @@ export interface CategoriaInput {
 
 export interface PaginatedCategorias {
   data: Categoria[];
-  total: number;
   offset: number;
   limit: number;
+  has_more: boolean;
 }

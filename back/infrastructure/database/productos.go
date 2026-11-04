@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"database/sql"
 	"strings"
 	"time"
 
@@ -62,7 +61,7 @@ func (s *ProductoStore) List(offset, limit int, filters store.ProductoFilters) o
 
 	where, args := productoWhere(filters)
 	q := s.db.rebind(`SELECT ` + productoColumns + ` FROM productos` + where + ` ORDER BY id LIMIT ? OFFSET ?`)
-	args = append(args, limit, offset)
+	args = append(args, limit+1, offset)
 
 	rows, err := s.db.QueryContext(context.Background(), q, args...)
 	if err != nil {
@@ -71,7 +70,12 @@ func (s *ProductoStore) List(offset, limit int, filters store.ProductoFilters) o
 	defer rows.Close()
 
 	data := []outputs.ProductoResponse{}
+	hasMore := false
 	for rows.Next() {
+		if len(data) == limit {
+			hasMore = true
+			break
+		}
 		p, err := scanProducto(rows)
 		if err != nil {
 			break
@@ -80,16 +84,20 @@ func (s *ProductoStore) List(offset, limit int, filters store.ProductoFilters) o
 	}
 
 	return outputs.PaginatedResponse[outputs.ProductoResponse]{
-		Data:   data,
-		Total:  s.Count(filters),
-		Offset: offset,
-		Limit:  limit,
+		Data:    data,
+		Offset:  offset,
+		Limit:   limit,
+		HasMore: hasMore,
 	}
 }
 
 func (s *ProductoStore) FindByID(id int64) (*domain.Producto, error) {
 	q := s.db.rebind(`SELECT ` + productoColumns + ` FROM productos WHERE id = ?`)
-	return scanProducto(s.db.QueryRowContext(context.Background(), q, id))
+	producto, err := scanProducto(s.db.QueryRowContext(context.Background(), q, id))
+	if err != nil {
+		return nil, translateDBError(err, "producto no encontrado")
+	}
+	return producto, nil
 }
 
 func (s *ProductoStore) Create(p domain.Producto) (domain.Producto, error) {
@@ -118,7 +126,7 @@ func (s *ProductoStore) Update(id int64, p domain.Producto) error {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return sql.ErrNoRows
+		return domain.NotFound("producto no encontrado")
 	}
 	return nil
 }
@@ -129,7 +137,7 @@ func (s *ProductoStore) Delete(id int64) error {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return sql.ErrNoRows
+		return domain.NotFound("producto no encontrado")
 	}
 	return nil
 }

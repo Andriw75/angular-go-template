@@ -20,7 +20,7 @@ export interface MensajeUpdateInput {
 
 export interface PaginatedMensajes {
   data: MensajePendiente[];
-  total: number;
   offset: number;
   limit: number;
+  has_more: boolean;
 }

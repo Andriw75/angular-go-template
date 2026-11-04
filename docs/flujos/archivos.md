@@ -158,7 +158,10 @@ Cuando cambia el estado de una entidad, sus imágenes se mueven de carpeta:
 
 ### Listado
 
+- `GET /archivos/count?q=...` devuelve el total con los mismos filtros.
 - Paginación `offset`/`limit` y búsqueda `q`.
+- El listado responde `{ "data": [...], "offset": 0, "limit": 20, "has_more": false }`
+  y no incluye `total`.
 - Devuelve metadata de todos los archivos con `publico`.
 - `ArchivoResponse` no incluye `user_id`.
 

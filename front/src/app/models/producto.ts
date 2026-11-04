@@ -24,7 +24,7 @@ export interface ProductoInput {
 
 export interface PaginatedProductos {
   data: Producto[];
-  total: number;
   offset: number;
   limit: number;
+  has_more: boolean;
 }

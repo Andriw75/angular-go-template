@@ -76,7 +76,6 @@ func (s *ProductoStore) List(offset, limit int, filters ProductoFilters) outputs
 		}
 	}
 
-	total := int64(len(filtered))
 
 	if offset < 0 {
 		offset = 0
@@ -100,7 +99,7 @@ func (s *ProductoStore) List(offset, limit int, filters ProductoFilters) outputs
 
 	return outputs.PaginatedResponse[outputs.ProductoResponse]{
 		Data:   data,
-		Total:  total,
+		HasMore: end < len(filtered),
 		Offset: offset,
 		Limit:  limit,
 	}

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -41,17 +40,21 @@ func (h *VentaHandler) List(w http.ResponseWriter, r *http.Request) {
 		limit = 20
 	}
 
-	ventas, total, err := h.deps.VentaStore.List(offset, limit, parseVentaFilters(r))
+	ventas, hasMore, err := h.deps.VentaStore.List(offset, limit, parseVentaFilters(r))
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "error al listar ventas")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"data":   outputs.ToVentaResponses(ventas),
-		"total":  total,
-		"offset": offset,
-		"limit":  limit,
+	writeJSON(w, http.StatusOK, outputs.PaginatedResponse[outputs.VentaResponse]{
+		Data:    outputs.ToVentaResponses(ventas),
+		Offset:  offset,
+		Limit:   limit,
+		HasMore: hasMore,
 	})
+}
+
+func (h *VentaHandler) Count(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, h.deps.VentaStore.Count(parseVentaFilters(r)))
 }
 
 func (h *VentaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +65,7 @@ func (h *VentaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 	venta, err := h.deps.VentaStore.FindByID(id)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "venta not found")
+		writeError(w, r, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, outputs.ToVentaResponse(venta))
@@ -83,7 +86,7 @@ func (h *VentaHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	venta, err := h.deps.VentaStore.Create(input, userID)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeError(w, r, err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, outputs.ToVentaResponse(&venta))
@@ -102,7 +105,7 @@ func (h *VentaHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	venta, err := h.deps.VentaStore.Update(id, input)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeError(w, r, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, outputs.ToVentaResponse(&venta))
@@ -115,7 +118,7 @@ func (h *VentaHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.deps.VentaStore.Delete(id); err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeError(w, r, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"message": "venta deleted"})
@@ -129,8 +132,7 @@ func (h *VentaHandler) Emit(w http.ResponseWriter, r *http.Request) {
 	}
 	venta, err := h.deps.VentaStore.Emit(id)
 	if err != nil {
-		slog.Error("failed to emit venta", "error", err, "id", id)
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeError(w, r, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, outputs.ToVentaResponse(&venta))
@@ -155,7 +157,7 @@ func (h *VentaHandler) Annul(w http.ResponseWriter, r *http.Request) {
 
 	venta, err := h.deps.VentaStore.Annul(id, body.Motivo, userID)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeError(w, r, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, outputs.ToVentaResponse(&venta))

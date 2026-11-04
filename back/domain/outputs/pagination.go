@@ -1,8 +1,8 @@
 package outputs
 
 type PaginatedResponse[T any] struct {
-	Data       []T   `json:"data"`
-	Total      int64 `json:"total"`
-	Offset     int   `json:"offset"`
-	Limit      int   `json:"limit"`
+	Data    []T  `json:"data"`
+	Offset  int  `json:"offset"`
+	Limit   int  `json:"limit"`
+	HasMore bool `json:"has_more"`
 }

@@ -67,7 +67,7 @@ export class ArchivosListComponent {
   });
 
   constructor() {
-    this.load();
+    this.loadWithCount();
   }
 
   setTab(tab: 'archivos' | 'imagenes'): void {
@@ -78,14 +78,39 @@ export class ArchivosListComponent {
     }
   }
 
-  load(): void {
+  private getFilters() {
+    return { q: this.searchQuery() || undefined };
+  }
+
+  loadWithCount(): void {
     this.loading.set(true);
+    const filters = this.getFilters();
     const offset = (this.page() - 1) * this.limit;
 
-    this.service.list({ offset, limit: this.limit, q: this.searchQuery() || undefined }).subscribe({
+    forkJoin({
+      count: this.service.count(filters),
+      data: this.service.list({ ...filters, offset, limit: this.limit }),
+    }).subscribe({
+      next: (res) => {
+        this.archivos.set(res.data.data);
+        this.total.set(res.count);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.toast.error(apiErrorMessage(err, 'Error al cargar archivos'));
+      },
+    });
+  }
+
+  load(): void {
+    this.loading.set(true);
+    const filters = this.getFilters();
+    const offset = (this.page() - 1) * this.limit;
+
+    this.service.list({ ...filters, offset, limit: this.limit }).subscribe({
       next: (res) => {
         this.archivos.set(res.data);
-        this.total.set(res.total);
         this.loading.set(false);
       },
       error: (err) => {
@@ -195,14 +220,14 @@ export class ArchivosListComponent {
 
   search(): void {
     this.page.set(1);
-    this.load();
+    this.loadWithCount();
   }
 
   resetFilters(): void {
     this.searchQuery.set('');
     this.filterVisibilidad.set('');
     this.page.set(1);
-    this.load();
+    this.loadWithCount();
   }
 
   openUpload(): void {
@@ -210,7 +235,7 @@ export class ArchivosListComponent {
   }
 
   onModalSaved(): void {
-    this.load();
+    this.loadWithCount();
   }
 
   deleting = signal<number | null>(null);
@@ -228,7 +253,7 @@ export class ArchivosListComponent {
       next: () => {
         this.toast.success('Archivo eliminado');
         this.deleting.set(null);
-        this.load();
+        this.loadWithCount();
       },
       error: (err) => {
         this.toast.error(apiErrorMessage(err, 'Error al eliminar archivo'));

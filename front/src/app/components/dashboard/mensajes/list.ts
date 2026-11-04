@@ -1,5 +1,6 @@
 import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { MensajesService } from '../../../services/mensajes.service';
 import { MensajesStoreService } from '../../../services/mensajes-store.service';
 import { ToastService } from '../../../services/toast.service';
@@ -66,7 +67,7 @@ export class MensajesListComponent implements OnInit {
 
   onTabChange(tab: 'activas' | 'pasadas'): void {
     this.activeTab.set(tab);
-    if (tab === 'pasadas') this.loadPasadas();
+    if (tab === 'pasadas') this.loadPasadasWithCount();
   }
 
   onActivasPageChange(p: number): void {
@@ -78,12 +79,25 @@ export class MensajesListComponent implements OnInit {
     this.loadPasadas();
   }
 
+  loadPasadasWithCount(): void {
+    const offset = (this.pasadasPage() - 1) * this.pasadasPageSize;
+    forkJoin({
+      count: this.service.countPasadas(),
+      data: this.service.listPasadas(offset, this.pasadasPageSize),
+    }).subscribe({
+      next: (res) => {
+        this.pasadas.set(res.data.data);
+        this.pasadasTotal.set(res.count);
+      },
+      error: () => this.toast.error('Error al cargar pasadas'),
+    });
+  }
+
   loadPasadas(): void {
     const offset = (this.pasadasPage() - 1) * this.pasadasPageSize;
     this.service.listPasadas(offset, this.pasadasPageSize).subscribe({
       next: (res) => {
         this.pasadas.set(res.data);
-        this.pasadasTotal.set(res.total);
       },
       error: () => this.toast.error('Error al cargar pasadas'),
     });

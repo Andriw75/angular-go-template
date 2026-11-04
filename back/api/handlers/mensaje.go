@@ -151,17 +151,17 @@ func (h *MensajeHandler) ListPasadas(w http.ResponseWriter, r *http.Request) {
 		limit = 10
 	}
 
-	pasadas, total := h.deps.MensajeStore.ListPasadas(offset, limit)
+	pasadas, hasMore := h.deps.MensajeStore.ListPasadas(offset, limit)
 	result := make([]outputs.MensajeResponse, 0, len(pasadas))
 	for i := range pasadas {
 		result = append(result, outputs.ToMensajeResponse(&pasadas[i]))
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"data":   result,
-		"total":  total,
-		"offset": offset,
-		"limit":  limit,
+	writeJSON(w, http.StatusOK, outputs.PaginatedResponse[outputs.MensajeResponse]{
+		Data:    result,
+		Offset:  offset,
+		Limit:   limit,
+		HasMore: hasMore,
 	})
 }
 

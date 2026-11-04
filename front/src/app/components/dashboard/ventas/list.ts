@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { apiErrorMessage } from '../../../common/api-error';
 import { PaginationComponent } from '../../../common/pagination/pagination';
 import { ConfirmService } from '../../../services/confirm.service';
@@ -33,19 +34,46 @@ export class VentasListComponent {
   selected = signal<Venta | null>(null);
 
   constructor() {
-    this.load();
+    this.loadWithCount();
+  }
+
+  private getFilters() {
+    return {
+      q: this.q || undefined,
+      serie: this.serie || undefined,
+      estado: this.estado || undefined,
+    };
+  }
+
+  loadWithCount(): void {
+    this.loading.set(true);
+    const filters = this.getFilters();
+    const offset = (this.page() - 1) * this.limit;
+
+    forkJoin({
+      count: this.service.count(filters),
+      data: this.service.list({ ...filters, offset, limit: this.limit }),
+    }).subscribe({
+      next: (res) => {
+        this.ventas.set(res.data.data);
+        this.total.set(res.count);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.toast.error(apiErrorMessage(err, 'Error al cargar ventas'));
+      },
+    });
   }
 
   load(): void {
     this.loading.set(true);
+    const filters = this.getFilters();
     const offset = (this.page() - 1) * this.limit;
-    this.service.list({
-      offset, limit: this.limit, q: this.q || undefined,
-      serie: this.serie || undefined, estado: this.estado || undefined,
-    }).subscribe({
+
+    this.service.list({ ...filters, offset, limit: this.limit }).subscribe({
       next: (res) => {
         this.ventas.set(res.data);
-        this.total.set(res.total);
         this.loading.set(false);
       },
       error: (err) => {
@@ -57,7 +85,7 @@ export class VentasListComponent {
 
   search(): void {
     this.page.set(1);
-    this.load();
+    this.loadWithCount();
   }
 
   resetFilters(): void {
@@ -65,7 +93,7 @@ export class VentasListComponent {
     this.serie = '';
     this.estado = '';
     this.page.set(1);
-    this.load();
+    this.loadWithCount();
   }
 
   onPageChange(p: number): void {
@@ -86,7 +114,7 @@ export class VentasListComponent {
 
   onSaved(): void {
     this.showModal.set(false);
-    this.load();
+    this.loadWithCount();
   }
 
   emitir(venta: Venta): void {
@@ -112,7 +140,7 @@ export class VentasListComponent {
     const ok = await this.confirm.confirm('Eliminar venta', `¿Eliminar el borrador ${venta.id}?`, 'danger');
     if (!ok) return;
     this.service.delete(venta.id).subscribe({
-      next: () => { this.toast.success('Venta eliminada'); this.load(); },
+      next: () => { this.toast.success('Venta eliminada'); this.loadWithCount(); },
       error: (err) => this.toast.error(apiErrorMessage(err, 'Error al eliminar venta')),
     });
   }

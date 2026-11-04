@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
 import { loginGuard } from './guards/login.guard';
+import { permissionGuard } from './guards/permission.guard';
 
 export const routes: Routes = [
   {
@@ -30,16 +31,22 @@ export const routes: Routes = [
       },
       {
         path: 'buses',
+        canActivate: [permissionGuard],
+        data: { permission: 'buses' },
         loadComponent: () =>
           import('./components/dashboard/buses/list').then((m) => m.BusesListComponent),
       },
       {
         path: 'usuarios',
+        canActivate: [permissionGuard],
+        data: { permission: 'usuarios' },
         loadComponent: () =>
           import('./components/dashboard/usuarios/list').then((m) => m.UsersListComponent),
       },
       {
         path: 'mensajes',
+        canActivate: [permissionGuard],
+        data: { permission: 'mensajes_pendientes' },
         loadComponent: () =>
           import('./components/dashboard/mensajes/list').then((m) => m.MensajesListComponent),
       },
@@ -50,31 +57,43 @@ export const routes: Routes = [
       },
       {
         path: 'categorias',
+        canActivate: [permissionGuard],
+        data: { permission: 'shop' },
         loadComponent: () =>
           import('./components/dashboard/shop/categorias/list').then((m) => m.CategoriasListComponent),
       },
       {
         path: 'productos',
+        canActivate: [permissionGuard],
+        data: { permission: 'shop' },
         loadComponent: () =>
           import('./components/dashboard/shop/productos/list').then((m) => m.ProductosListComponent),
       },
       {
         path: 'archivos',
+        canActivate: [permissionGuard],
+        data: { permission: 'archivos' },
         loadComponent: () =>
           import('./components/dashboard/archivos/list').then((m) => m.ArchivosListComponent),
       },
       {
         path: 'archivos/guia',
+        canActivate: [permissionGuard],
+        data: { permission: 'archivos' },
         loadComponent: () =>
           import('./components/dashboard/archivos/info').then((m) => m.ArchivosInfoComponent),
       },
       {
         path: 'ventas',
+        canActivate: [permissionGuard],
+        data: { permission: 'ventas' },
         loadComponent: () =>
           import('./components/dashboard/ventas/list').then((m) => m.VentasListComponent),
       },
       {
         path: 'reportes',
+        canActivate: [permissionGuard],
+        data: { permission: 'reportes' },
         loadComponent: () =>
           import('./components/dashboard/reportes/reportes').then((m) => m.ReportesComponent),
       },
@@ -87,10 +106,6 @@ export const routes: Routes = [
         path: '**',
         loadComponent: () =>
           import('./components/dashboard/home/home').then((m) => m.HomeComponent),
-      },
-      {
-        path: '**',
-        loadComponent: () => import('./components/dashboard/home/home').then((m) => m.HomeComponent),
       },
     ],
   },

@@ -41,7 +41,11 @@ func (s *InstalacionStore) List() []domain.Instalacion {
 
 func (s *InstalacionStore) FindByID(id int64) (*domain.Instalacion, error) {
 	q := s.db.rebind(`SELECT ` + instalacionColumns + ` FROM instalaciones WHERE id = ?`)
-	return scanInstalacion(s.db.QueryRowContext(context.Background(), q, id))
+	instalacion, err := scanInstalacion(s.db.QueryRowContext(context.Background(), q, id))
+	if err != nil {
+		return nil, translateDBError(err, "instalacion no encontrada")
+	}
+	return instalacion, nil
 }
 
 func (s *InstalacionStore) Create(i domain.Instalacion) (domain.Instalacion, error) {
@@ -87,7 +91,7 @@ func (s *InstalacionStore) Update(id int64, i domain.Instalacion) error {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return sql.ErrNoRows
+		return domain.NotFound("instalacion no encontrada")
 	}
 	return nil
 }
@@ -98,7 +102,7 @@ func (s *InstalacionStore) Delete(id int64) error {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return sql.ErrNoRows
+		return domain.NotFound("instalacion no encontrada")
 	}
 	return nil
 }

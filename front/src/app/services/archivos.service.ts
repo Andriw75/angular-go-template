@@ -11,18 +11,27 @@ export interface ArchivoListParams {
   q?: string;
 }
 
+export interface ArchivoCountParams {
+  q?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ArchivosService {
   private readonly api = environment.API_URL;
   private http = inject(HttpClient);
 
+  count(params: ArchivoCountParams): Observable<number> {
+    const p = new URLSearchParams();
+    if (params.q) p.set('q', params.q);
+    return this.http.get<number>(`${this.api}/archivos/count?${p.toString()}`);
+  }
+
   list(params: ArchivoListParams): Observable<PaginatedArchivos> {
-    const p: Record<string, string> = {};
-    if (params.offset != null) p['offset'] = String(params.offset);
-    if (params.limit != null) p['limit'] = String(params.limit);
-    if (params.q) p['q'] = params.q;
-    const qs = new URLSearchParams(p).toString();
-    return this.http.get<PaginatedArchivos>(`${this.api}/archivos?${qs}`);
+    const p = new URLSearchParams();
+    if (params.offset != null) p.set('offset', String(params.offset));
+    if (params.limit != null) p.set('limit', String(params.limit));
+    if (params.q) p.set('q', params.q);
+    return this.http.get<PaginatedArchivos>(`${this.api}/archivos?${p.toString()}`);
   }
 
   upload(files: File[], visibilidad: Visibilidad): Observable<Archivo[]> {

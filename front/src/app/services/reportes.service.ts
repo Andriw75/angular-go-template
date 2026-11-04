@@ -18,9 +18,9 @@ export interface ReporteFilters {
 
 export interface DocumentoList {
   data: Documento[];
-  total: number;
   offset: number;
   limit: number;
+  has_more: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

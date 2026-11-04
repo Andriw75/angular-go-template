@@ -13,5 +13,7 @@ export interface Archivo {
 
 export interface PaginatedArchivos {
   data: Archivo[];
-  total: number;
+  offset: number;
+  limit: number;
+  has_more: boolean;
 }

@@ -4,21 +4,47 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import type { Venta, VentaInput, PaginatedVentas } from '../models/venta';
 
+export interface VentaListParams {
+  offset?: number;
+  limit?: number;
+  q?: string;
+  serie?: string;
+  estado?: string;
+  desde?: string;
+  hasta?: string;
+}
+
+export interface VentaCountParams {
+  q?: string;
+  serie?: string;
+  estado?: string;
+  desde?: string;
+  hasta?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class VentasService {
   private readonly api = environment.API_URL;
   private http = inject(HttpClient);
 
-  list(params: { offset?: number; limit?: number; q?: string; serie?: string; estado?: string; desde?: string; hasta?: string }): Observable<PaginatedVentas> {
-    const p: Record<string, string> = {};
-    if (params.offset != null) p['offset'] = String(params.offset);
-    if (params.limit != null) p['limit'] = String(params.limit);
-    if (params.q) p['q'] = params.q;
-    if (params.serie) p['serie'] = params.serie;
-    if (params.estado) p['estado'] = params.estado;
-    if (params.desde) p['desde'] = params.desde;
-    if (params.hasta) p['hasta'] = params.hasta;
-    return this.http.get<PaginatedVentas>(`${this.api}/ventas?${new URLSearchParams(p).toString()}`);
+  count(params: VentaCountParams): Observable<number> {
+    return this.http.get<number>(`${this.api}/ventas/count?${this.buildParams(params).toString()}`);
+  }
+
+  list(params: VentaListParams): Observable<PaginatedVentas> {
+    return this.http.get<PaginatedVentas>(`${this.api}/ventas?${this.buildParams(params).toString()}`);
+  }
+
+  private buildParams(params: VentaListParams): URLSearchParams {
+    const p = new URLSearchParams();
+    if (params.offset != null) p.set('offset', String(params.offset));
+    if (params.limit != null) p.set('limit', String(params.limit));
+    if (params.q) p.set('q', params.q);
+    if (params.serie) p.set('serie', params.serie);
+    if (params.estado) p.set('estado', params.estado);
+    if (params.desde) p.set('desde', params.desde);
+    if (params.hasta) p.set('hasta', params.hasta);
+    return p;
   }
 
   getByID(id: number): Observable<Venta> {

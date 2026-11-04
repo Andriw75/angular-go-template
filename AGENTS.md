@@ -37,8 +37,11 @@ vigila `.env`. `npm start` es un alias de `ng serve`.
 - `DB_TYPE=sqlite|postgres` (ya no existe `USE_MOCK`).
 - SQLite por defecto en `back/data/template.db` (`DB_PATH`).
 - PostgreSQL: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE`.
-- Al arrancar se crean las tablas y se siembran los permisos base. **No hay
-  usuario por defecto.** El primer admin se define con
+- Al arrancar se crea el esquema si falta y se valida contra el esperado. Si la
+  base no corresponde (faltan tablas o columnas), el backend registra el error y
+  no arranca. El sistema se inicializa desde 0.
+- Se siembran los permisos base. **No hay usuario por defecto.** El primer admin
+  se define con
   `BOOTSTRAP_ADMIN_USERNAME` / `BOOTSTRAP_ADMIN_PASSWORD` en `.env` y debe
   cambiar la contraseña en el primer login.
 - Público en `PUBLIC_DIR/public` (nginx): imágenes de entidades activas y

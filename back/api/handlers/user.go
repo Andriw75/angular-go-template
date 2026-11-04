@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
+	"back/domain"
 	"back/domain/inputs"
 	"back/domain/outputs"
 	"back/services"
@@ -39,7 +39,7 @@ func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.deps.UserStore.FindByID(id)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "user not found")
+		writeError(w, r, err)
 		return
 	}
 
@@ -54,11 +54,11 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if input.Username == "" || input.Email == "" || input.Password == "" {
-		writeJSONError(w, http.StatusBadRequest, "username, email and password are required")
+		writeError(w, r, domain.Validation("username, email and password are required"))
 		return
 	}
 	if err := services.ValidatePasswordForUser(input.Username, input.Password); err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
+		writeError(w, r, domain.Validation(err.Error()))
 		return
 	}
 	// Las cuentas creadas por un administrador deben cambiar la contraseña
@@ -67,8 +67,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	created, err := h.deps.UserStore.Create(input)
 	if err != nil {
-		slog.Error("failed to create user", "error", err)
-		writeJSONError(w, http.StatusInternalServerError, "failed to create user")
+		writeError(w, r, err)
 		return
 	}
 
@@ -96,14 +95,13 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 			username = existing.Username
 		}
 		if err := services.ValidatePasswordForUser(username, *input.Password); err != nil {
-			writeJSONError(w, http.StatusBadRequest, err.Error())
+			writeError(w, r, domain.Validation(err.Error()))
 			return
 		}
 	}
 
 	if err := h.deps.UserStore.Update(id, input); err != nil {
-		slog.Error("failed to update user", "error", err)
-		writeJSONError(w, http.StatusInternalServerError, "failed to update user")
+		writeError(w, r, err)
 		return
 	}
 
@@ -129,7 +127,7 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.deps.UserStore.Delete(id); err != nil {
-		writeJSONError(w, http.StatusNotFound, "user not found")
+		writeError(w, r, err)
 		return
 	}
 

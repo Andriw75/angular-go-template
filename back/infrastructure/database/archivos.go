@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"database/sql"
 	"strings"
 	"time"
 
@@ -55,7 +54,15 @@ func (s *ArchivoStore) FindByFileName(fileName string) (*domain.Archivo, error) 
 	return scanArchivo(s.db.QueryRowContext(context.Background(), q, fileName))
 }
 
-func (s *ArchivoStore) List(offset, limit int, q string) ([]domain.Archivo, int, error) {
+func archivoWhere(q string) (string, []any) {
+	if q == "" {
+		return "", nil
+	}
+	like := "%" + strings.ToLower(q) + "%"
+	return ` WHERE (LOWER(nombre) LIKE ? OR LOWER(file_name) LIKE ?)`, []any{like, like}
+}
+
+func (s *ArchivoStore) List(offset, limit int, q string) ([]domain.Archivo, bool, error) {
 	if offset < 0 {
 		offset = 0
 	}
@@ -64,37 +71,40 @@ func (s *ArchivoStore) List(offset, limit int, q string) ([]domain.Archivo, int,
 	}
 
 	ctx := context.Background()
-	var total int
-	var args []any
-	where := ""
-	if q != "" {
-		like := "%" + strings.ToLower(q) + "%"
-		where = ` WHERE (LOWER(nombre) LIKE ? OR LOWER(file_name) LIKE ?)`
-		args = append(args, like, like)
-	}
-
-	if err := s.db.QueryRowContext(ctx, s.db.rebind(`SELECT COUNT(*) FROM archivos`+where), args...).Scan(&total); err != nil {
-		return nil, 0, err
-	}
+	where, args := archivoWhere(q)
 
 	query := s.db.rebind(`SELECT ` + archivoColumns + ` FROM archivos` + where + ` ORDER BY creado_en DESC LIMIT ? OFFSET ?`)
-	args = append(args, limit, offset)
+	args = append(args, limit+1, offset)
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, 0, err
+		return nil, false, err
 	}
 	defer rows.Close()
 
 	var out []domain.Archivo
+	hasMore := false
 	for rows.Next() {
+		if len(out) == limit {
+			hasMore = true
+			break
+		}
 		a, err := scanArchivo(rows)
 		if err != nil {
-			return out, total, err
+			return out, false, err
 		}
 		out = append(out, *a)
 	}
-	return out, total, nil
+	return out, hasMore, nil
+}
+
+func (s *ArchivoStore) Count(q string) (int, error) {
+	where, args := archivoWhere(q)
+	var total int
+	if err := s.db.QueryRowContext(context.Background(), s.db.rebind(`SELECT COUNT(*) FROM archivos`+where), args...).Scan(&total); err != nil {
+		return 0, err
+	}
+	return total, nil
 }
 
 func (s *ArchivoStore) UpdateVisibilidad(id int64, vis domain.Visibilidad) error {
@@ -104,7 +114,7 @@ func (s *ArchivoStore) UpdateVisibilidad(id int64, vis domain.Visibilidad) error
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return sql.ErrNoRows
+		return domain.NotFound("archivo no encontrado")
 	}
 	return nil
 }
@@ -115,7 +125,7 @@ func (s *ArchivoStore) Delete(id int64) error {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return sql.ErrNoRows
+		return domain.NotFound("archivo no encontrado")
 	}
 	return nil
 }

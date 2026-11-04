@@ -161,9 +161,9 @@ la visibilidad del archivo.
 | Sin permiso `usuarios`                 | `403 forbidden`                    |
 | Intento de eliminarse a uno mismo      | `403 cannot delete yourself`       |
 | Usuario inexistente en GET/DELETE      | `404 user not found`               |
-| Usuario inexistente en UPDATE          | `500 failed to update user`        |
-| `username` duplicado                   | `500 failed to create/update user` |
-| Permiso inexistente al asignar         | `500 failed to create/update user` |
+| Usuario inexistente en UPDATE          | `404 not_found`                    |
+| `username` duplicado                   | `409 conflict`                     |
+| Permiso inexistente al asignar         | `422 validation_error`             |
 
 ## Limitaciones conocidas
 
@@ -177,11 +177,12 @@ la visibilidad del archivo.
    llamada directa a la API sí puede hacerlo.
 3. **Sin CRUD de permisos**: el catálogo es fijo (seed). Agregar un permiso
    requiere tocar código y reiniciar.
-4. **Permisos de UI, no de ruta**: el sidebar oculta entradas sin permiso, pero
-   las rutas hijas del dashboard no tienen guards por permiso. La autorización
-   real está en el backend (`403`).
-5. **Conflictos devuelven 500**: `username` duplicado o un permiso inexistente
-   se reportan como `500`, no como `409`/`422`.
+4. **Permisos de UI y de ruta**: el sidebar oculta entradas sin permiso y las
+   rutas hijas aplican `permissionGuard` (`route.data.permission`). Aun así, la
+   autorización real sigue estando en el backend (`403`).
+5. **Conflictos y validación tipados**: `username` duplicado responde `409`
+   (`conflict`); un permiso inexistente al asignar responde `422`
+   (`validation_error`); un `id` inexistente en update/delete responde `404`.
 
 ## Archivos involucrados
 

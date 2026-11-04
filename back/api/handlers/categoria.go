@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -69,7 +68,7 @@ func (h *CategoriaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	categoria, err := h.deps.CategoriaStore.FindByID(id)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "categoria not found")
+		writeError(w, r, err)
 		return
 	}
 
@@ -88,7 +87,7 @@ func (h *CategoriaHandler) UploadImages(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if _, err := h.deps.CategoriaStore.FindByID(id); err != nil {
-		writeJSONError(w, http.StatusNotFound, "categoria not found")
+		writeError(w, r, err)
 		return
 	}
 	uploadImagesForEntity(h.deps, "categoria", id, w, r)
@@ -101,7 +100,7 @@ func (h *CategoriaHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := h.deps.CategoriaStore.FindByID(id); err != nil {
-		writeJSONError(w, http.StatusNotFound, "categoria not found")
+		writeError(w, r, err)
 		return
 	}
 	deleteImageForEntity(h.deps, "categoria", id, imagenID, w)
@@ -114,7 +113,7 @@ func (h *CategoriaHandler) ReorderImages(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if _, err := h.deps.CategoriaStore.FindByID(id); err != nil {
-		writeJSONError(w, http.StatusNotFound, "categoria not found")
+		writeError(w, r, err)
 		return
 	}
 	reorderImagesForEntity(h.deps, "categoria", id, w, r)
@@ -128,7 +127,7 @@ func (h *CategoriaHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if input.Nombre == "" {
-		writeJSONError(w, http.StatusBadRequest, "nombre is required")
+		writeError(w, r, domain.Validation("nombre is required"))
 		return
 	}
 
@@ -140,8 +139,7 @@ func (h *CategoriaHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	created, err := h.deps.CategoriaStore.Create(categoria)
 	if err != nil {
-		slog.Error("failed to create categoria", "error", err)
-		writeJSONError(w, http.StatusInternalServerError, "failed to create categoria")
+		writeError(w, r, err)
 		return
 	}
 
@@ -168,7 +166,7 @@ func (h *CategoriaHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	existing, err := h.deps.CategoriaStore.FindByID(id)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "categoria not found")
+		writeError(w, r, err)
 		return
 	}
 
@@ -183,8 +181,7 @@ func (h *CategoriaHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.deps.CategoriaStore.Update(id, *existing); err != nil {
-		slog.Error("failed to update categoria", "error", err)
-		writeJSONError(w, http.StatusInternalServerError, "failed to update categoria")
+		writeError(w, r, err)
 		return
 	}
 
@@ -206,7 +203,7 @@ func (h *CategoriaHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := h.deps.CategoriaStore.FindByID(id); err != nil {
-		writeJSONError(w, http.StatusNotFound, "categoria not found")
+		writeError(w, r, err)
 		return
 	}
 
@@ -214,7 +211,7 @@ func (h *CategoriaHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	products := h.deps.ProductoStore.ListByCategoria(id)
 	if len(products) > 0 && !cascade {
-		writeJSONError(w, http.StatusConflict, "categoria has products, use cascade=true to delete them too")
+		writeError(w, r, domain.Conflict("conflict", "categoria has products, use cascade=true to delete them too"))
 		return
 	}
 
@@ -240,7 +237,7 @@ func (h *CategoriaHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	h.deps.ImagenStore.DeleteByEntidad("categoria", id)
 	if err := h.deps.CategoriaStore.Delete(id); err != nil {
-		writeJSONError(w, http.StatusNotFound, "categoria not found")
+		writeError(w, r, err)
 		return
 	}
 

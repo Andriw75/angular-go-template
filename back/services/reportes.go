@@ -189,7 +189,8 @@ func buildBusesReport(data []outputs.BusResponse, filters store.BusFilters, modo
 }
 
 func (s *ReporteService) Ventas(filters store.VentaFilters) outputs.ReporteVentas {
-	ventas, total, _ := s.ventas.List(0, reportMaxRows, filters)
+	ventas, _, _ := s.ventas.List(0, reportMaxRows, filters)
+	total := s.ventas.Count(filters)
 
 	resumen := outputs.ReporteVentasResumen{Total: total}
 	clientes := map[string]struct{}{}

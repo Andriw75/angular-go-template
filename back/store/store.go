@@ -129,7 +129,7 @@ type MensajeStore interface {
 	Update(id int64, input inputs.MensajeUpdateInput, now time.Time, username string) (domain.MensajePendiente, error)
 	Delete(id int64) error
 	FindByID(id int64) (*domain.MensajePendiente, error)
-	ListPasadas(offset, limit int) ([]domain.MensajePendiente, int)
+	ListPasadas(offset, limit int) ([]domain.MensajePendiente, bool)
 	CountPasadas() int
 	FindAll() []domain.MensajePendiente
 }
@@ -170,7 +170,8 @@ type ArchivoStore interface {
 	Create(fileName, nombre, tipo string, tamano int64, visibilidad domain.Visibilidad, userID int64) (domain.Archivo, error)
 	FindByID(id int64) (*domain.Archivo, error)
 	FindByFileName(fileName string) (*domain.Archivo, error)
-	List(offset, limit int, q string) ([]domain.Archivo, int, error)
+	List(offset, limit int, q string) ([]domain.Archivo, bool, error)
+	Count(q string) (int, error)
 	UpdateVisibilidad(id int64, vis domain.Visibilidad) error
 	Delete(id int64) error
 }
@@ -207,14 +208,15 @@ type DocumentoCreateInput struct {
 type DocumentoStore interface {
 	FindByHash(tipo, hash string) (*domain.Documento, error)
 	FindByID(id int64) (*domain.Documento, error)
-	List(offset, limit int, filters DocumentoFilters) ([]domain.Documento, int, error)
+	List(offset, limit int, filters DocumentoFilters) ([]domain.Documento, bool, error)
+	Count(filters DocumentoFilters) (int, error)
 	CreateWithCorrelativo(input DocumentoCreateInput, build func(codigo string) ([]domain.DocumentoArchivo, error)) (domain.Documento, error)
 	AddVersion(id int64, snapshotJSON string, build func(codigo string, version int) ([]domain.DocumentoArchivo, error)) (domain.Documento, error)
 	Annul(id int64, motivo string, userID int64) (domain.Documento, error)
 }
 
 type VentaStore interface {
-	List(offset, limit int, filters VentaFilters) ([]domain.Venta, int, error)
+	List(offset, limit int, filters VentaFilters) ([]domain.Venta, bool, error)
 	Count(filters VentaFilters) int
 	FindByID(id int64) (*domain.Venta, error)
 	Create(input inputs.VentaInput, userID int64) (domain.Venta, error)

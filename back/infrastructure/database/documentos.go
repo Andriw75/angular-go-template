@@ -231,7 +231,7 @@ func (s *DocumentoStore) Annul(id int64, motivo string, userID int64) (domain.Do
 		return domain.Documento{}, err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return domain.Documento{}, sql.ErrNoRows
+		return domain.Documento{}, domain.NotFound("documento no encontrado")
 	}
 	if err := insertEvento(ctx, tx, s.db, id, "anulado", motivo, userID, now); err != nil {
 		return domain.Documento{}, err
@@ -246,15 +246,7 @@ func (s *DocumentoStore) Annul(id int64, motivo string, userID int64) (domain.Do
 	return *doc, nil
 }
 
-func (s *DocumentoStore) List(offset, limit int, filters store.DocumentoFilters) ([]domain.Documento, int, error) {
-	if offset < 0 {
-		offset = 0
-	}
-	if limit < 1 {
-		limit = 20
-	}
-	ctx := context.Background()
-
+func documentoWhere(filters store.DocumentoFilters) (string, []any) {
 	var conds []string
 	var args []any
 	if filters.Q != "" {
@@ -274,34 +266,60 @@ func (s *DocumentoStore) List(offset, limit int, filters store.DocumentoFilters)
 		conds = append(conds, `estado = ?`)
 		args = append(args, filters.Estado)
 	}
-	where := ""
-	if len(conds) > 0 {
-		where = " WHERE " + strings.Join(conds, " AND ")
+	if len(conds) == 0 {
+		return "", nil
 	}
+	return " WHERE " + strings.Join(conds, " AND "), args
+}
 
-	var total int
-	if err := s.db.QueryRowContext(ctx, s.db.rebind(`SELECT COUNT(*) FROM documentos`+where), args...).Scan(&total); err != nil {
-		return nil, 0, err
+func (s *DocumentoStore) List(offset, limit int, filters store.DocumentoFilters) ([]domain.Documento, bool, error) {
+	if offset < 0 {
+		offset = 0
 	}
+	if limit < 1 {
+		limit = 20
+	}
+	ctx := context.Background()
+	where, args := documentoWhere(filters)
+
 	q := s.db.rebind(`SELECT ` + documentoColumns + ` FROM documentos` + where + ` ORDER BY id DESC LIMIT ? OFFSET ?`)
-	rows, err := s.db.QueryContext(ctx, q, append(args, limit, offset)...)
+	rows, err := s.db.QueryContext(ctx, q, append(args, limit+1, offset)...)
 	if err != nil {
-		return nil, 0, err
+		return nil, false, err
 	}
 	defer rows.Close()
 
 	out := make([]domain.Documento, 0)
+	hasMore := false
 	for rows.Next() {
+		if len(out) == limit {
+			hasMore = true
+			break
+		}
 		doc, err := scanDocumento(rows)
 		if err != nil {
-			return nil, 0, err
-		}
-		if err := s.loadDetails(ctx, doc); err != nil {
-			return nil, 0, err
+			return nil, false, err
 		}
 		out = append(out, *doc)
 	}
-	return out, total, nil
+	// Cerrar rows antes de consultar detalles: SQLite usa una sola conexión.
+	rows.Close()
+
+	for i := range out {
+		if err := s.loadDetails(ctx, &out[i]); err != nil {
+			return nil, false, err
+		}
+	}
+	return out, hasMore, nil
+}
+
+func (s *DocumentoStore) Count(filters store.DocumentoFilters) (int, error) {
+	where, args := documentoWhere(filters)
+	var total int
+	if err := s.db.QueryRowContext(context.Background(), s.db.rebind(`SELECT COUNT(*) FROM documentos`+where), args...).Scan(&total); err != nil {
+		return 0, err
+	}
+	return total, nil
 }
 
 func insertArchivos(ctx context.Context, tx *sql.Tx, db *DB, docID int64, version int, archivos []domain.DocumentoArchivo, now time.Time) error {

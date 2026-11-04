@@ -130,16 +130,27 @@ func (h *ArchivoHandler) List(w http.ResponseWriter, r *http.Request) {
 		offset = 0
 	}
 
-	archivos, total, err := h.deps.ArchivoStore.List(offset, limit, q)
+	archivos, hasMore, err := h.deps.ArchivoStore.List(offset, limit, q)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "error al listar archivos")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{
-		"data":  outputs.ToArchivoResponses(archivos),
-		"total": total,
+	writeJSON(w, http.StatusOK, outputs.PaginatedResponse[outputs.ArchivoResponse]{
+		Data:    outputs.ToArchivoResponses(archivos),
+		Offset:  offset,
+		Limit:   limit,
+		HasMore: hasMore,
 	})
+}
+
+func (h *ArchivoHandler) Count(w http.ResponseWriter, r *http.Request) {
+	total, err := h.deps.ArchivoStore.Count(r.URL.Query().Get("q"))
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "error al contar archivos")
+		return
+	}
+	writeJSON(w, http.StatusOK, total)
 }
 
 func (h *ArchivoHandler) Upload(w http.ResponseWriter, r *http.Request) {
@@ -390,7 +401,7 @@ func (h *ArchivoHandler) UpdateVisibilidad(w http.ResponseWriter, r *http.Reques
 		if oldPublic != newPublic {
 			_ = h.deps.Storage.MoveFile(dst, src, archivo.FileName)
 		}
-		writeJSONError(w, http.StatusInternalServerError, "error al actualizar visibilidad")
+		writeError(w, r, err)
 		return
 	}
 
@@ -423,7 +434,7 @@ func (h *ArchivoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.deps.ArchivoStore.Delete(id); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "error al eliminar archivo")
+		writeError(w, r, err)
 		return
 	}
 

@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"database/sql"
 	"strings"
 	"time"
 
@@ -58,7 +57,7 @@ func (s *CategoriaStore) List(offset, limit int, filters store.CategoriaFilters)
 
 	where, args := categoriaWhere(filters)
 	q := s.db.rebind(`SELECT ` + categoriaColumns + ` FROM categorias` + where + ` ORDER BY id LIMIT ? OFFSET ?`)
-	args = append(args, limit, offset)
+	args = append(args, limit+1, offset)
 
 	rows, err := s.db.QueryContext(context.Background(), q, args...)
 	if err != nil {
@@ -67,7 +66,12 @@ func (s *CategoriaStore) List(offset, limit int, filters store.CategoriaFilters)
 	defer rows.Close()
 
 	data := []outputs.CategoriaResponse{}
+	hasMore := false
 	for rows.Next() {
+		if len(data) == limit {
+			hasMore = true
+			break
+		}
 		c, err := scanCategoria(rows)
 		if err != nil {
 			break
@@ -76,16 +80,20 @@ func (s *CategoriaStore) List(offset, limit int, filters store.CategoriaFilters)
 	}
 
 	return outputs.PaginatedResponse[outputs.CategoriaResponse]{
-		Data:   data,
-		Total:  s.Count(filters),
-		Offset: offset,
-		Limit:  limit,
+		Data:    data,
+		Offset:  offset,
+		Limit:   limit,
+		HasMore: hasMore,
 	}
 }
 
 func (s *CategoriaStore) FindByID(id int64) (*domain.Categoria, error) {
 	q := s.db.rebind(`SELECT ` + categoriaColumns + ` FROM categorias WHERE id = ?`)
-	return scanCategoria(s.db.QueryRowContext(context.Background(), q, id))
+	categoria, err := scanCategoria(s.db.QueryRowContext(context.Background(), q, id))
+	if err != nil {
+		return nil, translateDBError(err, "categoria no encontrada")
+	}
+	return categoria, nil
 }
 
 func (s *CategoriaStore) Create(c domain.Categoria) (domain.Categoria, error) {
@@ -112,7 +120,7 @@ func (s *CategoriaStore) Update(id int64, c domain.Categoria) error {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return sql.ErrNoRows
+		return domain.NotFound("categoria no encontrada")
 	}
 	return nil
 }
@@ -123,7 +131,7 @@ func (s *CategoriaStore) Delete(id int64) error {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return sql.ErrNoRows
+		return domain.NotFound("categoria no encontrada")
 	}
 	return nil
 }

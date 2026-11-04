@@ -99,7 +99,6 @@ func (s *BusStore) List(offset, limit int, filters BusFilters) outputs.Paginated
 		filtered = append(filtered, b)
 	}
 
-	total := int64(len(filtered))
 
 	if offset < 0 {
 		offset = 0
@@ -123,7 +122,7 @@ func (s *BusStore) List(offset, limit int, filters BusFilters) outputs.Paginated
 
 	return outputs.PaginatedResponse[outputs.BusResponse]{
 		Data:   data,
-		Total:  total,
+		HasMore: end < len(filtered),
 		Offset: offset,
 		Limit:  limit,
 	}

@@ -69,15 +69,6 @@ func (d *DB) Type() string { return d.dbType }
 
 func (d *DB) rebind(query string) string { return d.dialect.Rebind(query) }
 
-func (d *DB) Migrate(ctx context.Context) error {
-	for _, stmt := range schema(d.dialect) {
-		if _, err := d.ExecContext(ctx, stmt); err != nil {
-			return fmt.Errorf("migrate: %w", err)
-		}
-	}
-	return nil
-}
-
 func (d *DB) Seed(ctx context.Context, crypt interface {
 	Hash(string) (string, error)
 }, cfg *services.Config) error {

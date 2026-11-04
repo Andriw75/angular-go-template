@@ -89,7 +89,7 @@ func (s *MensajeStore) Delete(id int64) error {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return sql.ErrNoRows
+		return domain.NotFound("mensaje no encontrado")
 	}
 	return nil
 }
@@ -117,7 +117,7 @@ func (s *MensajeStore) FindAll() []domain.MensajePendiente {
 	return out
 }
 
-func (s *MensajeStore) ListPasadas(offset, limit int) ([]domain.MensajePendiente, int) {
+func (s *MensajeStore) ListPasadas(offset, limit int) ([]domain.MensajePendiente, bool) {
 	if offset < 0 {
 		offset = 0
 	}
@@ -127,21 +127,26 @@ func (s *MensajeStore) ListPasadas(offset, limit int) ([]domain.MensajePendiente
 
 	q := s.db.rebind(`SELECT ` + mensajeColumns + ` FROM mensajes_pendientes
 		WHERE estado = 'finalizado' ORDER BY hora_solicitada DESC LIMIT ? OFFSET ?`)
-	rows, err := s.db.QueryContext(context.Background(), q, limit, offset)
+	rows, err := s.db.QueryContext(context.Background(), q, limit+1, offset)
 	if err != nil {
-		return []domain.MensajePendiente{}, 0
+		return []domain.MensajePendiente{}, false
 	}
 	defer rows.Close()
 
 	var out []domain.MensajePendiente
+	hasMore := false
 	for rows.Next() {
+		if len(out) == limit {
+			hasMore = true
+			break
+		}
 		m, err := scanMensaje(rows)
 		if err != nil {
 			break
 		}
 		out = append(out, *m)
 	}
-	return out, s.CountPasadas()
+	return out, hasMore
 }
 
 func (s *MensajeStore) CountPasadas() int {

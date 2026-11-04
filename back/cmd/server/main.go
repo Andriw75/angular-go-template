@@ -50,8 +50,12 @@ func main() {
 	defer db.Close()
 
 	ctx := context.Background()
-	if err := db.Migrate(ctx); err != nil {
-		slog.Error("failed to migrate database", "error", err)
+	if err := db.EnsureSchema(ctx); err != nil {
+		slog.Error("failed to ensure database schema", "error", err)
+		os.Exit(1)
+	}
+	if err := db.ValidateSchema(ctx); err != nil {
+		slog.Error("database schema mismatch; server will not start", "error", err)
 		os.Exit(1)
 	}
 	if err := db.Seed(ctx, cryptManager, cfg); err != nil {

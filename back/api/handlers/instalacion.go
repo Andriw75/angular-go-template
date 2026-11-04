@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -37,7 +36,7 @@ func (h *InstalacionHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if input.Tipo == "" || input.Nombre == "" {
-		writeJSONError(w, http.StatusBadRequest, "tipo and nombre are required")
+		writeError(w, r, domain.Validation("tipo and nombre are required"))
 		return
 	}
 	if input.Estado == "" {
@@ -86,8 +85,7 @@ func (h *InstalacionHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	created, err := h.deps.InstalacionStore.Create(inst)
 	if err != nil {
-		slog.Error("failed to create instalacion", "error", err)
-		writeJSONError(w, http.StatusInternalServerError, "failed to create instalacion")
+		writeError(w, r, err)
 		return
 	}
 
@@ -109,7 +107,7 @@ func (h *InstalacionHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	existing, err := h.deps.InstalacionStore.FindByID(id)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "instalacion not found")
+		writeError(w, r, err)
 		return
 	}
 
@@ -161,8 +159,7 @@ func (h *InstalacionHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.deps.InstalacionStore.Update(id, *existing); err != nil {
-		slog.Error("failed to update instalacion", "error", err)
-		writeJSONError(w, http.StatusInternalServerError, "failed to update instalacion")
+		writeError(w, r, err)
 		return
 	}
 
@@ -177,7 +174,7 @@ func (h *InstalacionHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.deps.InstalacionStore.Delete(id); err != nil {
-		writeJSONError(w, http.StatusNotFound, "instalacion not found")
+		writeError(w, r, err)
 		return
 	}
 

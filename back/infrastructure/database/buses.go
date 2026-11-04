@@ -73,7 +73,7 @@ func (s *BusStore) List(offset, limit int, filters store.BusFilters) outputs.Pag
 
 	where, args := busWhere(filters)
 	q := s.db.rebind(`SELECT ` + busColumns + ` FROM buses` + where + ` ORDER BY id LIMIT ? OFFSET ?`)
-	args = append(args, limit, offset)
+	args = append(args, limit+1, offset)
 
 	rows, err := s.db.QueryContext(context.Background(), q, args...)
 	if err != nil {
@@ -82,7 +82,12 @@ func (s *BusStore) List(offset, limit int, filters store.BusFilters) outputs.Pag
 	defer rows.Close()
 
 	data := []outputs.BusResponse{}
+	hasMore := false
 	for rows.Next() {
+		if len(data) == limit {
+			hasMore = true
+			break
+		}
 		b, err := scanBus(rows)
 		if err != nil {
 			break
@@ -91,16 +96,20 @@ func (s *BusStore) List(offset, limit int, filters store.BusFilters) outputs.Pag
 	}
 
 	return outputs.PaginatedResponse[outputs.BusResponse]{
-		Data:   data,
-		Total:  s.Count(filters),
-		Offset: offset,
-		Limit:  limit,
+		Data:    data,
+		Offset:  offset,
+		Limit:   limit,
+		HasMore: hasMore,
 	}
 }
 
 func (s *BusStore) FindByID(id int64) (*domain.Bus, error) {
 	q := s.db.rebind(`SELECT ` + busColumns + ` FROM buses WHERE id = ?`)
-	return scanBus(s.db.QueryRowContext(context.Background(), q, id))
+	bus, err := scanBus(s.db.QueryRowContext(context.Background(), q, id))
+	if err != nil {
+		return nil, translateDBError(err, "bus no encontrado")
+	}
+	return bus, nil
 }
 
 func (s *BusStore) Create(b domain.Bus) (domain.Bus, error) {
@@ -140,7 +149,7 @@ func (s *BusStore) Update(id int64, b domain.Bus) error {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return sql.ErrNoRows
+		return domain.NotFound("bus no encontrado")
 	}
 	return nil
 }
@@ -152,7 +161,7 @@ func (s *BusStore) Delete(id int64) error {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return sql.ErrNoRows
+		return domain.NotFound("bus no encontrado")
 	}
 	return nil
 }

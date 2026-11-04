@@ -54,7 +54,7 @@ export interface VentaInput {
 
 export interface PaginatedVentas {
   data: Venta[];
-  total: number;
   offset: number;
   limit: number;
+  has_more: boolean;
 }

@@ -243,6 +243,8 @@ data: {"module":"mensajes_pendientes","name":"activos","type":"delete","data":{"
   paginación se resuelven **en cliente** sobre la lista completa del store. No
   se vuelve a llamar a la API al filtrar.
 - **Pasadas**: usa `GET /pasadas` con `offset`/`limit`; paginación de servidor.
+  El listado devuelve `has_more` (sin `total`); el total se consulta en
+  `GET /pasadas/count` y se cachea hasta que cambien los filtros.
 - Crear, asignar, finalizar y eliminar usan REST normal; el cambio llega a los
   demás clientes por SSE.
 

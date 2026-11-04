@@ -118,20 +118,22 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	r.With(authHandler.OptionalAuthMiddleware()).Get("/imagenes/{filename}", imagenHandler.Serve)
 
 	r.Route("/archivos", func(r chi.Router) {
-		r.With(authHandler.OptionalAuthMiddleware()).Get("/{filename}", archivoHandler.Serve)
-
 		r.Group(func(r chi.Router) {
 			r.Use(authHandler.AuthMiddleware("archivos"))
 			r.Get("/", archivoHandler.List)
+			r.Get("/count", archivoHandler.Count)
 			r.Post("/", archivoHandler.Upload)
 			r.Put("/{id}/visibilidad", archivoHandler.UpdateVisibilidad)
 			r.Delete("/{id}", archivoHandler.Delete)
 		})
+
+		r.With(authHandler.OptionalAuthMiddleware()).Get("/{filename}", archivoHandler.Serve)
 	})
 
 	r.Route("/documentos", func(r chi.Router) {
 		r.Use(authHandler.AuthMiddleware("documentos"))
 		r.Get("/", documentoHandler.List)
+		r.Get("/count", documentoHandler.Count)
 		r.Post("/buses", documentoHandler.GenerateBuses)
 		r.Post("/ventas/{id}", documentoHandler.GenerateVenta)
 		r.Get("/jobs/{jobID}", documentoHandler.Job)
@@ -155,6 +157,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	r.Route("/ventas", func(r chi.Router) {
 		r.Use(authHandler.AuthMiddleware("ventas"))
 		r.Get("/", ventaHandler.List)
+		r.Get("/count", ventaHandler.Count)
 		r.Post("/", ventaHandler.Create)
 		r.Get("/{id}", ventaHandler.GetByID)
 		r.Put("/{id}", ventaHandler.Update)

@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -35,7 +34,7 @@ func round2(v float64) float64 {
 
 func normalizeVenta(input inputs.VentaInput) (domain.Venta, error) {
 	if len(input.Items) == 0 {
-		return domain.Venta{}, errors.New("la venta debe tener al menos un item")
+		return domain.Venta{}, domain.Validation("la venta debe tener al menos un item")
 	}
 
 	fecha := time.Now()
@@ -58,13 +57,13 @@ func normalizeVenta(input inputs.VentaInput) (domain.Venta, error) {
 	var subtotal, descuento, impuesto, total float64
 	for _, it := range input.Items {
 		if it.Cantidad <= 0 {
-			return domain.Venta{}, errors.New("la cantidad debe ser mayor a cero")
+			return domain.Venta{}, domain.Validation("la cantidad debe ser mayor a cero")
 		}
 		if it.PrecioUnitario < 0 {
-			return domain.Venta{}, errors.New("el precio no puede ser negativo")
+			return domain.Venta{}, domain.Validation("el precio no puede ser negativo")
 		}
 		if strings.TrimSpace(it.Descripcion) == "" {
-			return domain.Venta{}, errors.New("la descripcion del item es obligatoria")
+			return domain.Venta{}, domain.Validation("la descripcion del item es obligatoria")
 		}
 
 		base := it.Cantidad*it.PrecioUnitario - it.Descuento
@@ -183,7 +182,7 @@ func (s *VentaStore) Update(id int64, input inputs.VentaInput) (domain.Venta, er
 		return domain.Venta{}, err
 	}
 	if estado != "borrador" {
-		return domain.Venta{}, errors.New("solo se puede editar una venta en borrador")
+		return domain.Venta{}, domain.Validation("solo se puede editar una venta en borrador")
 	}
 
 	now := time.Now()
@@ -216,14 +215,14 @@ func (s *VentaStore) Delete(id int64) error {
 		return err
 	}
 	if estado != "borrador" {
-		return errors.New("solo se puede eliminar una venta en borrador")
+		return domain.Validation("solo se puede eliminar una venta en borrador")
 	}
 	res, err := s.db.ExecContext(ctx, s.db.rebind(`DELETE FROM ventas WHERE id = ?`), id)
 	if err != nil {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return sql.ErrNoRows
+		return domain.NotFound("venta no encontrada")
 	}
 	return nil
 }
@@ -233,7 +232,7 @@ func (s *VentaStore) FindByID(id int64) (*domain.Venta, error) {
 	q := s.db.rebind(`SELECT ` + ventaColumns + ` FROM ventas WHERE id = ?`)
 	venta, err := scanVenta(s.db.QueryRowContext(ctx, q, id))
 	if err != nil {
-		return nil, err
+		return nil, translateDBError(err, "venta no encontrada")
 	}
 	items, err := s.loadItems(ctx, id)
 	if err != nil {
@@ -310,7 +309,7 @@ func (s *VentaStore) Count(filters store.VentaFilters) int {
 	return total
 }
 
-func (s *VentaStore) List(offset, limit int, filters store.VentaFilters) ([]domain.Venta, int, error) {
+func (s *VentaStore) List(offset, limit int, filters store.VentaFilters) ([]domain.Venta, bool, error) {
 	if offset < 0 {
 		offset = 0
 	}
@@ -321,32 +320,37 @@ func (s *VentaStore) List(offset, limit int, filters store.VentaFilters) ([]doma
 	ctx := context.Background()
 	where, args := ventaWhere(filters)
 
-	var total int
-	if err := s.db.QueryRowContext(ctx, s.db.rebind(`SELECT COUNT(*) FROM ventas`+where), args...).Scan(&total); err != nil {
-		return nil, 0, err
-	}
-
 	q := s.db.rebind(`SELECT ` + ventaColumns + ` FROM ventas` + where + ` ORDER BY id DESC LIMIT ? OFFSET ?`)
-	rows, err := s.db.QueryContext(ctx, q, append(args, limit, offset)...)
+	rows, err := s.db.QueryContext(ctx, q, append(args, limit+1, offset)...)
 	if err != nil {
-		return nil, 0, err
+		return nil, false, err
 	}
 	defer rows.Close()
 
 	ventas := make([]domain.Venta, 0)
+	hasMore := false
 	for rows.Next() {
+		if len(ventas) == limit {
+			hasMore = true
+			break
+		}
 		v, err := scanVenta(rows)
 		if err != nil {
-			return nil, 0, err
+			return nil, false, err
 		}
-		items, err := s.loadItems(ctx, v.ID)
-		if err != nil {
-			return nil, 0, err
-		}
-		v.Items = items
 		ventas = append(ventas, *v)
 	}
-	return ventas, total, nil
+	// Cerrar rows antes de cargar items: SQLite usa una sola conexión.
+	rows.Close()
+
+	for i := range ventas {
+		items, err := s.loadItems(ctx, ventas[i].ID)
+		if err != nil {
+			return nil, false, err
+		}
+		ventas[i].Items = items
+	}
+	return ventas, hasMore, nil
 }
 
 func (s *VentaStore) Emit(id int64) (domain.Venta, error) {
@@ -366,7 +370,7 @@ func (s *VentaStore) Emit(id int64) (domain.Venta, error) {
 		return domain.Venta{}, err
 	}
 	if estado != "borrador" {
-		return domain.Venta{}, errors.New("la venta ya fue emitida o anulada")
+		return domain.Venta{}, domain.Validation("la venta ya fue emitida o anulada")
 	}
 	if serie == "" {
 		serie = "FAC"
@@ -413,7 +417,7 @@ func (s *VentaStore) Annul(id int64, motivo string, userID int64) (domain.Venta,
 		return domain.Venta{}, err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return domain.Venta{}, errors.New("solo se puede anular una venta emitida")
+		return domain.Venta{}, domain.Validation("solo se puede anular una venta emitida")
 	}
 	return s.getVenta(id)
 }

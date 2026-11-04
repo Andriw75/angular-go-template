@@ -58,14 +58,16 @@ Todas bajo `AuthMiddleware("buses")` (`back/api/router.go:59`):
 - `q`: busca en `placa`, `nombre`, `marca` y `modelo` con `LOWER(...) LIKE`.
 - `tipo`: igualdad sin distinguir mayúsculas.
 - `activo`: `true`/`false`.
-- `count` devuelve un `int64`.
+- `count` devuelve un `int64` y es la única fuente del total.
 - `list` acepta `offset` y `limit` (10 por defecto, máximo 100) y responde:
 
 ```json
-{ "data": [ ... ], "total": 42, "offset": 0, "limit": 10 }
+{ "data": [ ... ], "offset": 0, "limit": 10, "has_more": true }
 ```
 
-- Orden fijo: `ORDER BY id`.
+- `list` ya no ejecuta `COUNT(*)`: pide `limit+1` filas para calcular
+  `has_more`. El front cachea el total de `/buses/count` y calcula las páginas.
+- Orden fijo: `ORDER BY id` (determinista porque `id` es único).
 
 ### Crear
 

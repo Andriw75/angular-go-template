@@ -42,7 +42,7 @@ func (h *DocumentoHandler) List(w http.ResponseWriter, r *http.Request) {
 		Serie:  q.Get("serie"),
 		Estado: q.Get("estado"),
 	}
-	docs, total, err := h.deps.DocumentoStore.List(offset, limit, filters)
+	docs, hasMore, err := h.deps.DocumentoStore.List(offset, limit, filters)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "error al listar documentos")
 		return
@@ -51,7 +51,28 @@ func (h *DocumentoHandler) List(w http.ResponseWriter, r *http.Request) {
 	for i := range docs {
 		res = append(res, outputs.ToDocumentoResponse(&docs[i]))
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": res, "total": total, "offset": offset, "limit": limit})
+	writeJSON(w, http.StatusOK, outputs.PaginatedResponse[outputs.DocumentoResponse]{
+		Data:    res,
+		Offset:  offset,
+		Limit:   limit,
+		HasMore: hasMore,
+	})
+}
+
+func (h *DocumentoHandler) Count(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	filters := store.DocumentoFilters{
+		Q:      q.Get("q"),
+		Tipo:   q.Get("tipo"),
+		Serie:  q.Get("serie"),
+		Estado: q.Get("estado"),
+	}
+	total, err := h.deps.DocumentoStore.Count(filters)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "error al contar documentos")
+		return
+	}
+	writeJSON(w, http.StatusOK, total)
 }
 
 func (h *DocumentoHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -132,7 +153,7 @@ func (h *DocumentoHandler) Annul(w http.ResponseWriter, r *http.Request) {
 	}
 	doc, err := h.deps.DocumentoStore.Annul(id, body.Motivo, userID)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "no se pudo anular")
+		writeError(w, r, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, outputs.ToDocumentoResponse(&doc))

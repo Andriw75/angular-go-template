@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -66,7 +65,7 @@ func (h *BusHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	bus, err := h.deps.BusStore.FindByID(id)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "bus not found")
+		writeError(w, r, err)
 		return
 	}
 
@@ -82,7 +81,7 @@ func (h *BusHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	fechaCompra, err := time.Parse("2006-01-02", input.FechaCompra)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid fecha_compra, use YYYY-MM-DD")
+		writeError(w, r, domain.Validation("invalid fecha_compra, use YYYY-MM-DD"))
 		return
 	}
 
@@ -90,7 +89,7 @@ func (h *BusHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if input.UltimoMantenimiento != nil {
 		t, err := time.Parse("2006-01-02", *input.UltimoMantenimiento)
 		if err != nil {
-			writeJSONError(w, http.StatusBadRequest, "invalid ultimo_mantenimiento, use YYYY-MM-DD")
+			writeError(w, r, domain.Validation("invalid ultimo_mantenimiento, use YYYY-MM-DD"))
 			return
 		}
 		ultimoMantenimiento = &t
@@ -115,8 +114,7 @@ func (h *BusHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	created, err := h.deps.BusStore.Create(bus)
 	if err != nil {
-		slog.Error("failed to create bus", "error", err)
-		writeJSONError(w, http.StatusInternalServerError, "failed to create bus")
+		writeError(w, r, err)
 		return
 	}
 
@@ -138,7 +136,7 @@ func (h *BusHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	existing, err := h.deps.BusStore.FindByID(id)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "bus not found")
+		writeError(w, r, err)
 		return
 	}
 
@@ -181,7 +179,7 @@ func (h *BusHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if input.FechaCompra != nil {
 		fechaCompra, err := time.Parse("2006-01-02", *input.FechaCompra)
 		if err != nil {
-			writeJSONError(w, http.StatusBadRequest, "invalid fecha_compra, use YYYY-MM-DD")
+			writeError(w, r, domain.Validation("invalid fecha_compra, use YYYY-MM-DD"))
 			return
 		}
 		existing.FechaCompra = fechaCompra
@@ -193,7 +191,7 @@ func (h *BusHandler) Update(w http.ResponseWriter, r *http.Request) {
 		} else {
 			t, err := time.Parse("2006-01-02", **input.UltimoMantenimiento)
 			if err != nil {
-				writeJSONError(w, http.StatusBadRequest, "invalid ultimo_mantenimiento, use YYYY-MM-DD")
+				writeError(w, r, domain.Validation("invalid ultimo_mantenimiento, use YYYY-MM-DD"))
 				return
 			}
 			existing.UltimoMantenimiento = &t
@@ -201,8 +199,7 @@ func (h *BusHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.deps.BusStore.Update(id, *existing); err != nil {
-		slog.Error("failed to update bus", "error", err)
-		writeJSONError(w, http.StatusInternalServerError, "failed to update bus")
+		writeError(w, r, err)
 		return
 	}
 
@@ -217,7 +214,7 @@ func (h *BusHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.deps.BusStore.Delete(id); err != nil {
-		writeJSONError(w, http.StatusNotFound, "bus not found")
+		writeError(w, r, err)
 		return
 	}
 
