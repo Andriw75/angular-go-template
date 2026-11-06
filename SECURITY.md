@@ -178,6 +178,20 @@ de larga duración, usar `http.NewResponseController(w).SetWriteDeadline`.
   generar archivos, no procesa entradas no confiables en servidor. Revisar al
   actualizar exceljs.
 - `vitest` se mantiene en la última 4.x (dev).
+- `github.com/golang-jwt/jwt/v5 v5.3.1`: no afectado por
+  GHSA-mh63-6h87-95cp / CVE-2025-30204 (corregido en 5.2.2). La validación fija
+  `HS256`, exige `exp`, verifica `iat` y rechaza tokens mayores a 4 KiB.
+- `jose@6.2.15` (npm) es dependencia transitiva **solo de desarrollo** de
+  `@angular/cli`; no entra al bundle de producción y `npm audit` no la marca. El
+  aviso no revisado GHSA-m523-xm42-q7ff apunta a `jose@6.0.10` y no aplica.
+- Dependabot semanal (`.github/dependabot.yml`) para Go modules, npm y GitHub
+  Actions.
+- Gitleaks: los secretos de test se generan en runtime; `.gitleaksignore`
+  conserva el fingerprint del falso positivo histórico (`auth_test.go`). No se
+  permite añadir credenciales reales ni de ejemplo con forma de secreto.
+- El toolchain local debe ser **1.27.3+**: `govulncheck` reporta avisos de la
+  stdlib corregidos en 1.27.2/1.27.3. Ajustar también el `go-version` del CI al
+  parchear.
 - CI: `.github/workflows/security.yml` ejecuta `go vet`, `go test -race ./...`,
   `govulncheck`, `npm audit --omit=dev` y `gitleaks`.
 
@@ -213,6 +227,7 @@ de larga duración, usar `http.NewResponseController(w).SetWriteDeadline`.
 - [ ] Sin `BOOTSTRAP_ADMIN_PASSWORD` en producción después del primer login.
 - [ ] `COOKIE_SECURE=true` y HTTPS/HSTS activos.
 - [ ] `npm audit --omit=dev` y `govulncheck ./...` limpios.
+- [ ] Revisar que Dependabot no tenga alertas abiertas de JWT/dependencias.
 - [ ] `limit_req` de login probado (429 tras 5 intentos).
 - [ ] `go test ./...` (y `-race` en CI) pasa.
 - [ ] Reiniciar el backend invalida sesiones (`401 session_expired`).

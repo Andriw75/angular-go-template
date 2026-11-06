@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,13 +12,23 @@ import (
 	"back/services"
 )
 
-const testJWTSecret = "0123456789abcdef0123456789abcdef"
+// testSecret genera el secreto en runtime para no versionar literales que
+// Gitleaks (correctamente) confundiría con una credencial real.
+func testSecret(t *testing.T) string {
+	t.Helper()
+
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		t.Fatalf("generar secreto de test: %v", err)
+	}
+	return hex.EncodeToString(b)
+}
 
 func newTestAuthHandler(t *testing.T) (*AuthHandler, *auth.JWTManager, *auth.JWTStore) {
 	t.Helper()
 
 	store := auth.NewJWTStore()
-	manager := auth.NewJWTManager(testJWTSecret, 15, 5)
+	manager := auth.NewJWTManager(testSecret(t), 15, 5)
 	manager.Store = store
 
 	deps := &Dependencies{

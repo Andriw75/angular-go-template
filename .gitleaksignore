@@ -1,0 +1,3 @@
+# Falso positivo historico: secreto dummy de tests en auth_test.go.
+# El valor real se genera en runtime desde el commit siguiente.
+c2762b88a09f5e5152ed30c97e8381077eacc508:back/api/handlers/auth_test.go:generic-api-key:13

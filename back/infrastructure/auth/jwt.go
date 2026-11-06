@@ -9,6 +9,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// maxTokenBytes acota el token antes de parsearlo. Un JWT normal ronda 1 KiB;
+// este límite evita amplificación de memoria con cabeceras manipuladas.
+const maxTokenBytes = 4 << 10
+
 type JWTManager struct {
 	secret     string
 	duration   time.Duration
@@ -85,12 +89,24 @@ func (m *JWTManager) Generate(userID int64, username, email string, activo bool,
 }
 
 func (m *JWTManager) Validate(tokenStr string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(m.secret), nil
-	})
+	if tokenStr == "" || len(tokenStr) > maxTokenBytes {
+		return nil, fmt.Errorf("invalid token size")
+	}
+
+	token, err := jwt.ParseWithClaims(
+		tokenStr,
+		&Claims{},
+		func(token *jwt.Token) (any, error) {
+			// Solo HS256: descarta algoritmos distintos y variantes HMAC.
+			if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+			return []byte(m.secret), nil
+		},
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		jwt.WithExpirationRequired(),
+		jwt.WithIssuedAt(),
+	)
 	if err != nil {
 		return nil, err
 	}

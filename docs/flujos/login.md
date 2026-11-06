@@ -47,6 +47,9 @@ Usuario            LoginComponent        AuthService             API Go
    - Firma `HS256` con `JWT_SECRET`.
    - Claims: `user_id`, `username`, `email`, `activo`, `permisos` y `jti`.
    - Expiración: `JWT_EXPIRATION_MINUTES` (15 por defecto).
+   - Validación: solo `HS256`, `exp` obligatorio, `iat` verificado y tamaño
+     máximo de 4 KiB (descarta `alg=none`, otras variantes HMAC y tokens
+     sobredimensionados).
    - El `jti` se registra en `JWTStore` en memoria si `JWT_STORE_ENABLED=true`.
 4. Cookie de sesión:
    - Nombre: `COOKIE_NAME` (por defecto `access_token_go`).
