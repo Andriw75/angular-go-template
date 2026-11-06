@@ -15,6 +15,10 @@
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
   --radius: 8px;
+  --nav-height: 52px;
+  --nav-bg: var(--primaryFocus);
+  --nav-fg: #ffffff;
+  --nav-border: rgba(255, 255, 255, 0.16);
 }
 
 *, *::before, *::after {

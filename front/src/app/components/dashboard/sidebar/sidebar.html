@@ -8,7 +8,7 @@
 
   <div class="menuContainer">
     <ul class="menuList">
-      @for (item of filterMenu(menu); track item.key) {
+      @for (item of menu(); track item.key) {
         <li class="menuItem">
           <sidebar-menu-item [item]="item" [collapsed]="isCollapsed()" />
         </li>

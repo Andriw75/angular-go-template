@@ -77,6 +77,7 @@ resume y enlaza. No numerar archivos; el orden se controla con esta tabla.
 | Ventas y reportes             | Documentado | [docs/flujos/reportes.md](docs/flujos/reportes.md)                       |
 | Instalaciones / mapas         | Documentado | [docs/flujos/instalaciones-mapas.md](docs/flujos/instalaciones-mapas.md) |
 | Laboratorio de consultas      | Documentado | [docs/flujos/laboratorio.md](docs/flujos/laboratorio.md)                 |
+| Layouts del dashboard         | Documentado | [docs/flujos/dashboard-layouts.md](docs/flujos/dashboard-layouts.md)     |
 
 ## Diagramas de flujo
 

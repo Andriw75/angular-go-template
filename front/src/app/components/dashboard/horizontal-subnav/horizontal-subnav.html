@@ -1,0 +1,7 @@
+<ul class="subnav" role="menu">
+  @for (item of items(); track item.key) {
+    <li role="none">
+      <app-nav-flyout [item]="item" [activeUrl]="activeUrl()" />
+    </li>
+  }
+</ul>

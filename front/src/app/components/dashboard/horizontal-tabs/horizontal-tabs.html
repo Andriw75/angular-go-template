@@ -1,0 +1,54 @@
+<div class="tabsBar" role="menubar" aria-label="Módulos">
+  <button type="button" class="scrollButton" aria-label="Desplazar a la izquierda" (click)="scroll(-1)">
+    ‹
+  </button>
+
+  <div class="tabs" #tabsContainer>
+    @for (item of items(); track item.key) {
+      <button
+        type="button"
+        class="tab"
+        [class.tab--active]="item.key === activeKey()"
+        role="menuitem"
+        (click)="choose(item)"
+      >
+        <span class="tabLabel">{{ item.label }}</span>
+        @if (item.submenu?.length) {
+          <span class="tabCaret" aria-hidden="true">▾</span>
+        }
+      </button>
+    }
+  </div>
+
+  <button type="button" class="scrollButton" aria-label="Desplazar a la derecha" (click)="scroll(1)">
+    ›
+  </button>
+
+  <div class="moreWrap">
+    <button
+      type="button"
+      class="moreButton"
+      [attr.aria-expanded]="moreOpen()"
+      aria-haspopup="menu"
+      (click)="toggleMore()"
+    >
+      Más <span aria-hidden="true">▾</span>
+    </button>
+
+    @if (moreOpen()) {
+      <div class="moreMenu" role="menu">
+        @for (item of items(); track item.key) {
+          <button
+            type="button"
+            class="moreItem"
+            [class.moreItem--active]="item.key === activeKey()"
+            role="menuitem"
+            (click)="choose(item)"
+          >
+            {{ item.label }}
+          </button>
+        }
+      </div>
+    }
+  </div>
+</div>

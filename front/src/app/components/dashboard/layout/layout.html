@@ -1,9 +1,19 @@
-<div class="dashboard-layout">
-  <app-sidebar />
-  <main class="main-content">
-    <router-outlet />
-  </main>
-</div>
+@switch (variant()) {
+  @case ('horizontal') {
+    <app-horizontal-layout />
+  }
+  @case ('grid') {
+    <app-grid-layout />
+  }
+  @default {
+    <div class="dashboard-layout">
+      <app-sidebar />
+      <main class="main-content">
+        <router-outlet />
+      </main>
+    </div>
+  }
+}
 
 <app-confirm />
 <app-toast />

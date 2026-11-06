@@ -1,0 +1,89 @@
+:host {
+  display: block;
+  position: relative;
+}
+
+.navItem {
+  position: relative;
+}
+
+.navGroup,
+.navLeaf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-left: 3px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.navGroup:hover,
+.navLeaf:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.navGroup--active,
+.navLeaf--active {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-left-color: var(--secondary);
+  font-weight: 700;
+}
+
+.navItem--active > .navGroup {
+  color: var(--primary);
+}
+
+.navLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navArrow {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.navArrow--open {
+  transform: rotate(90deg);
+}
+
+.flyout {
+  position: absolute;
+  left: calc(100% + 2px);
+  top: -6px;
+  min-width: 220px;
+  padding: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  z-index: 90;
+}
+
+.flyout app-nav-flyout {
+  display: block;
+}
+
+.flyout .navGroup,
+.flyout .navLeaf {
+  border-radius: 6px;
+  border-left: none;
+}
+
+.flyout .navLeaf--active {
+  background: var(--primary-light);
+}

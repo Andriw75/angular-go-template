@@ -1,9 +1,9 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
+import { MenuService } from '../../../services/menu.service';
 import { MensajesStoreService } from '../../../services/mensajes-store.service';
 import { SessionService } from '../../../services/session.service';
-import { MENU, type MenuItem } from './menu.config';
 import { SidebarMenuItemComponent } from './sidebar-menu-item';
 import { UserSolidIcon } from '../../../common/icons/user-solid.icon';
 import { LogoutIcon } from '../../../common/icons/logout.icon';
@@ -19,10 +19,11 @@ export class SidebarComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
   private mensajesStore = inject(MensajesStoreService);
+  private menuService = inject(MenuService);
   protected session = inject(SessionService);
 
   user = this.auth.user;
-  menu = MENU;
+  menu = this.menuService.visibleMenu;
 
   isCollapsed = signal(false);
   isLoggingOut = signal(false);
@@ -49,16 +50,4 @@ export class SidebarComponent {
     });
   }
 
-  filterMenu(items: MenuItem[]): MenuItem[] {
-    return items
-      .map((item) =>
-        item.submenu ? { ...item, submenu: this.filterMenu(item.submenu) } : item,
-      )
-      .filter(
-        (item) =>
-          (this.user()?.permisos?.includes(item.requiredPermission ?? '') ?? false) ||
-          !item.requiredPermission ||
-          (item.submenu && item.submenu.length > 0),
-      );
-  }
 }

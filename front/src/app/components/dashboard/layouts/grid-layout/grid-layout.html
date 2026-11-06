@@ -1,0 +1,25 @@
+<div class="grid-layout">
+  <header class="gridHeader">
+    <app-brand-logo />
+    <div class="gridHeaderRight">
+      <app-session-badge [compact]="true" />
+      <app-user-menu />
+    </div>
+  </header>
+
+  <main class="gridMain" [class.gridMain--module]="!isHome()">
+    @if (!isHome()) {
+      <header class="moduleWindowHeader">
+        <button type="button" class="windowButton" (click)="close()">← Volver al inicio</button>
+        <h1 class="moduleTitle">{{ activeModule()?.label ?? 'Módulo' }}</h1>
+        <button type="button" class="windowButton windowButton--close" aria-label="Cerrar" (click)="close()">
+          ✕
+        </button>
+      </header>
+    }
+
+    <div class="gridContent" [class.gridContent--module]="!isHome()">
+      <router-outlet />
+    </div>
+  </main>
+</div>

@@ -1,0 +1,27 @@
+<section class="gridHome">
+  <img src="branding/logo.png" class="watermark" alt="" aria-hidden="true" />
+
+  @if (showSearch) {
+    <div class="gridToolbar">
+      <input
+        class="gridSearch"
+        type="search"
+        placeholder="Buscar módulos..."
+        [value]="search()"
+        (input)="onSearch($event)"
+      />
+    </div>
+  }
+
+  @if (!hasResults()) {
+    <p class="empty">No se encontraron módulos para esta búsqueda.</p>
+  }
+
+  <div class="moduleGrid" [ngClass]="'cols-' + columns">
+    @for (item of modules(); track item.key) {
+      <app-module-card [item]="item" (select)="onSelect($event)" />
+    }
+  </div>
+
+  <app-grid-submenu [item]="submenu()" (close)="closeSubmenu()" />
+</section>

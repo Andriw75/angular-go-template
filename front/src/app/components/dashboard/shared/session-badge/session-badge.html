@@ -1,0 +1,15 @@
+@if (session.active()) {
+  <div
+    class="sessionBadge"
+    [class.sessionBadge--compact]="compact()"
+    [class.sessionBadge--warning]="session.warning()"
+    [class.sessionBadge--critical]="session.critical()"
+    [title]="'Sesión restante: ' + session.label()"
+  >
+    <span class="sessionDot" aria-hidden="true"></span>
+    @if (!compact()) {
+      <span class="sessionLabel">Sesión</span>
+      <span class="sessionValue">{{ session.label() }}</span>
+    }
+  </div>
+}

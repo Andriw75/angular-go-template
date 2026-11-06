@@ -1,0 +1,24 @@
+<button
+  type="button"
+  class="userTrigger"
+  (click)="toggle()"
+  [attr.aria-expanded]="open()"
+  aria-haspopup="menu"
+>
+  <icon-user-solid size="18" />
+  <span class="userName">{{ auth.user()?.username || 'Usuario' }}</span>
+  <span class="caret" [class.caretOpen]="open()">▾</span>
+</button>
+
+@if (open()) {
+  <div class="userDropdown" role="menu">
+    <div class="userMeta">
+      <strong>{{ auth.user()?.username }}</strong>
+      <span>{{ auth.user()?.email }}</span>
+    </div>
+    <button type="button" class="logoutAction" role="menuitem" (click)="logout()" [disabled]="loggingOut()">
+      <icon-logout size="16" />
+      <span>{{ loggingOut() ? 'Saliendo...' : 'Cerrar sesión' }}</span>
+    </button>
+  </div>
+}

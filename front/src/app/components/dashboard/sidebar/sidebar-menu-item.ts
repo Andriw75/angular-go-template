@@ -1,7 +1,7 @@
 import { Component, Input, signal, inject } from '@angular/core';
 import { NgComponentOutlet } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import type { MenuItem } from './menu.config';
+import type { MenuItem } from '../../../models/dashboard';
 
 @Component({
   selector: 'sidebar-menu-item',

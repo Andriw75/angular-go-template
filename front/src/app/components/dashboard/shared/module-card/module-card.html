@@ -1,0 +1,24 @@
+<button type="button" class="moduleCard" (click)="select.emit(item())">
+  <span class="moduleIcon" aria-hidden="true">
+    @if (item().icon) {
+      <ng-container
+        [ngComponentOutlet]="item().icon!.component"
+        [ngComponentOutletInputs]="item().icon!.inputs ?? {}"
+      />
+    }
+  </span>
+  <span class="moduleText">
+    <span class="moduleName">
+      {{ item().label }}
+      @if (item().badge) {
+        <span class="moduleBadge">{{ item().badge }}</span>
+      }
+    </span>
+    @if (item().description) {
+      <span class="moduleDescription">{{ item().description }}</span>
+    }
+  </span>
+  @if (item().submenu?.length) {
+    <span class="moduleArrow" aria-hidden="true">›</span>
+  }
+</button>

@@ -1,0 +1,37 @@
+<div
+  class="navItem"
+  [class.navItem--active]="hasActiveChild(item())"
+  (mouseenter)="onMouseEnter()"
+  (mouseleave)="onMouseLeave()"
+>
+  @if (item().submenu?.length) {
+    <button
+      type="button"
+      class="navGroup"
+      [class.navGroup--active]="hasActiveChild(item())"
+      [attr.aria-expanded]="open()"
+      aria-haspopup="menu"
+      (click)="toggle()"
+    >
+      <span class="navLabel">{{ item().label }}</span>
+      <span class="navArrow" [class.navArrow--open]="open()">›</span>
+    </button>
+
+    @if (open()) {
+      <div class="flyout" role="menu">
+        @for (child of item().submenu; track child.key) {
+          <app-nav-flyout [item]="child" [activeUrl]="activeUrl()" />
+        }
+      </div>
+    }
+  } @else {
+    <a
+      class="navLeaf"
+      [class.navLeaf--active]="isActive(item())"
+      [routerLink]="item().path"
+      routerLinkActive="navLeaf--active"
+    >
+      <span class="navLabel">{{ item().label }}</span>
+    </a>
+  }
+</div>

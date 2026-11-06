@@ -1,0 +1,13 @@
+<nav class="breadcrumbs" aria-label="Ruta de navegación">
+  <a routerLink="/dashboard">Inicio</a>
+  @for (item of trail(); track item.key) {
+    @if (item.path !== '/dashboard') {
+      <span class="separator" aria-hidden="true">/</span>
+      @if (item.path) {
+        <a [routerLink]="item.path">{{ item.label }}</a>
+      } @else {
+        <span class="crumbGroup">{{ item.label }}</span>
+      }
+    }
+  }
+</nav>

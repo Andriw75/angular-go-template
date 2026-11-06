@@ -1,0 +1,32 @@
+@if (item() && levels().length) {
+  <div class="backdrop" (click)="dismiss()"></div>
+  <section class="modal" role="dialog" aria-modal="true" [attr.aria-label]="current().title">
+    <header class="header">
+      @if (levels().length > 1) {
+        <button type="button" class="iconButton" aria-label="Atrás" (click)="back()">←</button>
+      } @else {
+        <span class="iconSpacer"></span>
+      }
+      <strong class="title">{{ current().title }}</strong>
+      <button type="button" class="iconButton" aria-label="Cerrar" (click)="dismiss()">✕</button>
+    </header>
+
+    <ul class="menuList">
+      @for (child of current().items; track child.key) {
+        <li>
+          <button type="button" class="menuItem" (click)="select(child)">
+            <span class="menuText">
+              <span class="menuLabel">{{ child.label }}</span>
+              @if (child.description) {
+                <span class="menuDescription">{{ child.description }}</span>
+              }
+            </span>
+            @if (child.submenu?.length) {
+              <span class="menuArrow" aria-hidden="true">›</span>
+            }
+          </button>
+        </li>
+      }
+    </ul>
+  </section>
+}

@@ -1,0 +1,136 @@
+:host {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+
+.tabsBar {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+}
+
+.tabs {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  height: 100%;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 0 16px;
+  height: 100%;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.tab--active {
+  color: white;
+  border-bottom-color: var(--secondary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tabCaret {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.scrollButton {
+  flex-shrink: 0;
+  width: 24px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.scrollButton:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.moreWrap {
+  position: relative;
+  flex-shrink: 0;
+  height: 100%;
+}
+
+.moreButton {
+  height: 100%;
+  padding: 0 14px;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.moreButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.moreMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 220px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  z-index: 130;
+}
+
+.moreItem {
+  display: block;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.moreItem:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.moreItem--active {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 700;
+}

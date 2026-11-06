@@ -1,0 +1,53 @@
+:host {
+  display: inline-flex;
+}
+
+.sessionBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sessionBadge--compact {
+  padding: 8px;
+}
+
+.sessionLabel {
+  opacity: 0.75;
+}
+
+.sessionValue {
+  font-weight: 700;
+}
+
+.sessionDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8bc34a;
+  flex-shrink: 0;
+}
+
+.sessionBadge--warning {
+  background: rgba(255, 193, 7, 0.22);
+  color: #ffecb3;
+}
+
+.sessionBadge--warning .sessionDot {
+  background: #ffc107;
+}
+
+.sessionBadge--critical {
+  background: rgba(220, 53, 69, 0.28);
+  color: #ffcdd2;
+}
+
+.sessionBadge--critical .sessionDot {
+  background: #f44336;
+}

@@ -5,18 +5,31 @@ import { SidebarComponent } from '../sidebar/sidebar';
 import { ConfirmComponent } from '../../../common/confirm/confirm';
 import { ToastComponent } from '../../../common/toast/toast';
 import { AuthService } from '../../../services/auth.service';
+import { DashboardConfigService } from '../../../services/dashboard-config.service';
 import { MensajesStoreService } from '../../../services/mensajes-store.service';
 import { SessionService } from '../../../services/session.service';
 import { SSEService } from '../../../services/sse.service';
 import { hasAnySseAccess } from '../../../services/sse-channels';
+import { GridLayoutComponent } from '../layouts/grid-layout/grid-layout';
+import { HorizontalLayoutComponent } from '../layouts/horizontal-layout/horizontal-layout';
 
 @Component({
   selector: 'app-dashboard-layout',
   templateUrl: './layout.html',
   styleUrl: './layout.css',
-  imports: [RouterOutlet, SidebarComponent, ConfirmComponent, ToastComponent],
+  imports: [
+    RouterOutlet,
+    SidebarComponent,
+    ConfirmComponent,
+    ToastComponent,
+    HorizontalLayoutComponent,
+    GridLayoutComponent,
+  ],
 })
 export class DashboardLayoutComponent {
+  private readonly config = inject(DashboardConfigService);
+  readonly variant = this.config.variant;
+
   constructor() {
     const mensajes = inject(MensajesStoreService);
     const session = inject(SessionService);

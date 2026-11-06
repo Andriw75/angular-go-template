@@ -1,0 +1,28 @@
+<div class="horizontal-layout">
+  <header class="topbar">
+    <app-brand-logo />
+    <app-horizontal-tabs
+      [items]="menu.visibleMenu()"
+      [activeKey]="activeTab()?.key"
+      (select)="onSelect($event)"
+    />
+    <div class="topbarRight">
+      <app-session-badge [compact]="true" />
+      <app-user-menu />
+      <app-mobile-drilldown />
+    </div>
+  </header>
+
+  <div class="workspace">
+    @if (secondary().length) {
+      <aside class="secondary">
+        <app-horizontal-subnav [items]="secondary()" [activeUrl]="currentUrl()" />
+      </aside>
+    }
+
+    <main class="content">
+      <app-breadcrumbs [trail]="trail()" />
+      <router-outlet />
+    </main>
+  </div>
+</div>

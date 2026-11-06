@@ -1,0 +1,41 @@
+<button
+  type="button"
+  class="mobileTrigger"
+  aria-label="Abrir menú"
+  [attr.aria-expanded]="open()"
+  (click)="openMenu()"
+>
+  ☰
+</button>
+
+@if (open()) {
+  <div class="backdrop" (click)="close()"></div>
+  <aside class="panel" role="dialog" aria-modal="true" aria-label="Menú de navegación">
+    <header class="panelHeader">
+      @if (levels().length > 1) {
+        <button type="button" class="iconButton" aria-label="Atrás" (click)="back()">←</button>
+      } @else {
+        <span class="iconSpacer"></span>
+      }
+      <strong class="panelTitle">{{ current().title }}</strong>
+      <button type="button" class="iconButton" aria-label="Cerrar" (click)="close()">✕</button>
+    </header>
+
+    <ul class="drillList">
+      @for (item of current().items; track item.key) {
+        <li>
+          <button type="button" class="drillItem" (click)="select(item)">
+            <span>{{ item.label }}</span>
+            @if (item.submenu?.length) {
+              <span class="drillArrow" aria-hidden="true">›</span>
+            }
+          </button>
+        </li>
+      }
+    </ul>
+
+    @if (current().items.length === 0) {
+      <p class="empty">No hay opciones disponibles.</p>
+    }
+  </aside>
+}
