@@ -56,8 +56,9 @@ vigila `.env`. `npm start` es un alias de `ng serve`.
   contraseña en el primer login.
 - `JWT_SECRET` es obligatorio (32+ caracteres); el backend no arranca sin él.
 - Login con rate limit en nginx y en Go (`LOGIN_MAX_ATTEMPTS`, etc.).
-- Antes de cerrar un cambio en `back/`: `go build ./...`, `go vet ./...` y
-  `govulncheck ./...`. En `front/`: `npm audit --omit=dev` y `npm run build`.
+- Antes de cerrar un cambio en `back/`: `go build ./...`, `go vet ./...`,
+  `go test ./...` (`-race` en CI) y `govulncheck ./...`. En `front/`:
+  `npm audit --omit=dev` y `npm run build`.
 
 ## Documentación por flujo
 

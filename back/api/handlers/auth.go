@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net"
 	"net/http"
@@ -60,6 +61,49 @@ func (h *AuthHandler) clearSessionCookie(w http.ResponseWriter) {
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   -1,
 	})
+}
+
+var errInactiveUser = errors.New("usuario inactivo")
+
+// expireSession limpia la cookie y responde 401 cuando el jti ya no es válido.
+func (h *AuthHandler) expireSession(w http.ResponseWriter) {
+	h.clearSessionCookie(w)
+	writeJSONErrorCode(w, http.StatusUnauthorized, "session_expired", "la sesión expiró; inicia sesión de nuevo")
+}
+
+// renewToken genera un token nuevo y rota su jti. Con JWTLoadUserOnRenew,
+// recarga permisos y estado desde la base y rechaza cuentas inactivas.
+func (h *AuthHandler) renewToken(claims *auth.Claims) (string, error) {
+	var (
+		token string
+		err   error
+	)
+	if h.deps.Config.JWTLoadUserOnRenew {
+		user, uerr := h.deps.UserStore.FindByID(claims.UserID)
+		if uerr != nil {
+			return "", uerr
+		}
+		if !user.Activo {
+			return "", errInactiveUser
+		}
+		token, err = h.deps.JWTManager.Generate(user.ID, user.Username, user.Email, user.Activo, user.Permisos, user.MustChangePassword)
+	} else {
+		token, err = h.deps.JWTManager.Generate(claims.UserID, claims.Username, claims.Email, claims.Activo, claims.Permisos, claims.MustChangePassword)
+	}
+	if err != nil {
+		return "", err
+	}
+
+	if h.deps.Config.JWTStoreEnabled {
+		if renewed, verr := h.deps.JWTManager.Validate(token); verr == nil && renewed.ID != "" {
+			exp := time.Time{}
+			if renewed.ExpiresAt != nil {
+				exp = renewed.ExpiresAt.Time
+			}
+			h.deps.JWTStore.Rotate(claims.ID, renewed.ID, renewed.UserID, exp)
+		}
+	}
+	return token, nil
 }
 
 // clientIP prioriza las cabeceras que pone nginx. Si el binario se expone
@@ -232,42 +276,24 @@ func (h *AuthHandler) AuthMiddleware(requiredPermission ...string) func(http.Han
 				return
 			}
 
-			renewed := false
-
-			if h.deps.Config.JWTStoreEnabled && claims.ID != "" && !h.deps.JWTStore.Exists(claims.ID) {
-				if h.deps.Config.JWTLoadUserOnRenew {
-					user, uerr := h.deps.UserStore.FindByID(claims.UserID)
-					if uerr == nil && user.Activo {
-						newToken, terr := h.deps.JWTManager.Generate(user.ID, user.Username, user.Email, user.Activo, user.Permisos, user.MustChangePassword)
-						if terr == nil {
-							h.setSessionCookie(w, newToken)
-							claims, _ = h.deps.JWTManager.Validate(newToken)
-							renewed = true
-						}
-					}
-				}
-				if !renewed {
-					h.clearSessionCookie(w)
-					writeJSONError(w, http.StatusUnauthorized, "session expired")
+			// Con el store activo, un jti ausente significa sesión revocada o
+			// perdida al reiniciar el proceso: se exige iniciar sesión de nuevo.
+			if h.deps.Config.JWTStoreEnabled {
+				if claims.ID == "" || !h.deps.JWTStore.Exists(claims.ID) {
+					h.expireSession(w)
 					return
 				}
 			}
 
-			if !renewed && h.deps.JWTManager.ShouldRenew(claims) {
-				if h.deps.Config.JWTLoadUserOnRenew {
-					user, uerr := h.deps.UserStore.FindByID(claims.UserID)
-					if uerr == nil {
-						newToken, terr := h.deps.JWTManager.Generate(user.ID, user.Username, user.Email, user.Activo, user.Permisos, user.MustChangePassword)
-						if terr == nil {
-							h.setSessionCookie(w, newToken)
-							claims, _ = h.deps.JWTManager.Validate(newToken)
-						}
-					}
-				} else {
-					newToken, terr := h.deps.JWTManager.Generate(claims.UserID, claims.Username, claims.Email, claims.Activo, claims.Permisos, claims.MustChangePassword)
-					if terr == nil {
-						h.setSessionCookie(w, newToken)
-					}
+			if h.deps.JWTManager.ShouldRenew(claims) {
+				newToken, err := h.renewToken(claims)
+				if err != nil {
+					h.expireSession(w)
+					return
+				}
+				h.setSessionCookie(w, newToken)
+				if renewedClaims, verr := h.deps.JWTManager.Validate(newToken); verr == nil {
+					claims = renewedClaims
 				}
 			}
 
@@ -306,6 +332,14 @@ func (h *AuthHandler) OptionalAuthMiddleware() func(http.Handler) http.Handler {
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return
+			}
+
+			// Si el token fue revocado, se trata como anónimo.
+			if h.deps.Config.JWTStoreEnabled {
+				if claims.ID == "" || !h.deps.JWTStore.Exists(claims.ID) {
+					next.ServeHTTP(w, r)
+					return
+				}
 			}
 
 			h.setSessionHeaders(w, claims)

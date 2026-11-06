@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -16,6 +17,8 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
+	r.Use(securityHeaders)
+	r.Use(limitBody)
 	r.Use(corsMiddleware(deps.Config.CORSOrigin))
 
 	authHandler := handlers.NewAuthHandler(deps)
@@ -40,6 +43,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	})
 
 	r.Route("/auth", func(r chi.Router) {
+		r.Use(middleware.Timeout(30 * time.Second))
 		r.Post("/token", authHandler.Token)
 		r.Group(func(r chi.Router) {
 			r.Use(authHandler.AuthMiddleware())
@@ -50,6 +54,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	})
 
 	r.Route("/users", func(r chi.Router) {
+		r.Use(middleware.Timeout(30 * time.Second))
 		r.Use(authHandler.AuthMiddleware("usuarios"))
 		r.Get("/", userHandler.List)
 		r.Post("/", userHandler.Create)
@@ -59,11 +64,13 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	})
 
 	r.Route("/permisos", func(r chi.Router) {
+		r.Use(middleware.Timeout(30 * time.Second))
 		r.Use(authHandler.AuthMiddleware("usuarios"))
 		r.Get("/", permisoHandler.List)
 	})
 
 	r.Route("/buses", func(r chi.Router) {
+		r.Use(middleware.Timeout(30 * time.Second))
 		r.Use(authHandler.AuthMiddleware("buses"))
 		r.Get("/count", busHandler.Count)
 		r.Get("/", busHandler.List)
@@ -74,6 +81,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	})
 
 	r.Route("/mensajes_pendientes", func(r chi.Router) {
+		r.Use(middleware.Timeout(30 * time.Second))
 		r.Use(authHandler.AuthMiddleware("mensajes_pendientes"))
 		r.Get("/", mensajeHandler.List)
 		r.Post("/", mensajeHandler.Create)
@@ -90,6 +98,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	})
 
 	r.Route("/categorias", func(r chi.Router) {
+		r.Use(middleware.Timeout(30 * time.Second))
 		r.Use(authHandler.AuthMiddleware("shop"))
 		r.Get("/count", categoriaHandler.Count)
 		r.Get("/", categoriaHandler.List)
@@ -103,6 +112,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	})
 
 	r.Route("/productos", func(r chi.Router) {
+		r.Use(middleware.Timeout(30 * time.Second))
 		r.Use(authHandler.AuthMiddleware("shop"))
 		r.Get("/count", productoHandler.Count)
 		r.Get("/", productoHandler.List)
@@ -118,6 +128,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	r.With(authHandler.OptionalAuthMiddleware()).Get("/imagenes/{filename}", imagenHandler.Serve)
 
 	r.Route("/archivos", func(r chi.Router) {
+		r.Use(middleware.Timeout(5 * time.Minute))
 		r.Group(func(r chi.Router) {
 			r.Use(authHandler.AuthMiddleware("archivos"))
 			r.Get("/", archivoHandler.List)
@@ -131,6 +142,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	})
 
 	r.Route("/documentos", func(r chi.Router) {
+		r.Use(middleware.Timeout(2 * time.Minute))
 		r.Use(authHandler.AuthMiddleware("documentos"))
 		r.Get("/", documentoHandler.List)
 		r.Get("/count", documentoHandler.Count)
@@ -143,6 +155,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	})
 
 	r.Route("/reportes", func(r chi.Router) {
+		r.Use(middleware.Timeout(2 * time.Minute))
 		r.Use(authHandler.AuthMiddleware("reportes"))
 		r.Get("/buses", reporteHandler.Buses)
 		r.Get("/buses/count", reporteHandler.BusesCount)
@@ -155,6 +168,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	})
 
 	r.Route("/ventas", func(r chi.Router) {
+		r.Use(middleware.Timeout(30 * time.Second))
 		r.Use(authHandler.AuthMiddleware("ventas"))
 		r.Get("/", ventaHandler.List)
 		r.Get("/count", ventaHandler.Count)
@@ -167,6 +181,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	})
 
 	r.Route("/instalaciones", func(r chi.Router) {
+		r.Use(middleware.Timeout(30 * time.Second))
 		r.Use(authHandler.AuthMiddleware())
 		r.Get("/", instalacionHandler.List)
 		r.Post("/", instalacionHandler.Create)
@@ -183,23 +198,4 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	})
 
 	return r
-}
-
-func corsMiddleware(origin string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-			w.Header().Set("Access-Control-Expose-Headers", "X-Session-Expires-In")
-
-			if r.Method == http.MethodOptions {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	}
 }

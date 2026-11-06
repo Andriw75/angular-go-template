@@ -140,6 +140,9 @@ Sin límite de filas. La generación es síncrona hasta `REPORT_SYNC_TIMEOUT_SEC
 - Responde `202 { job_id }`.
 - El trabajo continúa en segundo plano.
 - El resultado se guarda temporalmente en memoria (TTL `JOB_TTL_MINUTES`, 30 min).
+  Un ticker interno elimina los jobs vencidos aunque no se creen nuevos.
+- El estado mutable se lee y escribe bajo mutex; los handlers consultan un
+  `JobSnapshot` para evitar carreras con la goroutine de generación.
 - El documento final se persiste en BD/disco.
 
 Endpoints:
@@ -154,7 +157,10 @@ GET  /documentos/{id}/file?formato=pdf|xlsx
 POST /documentos/{id}/anular
 ```
 
-El frontend hace polling cada 2 s y muestra el progreso. Si el job expira o el proceso se reinicia, el job en memoria se pierde; el documento ya persistido sigue disponible.
+El frontend hace polling cada 2 s y muestra el progreso. Los jobs son efímeros y
+compartidos para quien tenga el permiso `documentos` (igual que los documentos).
+Si el job expira o el proceso se reinicia, el job en memoria se pierde; el
+documento ya persistido sigue disponible.
 
 ## UI
 

@@ -5,6 +5,10 @@
 Herramienta de desarrollo para simular consultas largas contra PostgreSQL y
 cancelarlas terminando la consulta en el servidor (`pg_cancel_backend`).
 
+Es un recurso **compartido por diseño**: cualquier usuario autenticado puede
+crear tareas, ver las de todos y cancelarlas. No se filtra por dueño ni requiere
+un permiso adicional; los límites de concurrencia son la única protección.
+
 Tiene dos modos:
 
 | Modo        | Ciclo de vida                                             | Cancelación                         |

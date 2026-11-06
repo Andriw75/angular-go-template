@@ -147,6 +147,20 @@ nginx -s reload
 > `/template/api/auth/token` llegue al backend como `/auth/token`, tal como están
 > registradas las rutas del router Go.
 
+### Seguridad HTTP
+
+- nginx añade `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` y
+  `Permissions-Policy` en el `server` y en `/template/public/`. HSTS va en el
+  bloque TLS.
+- La API añade las mismas cabeceras más CSP (`default-src 'none'`); no se aplica
+  CSP a la SPA para no romper Angular.
+- CORS lo aplica Go con allowlist: `CORS_ORIGIN` admite una lista separada por
+  comas. Los orígenes no configurados no reciben cabeceras CORS.
+- Límite de body: `client_max_body_size 120M` en nginx; en Go, 2 MiB para JSON y
+  120 MiB para subidas (`413 request_too_large`).
+- Timeouts por grupo en Go: 30 s JSON, 2 min reportes/documentos, 5 min archivos.
+  `/sse` y `/lab` quedan sin timeout por ser operaciones largas.
+
 ---
 
 ## Flujo resumido

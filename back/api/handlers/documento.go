@@ -173,8 +173,7 @@ func (h *DocumentoHandler) GenerateBuses(w http.ResponseWriter, r *http.Request)
 
 	job := h.svc.Jobs().Create("documento_buses", func(job *services.Job) {
 		doc, exists, err := h.svc.GenerateBuses(context.Background(), p, userID, func(progress int) {
-			job.Progreso = progress
-			job.Actualizado = time.Now()
+			job.SetProgress(progress)
 		})
 		if err != nil {
 			h.svc.Jobs().Update(job, "error", 100, err.Error(), nil, false)
@@ -205,8 +204,7 @@ func (h *DocumentoHandler) GenerateVenta(w http.ResponseWriter, r *http.Request)
 
 	job := h.svc.Jobs().Create("documento_venta", func(job *services.Job) {
 		doc, exists, err := h.svc.GenerateVenta(context.Background(), p, userID, func(progress int) {
-			job.Progreso = progress
-			job.Actualizado = time.Now()
+			job.SetProgress(progress)
 		})
 		if err != nil {
 			h.svc.Jobs().Update(job, "error", 100, err.Error(), nil, false)
@@ -219,18 +217,20 @@ func (h *DocumentoHandler) GenerateVenta(w http.ResponseWriter, r *http.Request)
 
 func (h *DocumentoHandler) respondJobOrWait(w http.ResponseWriter, job *services.Job) {
 	select {
-	case <-job.Done:
-		if job.Estado == "error" {
-			writeJSONError(w, http.StatusInternalServerError, job.Error)
+	case <-job.Wait():
+		snap := job.Snapshot()
+		if snap.Estado == "error" {
+			writeJSONError(w, http.StatusInternalServerError, snap.Error)
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{
-			"job_id":    job.ID,
-			"exists":    job.Exists,
-			"documento": outputs.ToDocumentoResponse(job.Documento),
+			"job_id":    snap.ID,
+			"exists":    snap.Exists,
+			"documento": outputs.ToDocumentoResponse(snap.Documento),
 		})
 	case <-time.After(h.svc.SyncTimeout()):
-		writeJSON(w, http.StatusAccepted, map[string]any{"job_id": job.ID, "estado": job.Estado, "progreso": job.Progreso})
+		snap := job.Snapshot()
+		writeJSON(w, http.StatusAccepted, map[string]any{"job_id": snap.ID, "estado": snap.Estado, "progreso": snap.Progreso})
 	}
 }
 

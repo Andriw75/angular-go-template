@@ -113,6 +113,8 @@ El contador mide el token **actual**, no la sesión total:
   ejemplo, usuario inactivo).
 - Si quieres un máximo absoluto desde el login, eso requiere otro claim
   (`session_started_at`) y no se extiende con la actividad.
+- Cada renovación rota el `jti` en el servidor (el anterior se elimina). El
+  contador no cambia por ello: sigue midiendo el token actual.
 
 ## Limitaciones
 

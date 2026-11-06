@@ -105,7 +105,8 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.deps.Config.JWTStoreEnabled && (input.Permisos != nil || input.Activo != nil) {
+	if h.deps.Config.JWTStoreEnabled &&
+		(input.Permisos != nil || input.Activo != nil || (input.Password != nil && *input.Password != "")) {
 		h.deps.JWTStore.RemoveUserTokens(id)
 	}
 
@@ -129,6 +130,10 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	if err := h.deps.UserStore.Delete(id); err != nil {
 		writeError(w, r, err)
 		return
+	}
+
+	if h.deps.Config.JWTStoreEnabled {
+		h.deps.JWTStore.RemoveUserTokens(id)
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "user deleted"})

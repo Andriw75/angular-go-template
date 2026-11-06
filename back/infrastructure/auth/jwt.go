@@ -48,6 +48,7 @@ func generateJTI() (string, error) {
 
 func (m *JWTManager) Generate(userID int64, username, email string, activo bool, permisos []string, mustChangePassword bool) (string, error) {
 	now := time.Now()
+	expiresAt := now.Add(m.duration)
 	claims := &Claims{
 		UserID:             userID,
 		Username:           username,
@@ -56,7 +57,7 @@ func (m *JWTManager) Generate(userID int64, username, email string, activo bool,
 		Permisos:           permisos,
 		MustChangePassword: mustChangePassword,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(now.Add(m.duration)),
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
 		},
@@ -77,7 +78,7 @@ func (m *JWTManager) Generate(userID int64, username, email string, activo bool,
 	}
 
 	if m.Store != nil && claims.ID != "" {
-		m.Store.Add(claims.ID, userID)
+		m.Store.Add(claims.ID, userID, expiresAt)
 	}
 
 	return tokenStr, nil

@@ -117,20 +117,24 @@ en memoria, no se llama a la API.
 En cada request autenticada, `AuthMiddleware`:
 
 1. Lee y valida la cookie.
-2. Si `JWT_STORE_ENABLED` y el `jti` ya no existe (por ejemplo, tras reiniciar
-   el backend), intenta regenerar el token si `JWT_LOAD_USER_ON_RENEW=true` y el
-   usuario sigue activo.
+2. Si `JWT_STORE_ENABLED`, exige que el `jti` exista. Si no existe (logout,
+   revocación, usuario eliminado o reinicio del backend), responde
+   `401 session_expired` y borra la cookie: hay que iniciar sesión de nuevo.
 3. Si pasaron `JWT_RENEW_MINUTES` (5 por defecto) desde `iat`, genera un token
-   nuevo y actualiza la cookie.
+   nuevo, **rota el `jti`** (elimina el anterior) y actualiza la cookie. Con
+   `JWT_LOAD_USER_ON_RENEW=true` recarga permisos y estado desde la BD y rechaza
+   cuentas inactivas.
 4. Verifica el permiso requerido por la ruta (si aplica).
 5. Inyecta los claims en el contexto (`WithClaims`).
 
 ## CORS y cookies
 
-- El backend responde con `Access-Control-Allow-Origin` = `CORS_ORIGIN` y
-  `Access-Control-Allow-Credentials: true`.
+- El backend responde con `Access-Control-Allow-Origin` igual al origen de la
+  petición **solo si está en la allowlist** de `CORS_ORIGIN` (lista separada por
+  comas) y con `Access-Control-Allow-Credentials: true`. Añade `Vary: Origin`.
 - En desarrollo, el frontend (`:4200`) consume la API vía nginx (`:5000`) o
-  directo (`:8080`); el origen debe coincidir exactamente con `CORS_ORIGIN`.
+  directo (`:8080`); el origen debe coincidir exactamente con una entrada de
+  `CORS_ORIGIN`.
 - `SameSite=Strict` funciona porque front y API comparten sitio (localhost o
   mismo dominio tras nginx).
 
@@ -142,7 +146,7 @@ En cada request autenticada, `AuthMiddleware`:
 | Credenciales inválidas       | `401 invalid credentials` |
 | Sin cookie en ruta protegida | `401 not authenticated`   |
 | Token inválido/expirado      | `401 invalid token`       |
-| Sesión revocada sin recarga  | `401 session expired`     |
+| Sesión revocada o jti ausente| `401 session_expired`     |
 | Sin permiso para la ruta     | `403 forbidden`           |
 
 ## Archivos involucrados

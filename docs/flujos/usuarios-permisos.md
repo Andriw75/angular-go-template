@@ -63,9 +63,10 @@ para agregar uno hay que modificar el seed y reiniciar.
 - **Update**: actualización parcial con punteros (`username`, `email`,
   `password`, `activo`, `permisos`). La contraseña solo se cambia si llega no
   vacía.
-  - Si el update incluye `permisos` o `activo`, ejecuta
-    `JWTStore.RemoveUserTokens(id)` para forzar la resincronización del token
-    (ver [logout.md](./logout.md)).
+  - Si el update incluye `permisos`, `activo` o una contraseña nueva, ejecuta
+    `JWTStore.RemoveUserTokens(id)`. La siguiente petición del afectado recibe
+    `401 session_expired` y debe volver a iniciar sesión (ver
+    [logout.md](./logout.md)).
   - Un `id` inexistente termina en `500 failed to update user` (el store
     devuelve `sql.ErrNoRows` y el handler lo trata como error interno).
 - **Delete**: impide eliminarse a uno mismo (`claims.UserID == id` →
@@ -95,8 +96,10 @@ para agregar uno hay que modificar el seed y reiniciar.
 ### Permisos en el JWT
 
 Al hacer login, `JWTManager.Generate` incluye `user.Permisos` como claim. Es una
-**foto del momento**: si luego cambian, el middleware debe refrescar el token
-(ver [logout.md](./logout.md)).
+**foto del momento**: si luego cambian por API, se revocan los tokens del
+usuario y el siguiente request exige re-login. En la renovación deslizante,
+`JWT_LOAD_USER_ON_RENEW=true` recarga permisos desde la BD (ver
+[logout.md](./logout.md)).
 
 `AuthMiddleware(requiredPermission...)` (`back/api/handlers/auth.go`) valida el
 token y, si la ruta exige permiso, usa `tienePermiso(claims.Permisos, required)`.
@@ -167,10 +170,9 @@ la visibilidad del archivo.
 
 ## Limitaciones conocidas
 
-1. **Eliminar un usuario no revoca sus tokens**: `UserHandler.Delete` no llama a
-   `RemoveUserTokens`. El JWT del usuario eliminado sigue siendo válido hasta
-   expirar (≤ 15 min). Para corte inmediato habría que revocar sus tokens en el
-   delete.
+1. **Eliminar un usuario revoca sus tokens**: `UserHandler.Delete` llama a
+   `RemoveUserTokens` tras borrar la fila. Con `JWT_STORE_ENABLED=false` no hay
+   revocación y el JWT sigue válido hasta expirar (≤ 15 min).
 2. **Autoprotección parcial**: el backend impide eliminarse a uno mismo, pero
    **no** impide que un administrador cambie sus propios permisos o su `activo`.
    La UI deshabilita los checkboxes de permisos cuando `isSelf`, pero una
@@ -209,6 +211,6 @@ la visibilidad del archivo.
 
 - [Login](./login.md): emisión del JWT y claims de permisos.
 - [Logout y revocación](./logout.md): qué pasa cuando cambian los permisos de
-  una sesión activa y cómo se resincroniza el token.
+  una sesión activa (revocación y re-login).
 - [Mensajes pendientes y SSE](./mensajes-sse.md): usa el permiso
   `mensajes_pendientes`.
