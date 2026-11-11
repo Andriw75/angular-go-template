@@ -68,6 +68,7 @@ resume y enlaza. No numerar archivos; el orden se controla con esta tabla.
 | Flujo                         | Estado      | Documento                                                                |
 | ----------------------------- | ----------- | ------------------------------------------------------------------------ |
 | Login                         | Documentado | [docs/flujos/login.md](docs/flujos/login.md)                             |
+| Cambio de contraseña          | Documentado | [docs/flujos/cambio-password.md](docs/flujos/cambio-password.md)         |
 | Logout y revocación           | Documentado | [docs/flujos/logout.md](docs/flujos/logout.md)                           |
 | Contador de sesión            | Documentado | [docs/flujos/sesion-contador.md](docs/flujos/sesion-contador.md)         |
 | Usuarios y permisos           | Documentado | [docs/flujos/usuarios-permisos.md](docs/flujos/usuarios-permisos.md)     |
@@ -86,6 +87,21 @@ Los diagramas visuales de negocio viven en `front/public/flujos/` y se abren
 desde el sidebar en **Flujos** (`/dashboard/flujos`). El índice con HTML, PNG,
 GIF y fuentes está en
 [docs/diagramas/README.md](docs/diagramas/README.md).
+
+Los diagramas son de **flujo de negocio**, no de arquitectura ni de clases. Para
+implementar un módulo nuevo usa la guía
+[docs/arquitectura/modulos.md](docs/arquitectura/modulos.md), que describe la
+vertical slice completa (backend, frontend, permisos, rutas y checklist).
+
+## Mantenimiento de la documentación
+
+- Un cambio de flujo debe actualizar su `docs/flujos/<flujo>.md`, su JSON en
+  `docs/diagramas/fuentes/`, el HTML/PNG/GIF generado y
+  `docs/diagramas/manifest.json`.
+- No se aceptan diagramas con endpoints o reglas que no existan en el código.
+- Antes de cerrar un cambio documental ejecuta:
+  `node tools/update-diagram-manifest.mjs` y `node tools/check-docs.mjs`.
+- `docs/flujos/` es la fuente de verdad; los diagramas se derivan de ella.
 
 ## Convenciones de trabajo
 

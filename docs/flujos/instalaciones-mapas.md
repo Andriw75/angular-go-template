@@ -60,7 +60,7 @@ Catálogos en `front/src/app/models/instalacion.ts`:
 
 ### Rutas
 
-Todas bajo `AuthMiddleware()` (`back/api/router.go:119`), sin permiso adicional:
+Todas bajo `AuthMiddleware()` (`back/api/router.go`), sin permiso adicional:
 
 | Método | Ruta                |
 | ------ | ------------------- |

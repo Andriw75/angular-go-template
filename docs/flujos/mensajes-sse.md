@@ -8,10 +8,8 @@ Este documento tiene dos partes:
 La idea es que, al clonar el template, puedas eliminar o reutilizar el módulo sin
 arrastrar dependencias raras.
 
-> **Pendiente de actualización visual:** el diagrama HTML/GIF/PNG de este flujo
-> todavía muestra la conexión directa anterior (`/mensajes_pendientes/events`).
-> Debe regenerarse para reflejar el SSE global filtrado por permisos descrito
-> aquí.
+> **Diagrama actualizado:** el HTML, PNG y GIF reflejan el SSE global filtrado
+> por permisos descrito en este documento (`GET /sse/events`).
 
 ---
 
@@ -24,7 +22,7 @@ una conexión HTTP normal. El servidor responde con
 `Content-Type: text/event-stream` y va escribiendo líneas con este formato:
 
 ```
-data: {"type":"...","data":...}
+data: {"module":"...","name":"...","type":"...","data":...}
 
 ```
 
@@ -103,7 +101,8 @@ paquete `handlers`. Si solo se usa en mensajes, dejarlo donde está.
   permiso sobre el canal.
 - **Pasadas**: mensajes `finalizado`. Se consultan a la BD con paginación normal.
 - Cuando alguien crea, asigna o finaliza un mensaje, la BD se actualiza y el
-  servidor emite un evento a **todos** los clientes conectados.
+  servidor emite un evento a **todos los clientes suscritos al canal**
+  `mensajes_pendientes/activos`; no a todos los conectados sin filtrar.
 
 ## Backend
 
@@ -148,7 +147,7 @@ handler calculó a partir de los permisos del JWT al conectar.
 
 - Caché en memoria de mensajes no finalizados.
 - Se siembra al arrancar desde la BD (`seedActivos` en
-  `back/cmd/server/main.go:119`).
+  `back/cmd/server/main.go`).
 - `GetAll()` ordena por `hora_solicitada` descendente.
 - Es por proceso. No se comparte entre instancias.
 
@@ -242,9 +241,10 @@ data: {"module":"mensajes_pendientes","name":"activos","type":"delete","data":{"
 - **Activas**: usa el store global. Los filtros (`estado`, `teléfono`) y la
   paginación se resuelven **en cliente** sobre la lista completa del store. No
   se vuelve a llamar a la API al filtrar.
-- **Pasadas**: usa `GET /pasadas` con `offset`/`limit`; paginación de servidor.
-  El listado devuelve `has_more` (sin `total`); el total se consulta en
-  `GET /pasadas/count` y se cachea hasta que cambien los filtros.
+- **Pasadas**: usa `GET /mensajes_pendientes/pasadas` con `offset`/`limit`;
+  paginación de servidor. El listado devuelve `has_more` (sin `total`); el total
+  se consulta en `GET /mensajes_pendientes/pasadas/count` y se cachea hasta que
+  cambien los filtros.
 - Crear, asignar, finalizar y eliminar usan REST normal; el cambio llega a los
   demás clientes por SSE.
 
@@ -324,17 +324,21 @@ resultado de su propia consulta hasta que vuelva a buscar o refrescar.
 2. **Sin heartbeat ni `Last-Event-ID`**: si el proxy corta la conexión, el cliente
    reintenta a los 3 s y recibe un snapshot `current` completo. No hay replay de
    eventos perdidos.
-3. **Ventana entre snapshot y registro**: `Events` envía `current` y luego
-   registra el canal. Un evento creado justo en ese instante puede perderse hasta
-   la próxima reconexión. Es una ventana muy pequeña.
+3. **Snapshot y registro**: `Events` registra el cliente **antes** de enviar
+   `current`. Los eventos que ocurren durante el snapshot quedan encolados en el
+   buffer del cliente y se entregan después; el cliente deduplica los `create`
+   por `id`. No hay pérdida entre snapshot y registro, pero el orden puede
+   requerir esa deduplicación.
 4. **Cliente lento**: si su buffer de 64 se llena, los eventos se descartan para
    ese cliente; se resincroniza al reconectar.
 5. **Cambios directos en BD**: si se modifica `mensajes_pendientes` por SQL, la
    caché y los clientes no se enteran. Todo cambio debe pasar por la API.
 6. **Token expirado o revocado**: el `EventSource` recibe `401`, emite error y
-   el store reintenta cada 3 s **solo si el usuario sigue teniendo algún permiso
-   SSE**. La redirección a login la provoca el interceptor de las peticiones HTTP
-   normales, no el SSE. Al hacer logout se llama a `disconnect()`.
+   `SSEService` reintenta con backoff mientras su flag `enabled` siga activo.
+   Ese flag lo controla el `effect` del layout a partir de `auth.user`; el SSE no
+   inspecciona el `401` por sí mismo. La redirección a login la provoca el
+   interceptor de las peticiones HTTP normales, no el SSE. Al hacer logout el
+   layout limpia `auth.user` y llama a `sse.disconnect()`.
 7. **Filtrado por permisos/canal, no por usuario**: el hub conoce los canales
    `(module, name)` permitidos de cada cliente, calculados desde el JWT al
    conectar. Los canales con permiso llegan solo a quienes lo tienen; los

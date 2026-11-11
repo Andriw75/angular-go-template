@@ -40,7 +40,7 @@ Tabla `buses` con las mismas columnas; `fecha_compra` y
 
 ### Rutas
 
-Todas bajo `AuthMiddleware("buses")` (`back/api/router.go:59`):
+Todas bajo `AuthMiddleware("buses")` (`back/api/router.go`):
 
 | Método | Ruta            | Descripción                  |
 | ------ | --------------- | ---------------------------- |
@@ -73,7 +73,11 @@ Todas bajo `AuthMiddleware("buses")` (`back/api/router.go:59`):
 
 `POST /buses`:
 
-- Obligatorios: `placa`, `nombre` y `fecha_compra` (formato `YYYY-MM-DD`).
+- El frontend exige `placa`, `nombre` y `fecha_compra` (formato `YYYY-MM-DD`).
+- El backend solo valida/parsea `fecha_compra` y, si llega,
+  `ultimo_mantenimiento`; `placa` y `nombre` se guardan tal cual. La tabla los
+  declara `NOT NULL`, pero una cadena vacía pasaría: la validación de obligatorios
+  es de UI.
 - `ultimo_mantenimiento` es opcional y también usa `YYYY-MM-DD`.
 - El handler construye el `domain.Bus` y el store asigna `creado_en` y
   `actualizado_en`.
@@ -96,7 +100,8 @@ Todas bajo `AuthMiddleware("buses")` (`back/api/router.go:59`):
 
 | Caso                                  | Respuesta                    |
 | ------------------------------------- | ---------------------------- |
-| Body inválido o fecha mal formada     | `400`                        |
+| JSON inválido o `id` no numérico       | `400`                        |
+| Fecha mal formada                      | `422 validation_error`       |
 | Sin sesión                            | `401`                        |
 | Sin permiso `buses`                   | `403`                        |
 | Bus inexistente en GET/DELETE         | `404 bus not found`          |
@@ -165,5 +170,7 @@ Todas bajo `AuthMiddleware("buses")` (`back/api/router.go:59`):
 ## Ver también
 
 - [Usuarios y permisos](./usuarios-permisos.md): permiso `buses`.
+- [Anatomía de un módulo](../arquitectura/modulos.md): checklist para replicar
+  este CRUD en otro módulo.
 - [Mensajes pendientes y SSE](./mensajes-sse.md): ejemplo del otro patrón de
   actualización (estado compartido en vivo vs consulta bajo demanda).

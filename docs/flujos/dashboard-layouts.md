@@ -116,4 +116,4 @@ Prueba manual por variante:
 
 1. `sidebar`: comportamiento actual.
 2. `horizontal`: tabs, “Más”, scroll, submenú izquierdo, flyouts y móvil.
-3. `grid`: grupos, buscador, tarjetas, ventana y “Volver al inicio”.
+3. `grid`: módulos planos, buscador, tarjetas, ventana y “Volver al inicio”.

@@ -12,7 +12,7 @@
       "url": "https://github.com/Andriw75/angular-go-template",
       "provider": "github",
       "link_mode": "web",
-      "revision": "db02384130585abab33e03fed6a4e89cb46b9cfa"
+      "revision": "1968f4367530dd7c1bba53d1766f357415190cff"
     }
   },
   "participants": [
@@ -110,24 +110,24 @@
       "variant": "return",
       "note": "X-Session-Expires-In"
     },
-    { "from": "navegador", "to": "dashboard", "y": 375, "label": "auth.user.set(u) + navigate", "variant": "default" },
+    { "from": "navegador", "to": "dashboard", "y": 375, "label": "auth.user.set(u) + navigate", "variant": "default", "note": "a /change-password si must_change_password=true; si no, a /dashboard" },
     {
       "from": "dashboard",
       "to": "api",
-      "y": 405,
+      "y": 450,
       "label": "GET /auth/me (solo tras F5)",
       "variant": "dashed",
       "note": "el signal vive solo en memoria"
     },
-    { "from": "api", "to": "dashboard", "y": 460, "label": "200 UserResponse", "variant": "return" },
-    { "from": "dashboard", "to": "usuario", "y": 490, "label": "dashboard visible", "variant": "return" }
+    { "from": "api", "to": "dashboard", "y": 510, "label": "200 UserResponse", "variant": "return" },
+    { "from": "dashboard", "to": "usuario", "y": 550, "label": "dashboard visible", "variant": "return" }
   ],
   "activations": [
     { "participant": "navegador", "from": 160, "to": 381, "type": "frontend" },
     { "participant": "api", "from": 186, "to": 337, "type": "backend" },
     { "participant": "db", "from": 210, "to": 277, "type": "database" },
     { "participant": "cookie", "from": 295, "to": 337, "type": "security" },
-    { "participant": "dashboard", "from": 370, "to": 522, "type": "frontend" }
+    { "participant": "dashboard", "from": 370, "to": 550, "type": "frontend" }
   ],
   "cards": [
     {
@@ -136,7 +136,8 @@
       "items": [
         "La contraseña viaja en el cuerpo y no se guarda en el navegador.",
         "Lo que persiste es un JWT en una cookie HttpOnly, inaccesible para JavaScript.",
-        "El JWT lleva user_id, permisos, jti y expiración."
+        "El JWT lleva user_id, permisos, must_change_password, jti y expiración.",
+        "Si must_change_password=true, el login redirige a /change-password."
       ]
     },
     {
@@ -145,6 +146,7 @@
       "items": [
         "El signal auth.user se pierde al recargar.",
         "El guard consulta GET /auth/me para restaurar la sesión desde la cookie.",
+        "El flag must_change_password se restaura con la sesión y desvía a /change-password.",
         "Si la cookie no es válida, el guard redirige a /login."
       ]
     },

@@ -11,7 +11,7 @@
       "url": "https://github.com/Andriw75/angular-go-template",
       "provider": "github",
       "link_mode": "web",
-      "revision": "db02384130585abab33e03fed6a4e89cb46b9cfa"
+      "revision": "1968f4367530dd7c1bba53d1766f357415190cff"
     }
   },
   "lanes": [
@@ -37,10 +37,11 @@
       "col": 1,
       "type": "frontend",
       "label": "Menú lateral",
-      "sublabel": "corta SSE y contador",
+      "sublabel": "desuscribe SSE y detiene contador",
       "icon": "frontend",
       "sources": [
-        { "path": "front/src/app/components/dashboard/sidebar/sidebar.ts", "line": 34, "end_line": 49 }
+        { "path": "front/src/app/components/dashboard/sidebar/sidebar.ts", "line": 35, "end_line": 51 },
+        { "path": "front/src/app/components/dashboard/layout/layout.ts", "line": 40, "end_line": 58 }
       ]
     },
     {
@@ -74,7 +75,7 @@
       "sublabel": "POST /auth/logout",
       "icon": "backend",
       "sources": [
-        { "path": "back/api/handlers/auth.go", "line": 74, "end_line": 91 }
+        { "path": "back/api/handlers/auth.go", "line": 176, "end_line": 185 }
       ]
     },
     {
@@ -86,7 +87,7 @@
       "sublabel": "cookie + claims",
       "icon": "security",
       "sources": [
-        { "path": "back/api/handlers/auth.go", "line": 111, "end_line": 170 }
+        { "path": "back/api/handlers/auth.go", "line": 263, "end_line": 320 }
       ]
     },
     {
@@ -98,7 +99,7 @@
       "sublabel": "401 sin cookie",
       "icon": "security",
       "sources": [
-        { "path": "back/api/handlers/auth.go", "line": 93, "end_line": 109 }
+        { "path": "back/api/handlers/auth.go", "line": 187, "end_line": 204 }
       ]
     },
     {
@@ -111,7 +112,7 @@
       "icon": "backend",
       "yOffset": 150,
       "sources": [
-        { "path": "back/api/handlers/user.go", "line": 70, "end_line": 94 }
+        { "path": "back/api/handlers/user.go", "line": 77, "end_line": 115 }
       ]
     },
     {
@@ -123,7 +124,7 @@
       "sublabel": "elimina el jti",
       "icon": "security",
       "sources": [
-        { "path": "back/infrastructure/auth/jwt_store.go", "line": 30, "end_line": 52 }
+        { "path": "back/infrastructure/auth/jwt_store.go", "line": 59, "end_line": 91 }
       ]
     },
     {
@@ -136,7 +137,7 @@
       "icon": "security",
       "yOffset": 150,
       "sources": [
-        { "path": "back/api/handlers/user.go", "line": 89, "end_line": 91 }
+        { "path": "back/api/handlers/user.go", "line": 117, "end_line": 140 }
       ]
     },
     {
@@ -154,12 +155,12 @@
       "lane": "sesion",
       "col": 5,
       "type": "security",
-      "label": "Token nuevo",
-      "sublabel": "recarga usuario y permisos",
+      "label": "Re-login",
+      "sublabel": "credenciales actuales",
       "icon": "success",
       "yOffset": 110,
       "sources": [
-        { "path": "back/api/handlers/auth.go", "line": 137, "end_line": 156 }
+        { "path": "back/api/handlers/auth.go", "line": 129, "end_line": 174 }
       ]
     },
     {
@@ -167,8 +168,8 @@
       "lane": "sesion",
       "col": 5,
       "type": "security",
-      "label": "401 session expired",
-      "sublabel": "sin recarga",
+      "label": "401 session_expired",
+      "sublabel": "cookie borrada; sin token nuevo",
       "icon": "failure",
       "yOffset": 190
     },
@@ -182,7 +183,7 @@
       "icon": "database",
       "yOffset": 20,
       "sources": [
-        { "path": "back/infrastructure/database/users.go", "line": 62, "end_line": 105 }
+        { "path": "back/infrastructure/database/users.go", "line": 65, "end_line": 116 }
       ]
     }
   ],
@@ -197,10 +198,11 @@
     { "from": "me", "to": "acceso", "label": "401", "variant": "security", "role": "error" },
     { "from": "admin", "to": "update", "label": "cambia permisos", "variant": "default", "role": "branch" },
     { "from": "update", "to": "db", "label": "guarda cambios", "variant": "default", "role": "branch" },
-    { "from": "update", "to": "revoca", "label": "permisos/activo", "variant": "security", "role": "branch" },
+    { "from": "update", "to": "revoca", "label": "permisos/activo/contraseña + STORE=true", "variant": "security", "role": "branch" },
     { "from": "revoca", "to": "siguiente", "label": "invalida jti", "variant": "security", "role": "branch" },
-    { "from": "siguiente", "to": "renueva", "label": "LOAD=true + activo", "variant": "default", "role": "branch" },
-    { "from": "siguiente", "to": "expira", "label": "LOAD=false o inactivo", "variant": "security", "role": "error" },
+    { "from": "siguiente", "to": "expira", "label": "jti ausente", "variant": "security", "role": "error" },
+    { "from": "expira", "to": "me", "label": "401", "variant": "security", "role": "error" },
+    { "from": "acceso", "to": "renueva", "label": "usuario vuelve a entrar", "variant": "default", "role": "branch" },
     { "from": "renueva", "to": "me", "label": "nueva cookie", "variant": "default", "role": "return" }
   ],
   "cards": [
@@ -208,7 +210,7 @@
       "dot": "cyan",
       "title": "Cierre normal",
       "items": [
-        "El navegador corta SSE, detiene el contador y limpia auth.user.",
+        "El sidebar desuscribe el store de mensajes y detiene el contador; el layout cierra el SSE global al limpiar auth.user.",
         "La API elimina el jti del registro en memoria y borra la cookie.",
         "Al llegar a /login, loginGuard consulta /auth/me y recibe 401."
       ]
@@ -217,16 +219,17 @@
       "dot": "amber",
       "title": "Revocación por permisos",
       "items": [
-        "PUT /users/{id} ejecuta RemoveUserTokens si cambian permisos o activo.",
-        "Con LOAD=true la siguiente request recarga el usuario y emite un JWT nuevo.",
-        "Con LOAD=false o usuario inactivo responde 401 session expired."
+        "PUT /users/{id} ejecuta RemoveUserTokens si cambian permisos, activo o contraseña.",
+        "La siguiente request encuentra el jti ausente y responde 401 session_expired.",
+        "No se emite un token nuevo: el usuario debe volver a iniciar sesión.",
+        "Con JWT_STORE_ENABLED=false no hay revocación server-side; el token vive hasta expirar."
       ]
     },
     {
       "dot": "rose",
       "title": "Límites conocidos",
       "items": [
-        "Eliminar un usuario no revoca sus tokens.",
+        "Eliminar un usuario sí revoca sus tokens con RemoveUserTokens.",
         "Cambios directos en BD no disparan RemoveUserTokens.",
         "El registro es por proceso: en multi-instancia la revocación no es global."
       ]

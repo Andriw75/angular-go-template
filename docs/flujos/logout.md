@@ -2,10 +2,11 @@
 
 ## Resumen
 
-El usuario pulsa “Cerrar sesión” en el sidebar. El frontend cierra la conexión
-SSE, llama a `POST /auth/logout`, limpia el usuario en memoria y navega a
-`/login`. El backend elimina el `jti` del token del `JWTStore` (si está activo)
-y borra la cookie de sesión.
+El usuario pulsa “Cerrar sesión” en el sidebar. El frontend desuscribe el store
+de mensajes, detiene el contador, llama a `POST /auth/logout`, limpia el usuario
+en memoria y navega a `/login`. La conexión SSE global se cierra cuando el
+layout observa `auth.user = null`. El backend elimina el `jti` del token del
+`JWTStore` (si está activo) y borra la cookie de sesión.
 
 ## Secuencia
 
@@ -13,7 +14,7 @@ y borra la cookie de sesión.
 Usuario          SidebarComponent       AuthService              API Go
   |                    |                    |                      |
   |-- Cerrar sesión -->|                    |                      |
-  |                    |-- disconnect SSE   |                      |
+  |                    |-- unsubscribe store|                      |
   |                    |-- logout() ------->|                      |
   |                    |                    |-- POST /auth/logout ->|
   |                    |                    |   (cookie HttpOnly)  |
@@ -27,7 +28,7 @@ Usuario          SidebarComponent       AuthService              API Go
 ## Backend
 
 1. Ruta: `POST /auth/logout` dentro del grupo con `AuthMiddleware()`
-   (`back/api/router.go:40`). Requiere una cookie válida.
+   (`back/api/router.go`). Requiere una cookie válida.
 2. Handler `AuthHandler.Logout` (`back/api/handlers/auth.go`):
    - Obtiene los claims del contexto.
    - Si `JWT_STORE_ENABLED` y el token tiene `jti`, ejecuta
@@ -37,8 +38,8 @@ Usuario          SidebarComponent       AuthService              API Go
    - Responde `200 {"message":"logged out"}`.
 3. `JWTStore` (`back/infrastructure/auth/jwt_store.go`):
    - Mantiene en memoria `jti -> userID` y `userID -> {jti...}`.
-   - `Remove(jti)` (`jwt_store.go:30`): revoca una sesión concreta (logout).
-   - `RemoveUserTokens(userID)` (`jwt_store.go:42`): revoca todas las sesiones.
+   - `Remove(jti)` (`jwt_store.go`): revoca una sesión concreta (logout).
+   - `RemoveUserTokens(userID)` (`jwt_store.go`): revoca todas las sesiones.
    - `Exists(jti)` (`jwt_store.go`): lo consulta `AuthMiddleware` en cada
      request autenticada y descarta entradas vencidas.
    - `Rotate(old, new, ...)`: se usa en la renovación deslizante para eliminar
@@ -50,9 +51,11 @@ Usuario          SidebarComponent       AuthService              API Go
 
 `UserHandler.Update` (`back/api/handlers/user.go`) llama a
 `JWTStore.RemoveUserTokens(id)` cuando el update incluye `permisos`, `activo` o
-una contraseña nueva. `UserHandler.Delete` hace lo mismo tras borrar la fila.
-El modal de usuarios solo envía `permisos` cuando el array cambió. El detalle
-del CRUD y del catálogo está en [usuarios-permisos.md](./usuarios-permisos.md).
+una contraseña nueva. Un reset de contraseña también activa
+`must_change_password` (ver [cambio-password.md](./cambio-password.md)).
+`UserHandler.Delete` hace lo mismo tras borrar la fila. El modal de usuarios
+solo envía `permisos` cuando el array cambió. El detalle del CRUD y del catálogo
+está en [usuarios-permisos.md](./usuarios-permisos.md).
 
 - Permisos, contraseña o `activo` cambiados vía API: la siguiente request
   encuentra el `jti` ausente y responde `401 session_expired`; el usuario debe
@@ -134,13 +137,14 @@ pierden todos los `jti`:
 
 `SidebarComponent.logout()` (`front/src/app/components/dashboard/sidebar/sidebar.ts`):
 
-1. `mensajesStore.disconnect()` cierra la conexión SSE (ver
-   [mensajes-sse.md](./mensajes-sse.md)).
+1. `mensajesStore.disconnect()` desuscribe el store de mensajes del SSE global
+   (ver [mensajes-sse.md](./mensajes-sse.md)).
 2. `session.clear()` detiene el contador de sesión (ver
    [sesion-contador.md](./sesion-contador.md)).
 3. `isLoggingOut.set(true)` deshabilita el botón y muestra el spinner.
 4. `auth.logout()` → `POST /auth/logout` con `withCredentials` (interceptor).
-5. En `next`: `auth.user.set(null)`.
+5. En `next`: `auth.user.set(null)`. El `effect` del layout ve el usuario nulo y
+   ejecuta `sse.disconnect()` para cerrar la conexión global.
 6. En `complete`: `isLoggingOut.set(false)` y `router.navigate(['/login'])`.
 7. En `error`: `isLoggingOut.set(false)`; si el error es `401`, el
    `errorInterceptor` limpia el usuario y redirige a `/login`.

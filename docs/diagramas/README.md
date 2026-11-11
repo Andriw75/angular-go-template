@@ -12,6 +12,7 @@ Se abren desde el sidebar en **Flujos** (`/dashboard/flujos`) o directo en
 | Flujo | Qué responde | Tipo | HTML | PNG | Documento fuente |
 | --- | --- | --- | --- | --- | --- |
 | Acceso y restauración de sesión | ¿Cómo entra un usuario y cómo sobrevive la sesión? | Secuencia | [login.html](../../front/public/flujos/login.html) | [login.png](img/login.png) | [login.md](../flujos/login.md) |
+| Cambio obligatorio de contraseña | ¿Qué pasa si `must_change_password` está activo? | Secuencia | [cambio-password.html](../../front/public/flujos/cambio-password.html) | [cambio-password.png](img/cambio-password.png) | [cambio-password.md](../flujos/cambio-password.md) |
 | Cierre de sesión y revocación | ¿Qué pasa al salir y al revocar permisos? | Flujo | [logout.html](../../front/public/flujos/logout.html) | [logout.png](img/logout.png) | [logout.md](../flujos/logout.md) |
 | Vida del contador de sesión | ¿Cómo cuenta la sesión y cuándo se cierra sola? | Ciclo de vida | [sesion-contador.html](../../front/public/flujos/sesion-contador.html) | [sesion-contador.png](img/sesion-contador.png) | [sesion-contador.md](../flujos/sesion-contador.md) |
 | Usuarios, permisos y JWT | ¿Cómo se asignan permisos y cómo llegan al token? | Flujo | [usuarios-permisos.html](../../front/public/flujos/usuarios-permisos.html) | [usuarios-permisos.png](img/usuarios-permisos.png) | [usuarios-permisos.md](../flujos/usuarios-permisos.md) |
@@ -23,11 +24,22 @@ Se abren desde el sidebar en **Flujos** (`/dashboard/flujos`) o directo en
 | Vida de un documento generado | ¿Qué estados y versiones tiene un documento? | Ciclo de vida | [documentos.html](../../front/public/flujos/documentos.html) | [documentos.png](img/documentos.png) | [reportes.md](../flujos/reportes.md) |
 | Instalaciones en el mapa | ¿Cómo se gestionan instalaciones desde el mapa? | Flujo | [instalaciones-mapas.html](../../front/public/flujos/instalaciones-mapas.html) | [instalaciones-mapas.png](img/instalaciones-mapas.png) | [instalaciones-mapas.md](../flujos/instalaciones-mapas.md) |
 
-> **Pendiente de actualización:** el HTML, PNG y GIF de **Mensajes en vivo con
-> SSE** todavía muestran el flujo anterior (conexión directa a
-> `/mensajes_pendientes/events`). El flujo vigente es un único `GET /sse/events`
-> filtrado por permisos; ver [mensajes-sse.md](../flujos/mensajes-sse.md). Hay
-> que regenerar el diagrama y sus capturas.
+> **SSE actualizado:** el HTML, PNG y GIF de **Mensajes en vivo con SSE**
+> reflejan el flujo vigente: un único `GET /sse/events` filtrado por canales y
+> permisos. Ver [mensajes-sse.md](../flujos/mensajes-sse.md).
+
+## Flujos sin diagrama
+
+Estos flujos están documentados en `docs/flujos/`, pero no tienen un diagrama
+visual propio:
+
+| Flujo | Documento | Motivo |
+| --- | --- | --- |
+| Laboratorio de consultas | [laboratorio.md](../flujos/laboratorio.md) | Herramienta de desarrollo; su flujo se explica mejor en texto y en la UI. |
+| Layouts del dashboard | [dashboard-layouts.md](../flujos/dashboard-layouts.md) | Configuración de shell (sidebar/horizontal/grid), no un flujo de negocio. |
+
+Si se agrega un diagrama para ellos, actualizar también
+`front/public/flujos/index.html` y `flujos.ts`.
 
 ## Demostraciones animadas
 
@@ -54,6 +66,10 @@ Cinco flujos del núcleo tienen una grabación del movimiento del diagrama:
 ![Reportes y documentos](img/reportes.gif)
 
 ## Capturas del resto de flujos
+
+### Cambio obligatorio de contraseña
+
+![Cambio obligatorio de contraseña](img/cambio-password.png)
 
 ### Cierre de sesión y revocación
 
@@ -106,7 +122,16 @@ $archify = "C:\Users\USUARIO\Desktop\Andriw\HERRAMIENTAS_IA\crear_diagramas\.age
 
 node $archify finalize sequence "docs/diagramas/fuentes/login.json" `
   "front/public/flujos/login.html" --repo-root . --quality showcase --json
+
+node $archify finalize sequence "docs/diagramas/fuentes/cambio-password.json" `
+  "front/public/flujos/cambio-password.html" --repo-root . --quality showcase --json
+
+node tools/update-diagram-manifest.mjs
 ```
+
+`docs/diagramas/manifest.json` guarda el hash del JSON y del HTML de cada
+diagrama. Así `tools/check-docs.mjs` detecta un HTML desactualizado sin
+publicar receipts con rutas absolutas.
 
 Para las capturas, abre el HTML, usa **Exportar → PNG** y guarda en `img/`.
 Para los GIF, exporta **WebM** y conviértelo con `ffmpeg`:
@@ -117,13 +142,36 @@ ffmpeg -y -i docs\diagramas\img\anim\login.webm `
   -loop 0 docs\diagramas\img\login.gif
 ```
 
+## Verificación
+
+Después de regenerar un diagrama:
+
+```powershell
+node tools/update-diagram-manifest.mjs
+```
+
+Antes de cerrar un cambio documental:
+
+```powershell
+node tools/check-docs.mjs
+```
+
+El script comprueba que:
+
+- cada ruta de `back/api/router.go` aparece en algún documento de flujo;
+- las rutas de archivo citadas en Markdown existen;
+- cada JSON de Archify es válido y sus `sources[].path` existen;
+- el seed de permisos coincide con la tabla de `usuarios-permisos.md`;
+- los diagramas generados están al día respecto a su JSON.
+
 ## Evidencia
 
 - Repositorio: `https://github.com/Andriw75/angular-go-template`
-- Revisión: `db02384130585abab33e03fed6a4e89cb46b9cfa`
+- Revisión de referencia: `1968f4367530dd7c1bba53d1766f357415190cff`
 - Fuente funcional: [`docs/flujos/`](../flujos/)
-- Los nodos principales de cada diagrama citan rutas y líneas del código en los
-  JSON de `fuentes/`.
+- Los nodos principales de cada diagrama citan rutas y símbolos del código en
+  los JSON de `fuentes/`. Los números de línea son auxiliares y pueden cambiar
+  con refactors; la referencia estable es el símbolo o el archivo.
 
 ## Notas de alcance
 

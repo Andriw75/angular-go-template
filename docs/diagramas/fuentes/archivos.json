@@ -11,7 +11,7 @@
       "url": "https://github.com/Andriw75/angular-go-template",
       "provider": "github",
       "link_mode": "web",
-      "revision": "db02384130585abab33e03fed6a4e89cb46b9cfa"
+      "revision": "1968f4367530dd7c1bba53d1766f357415190cff"
     }
   },
   "stages": [
@@ -169,7 +169,7 @@
       "title": "Límites",
       "items": [
         "Una copia pública ya cacheada puede seguir viéndose tras pasar a restringida.",
-        "OptionalAuthMiddleware no consulta JWTStore ni activo.",
+        "OptionalAuthMiddleware valida firma, expiración y jti; un token revocado se trata como anónimo. No recarga activo.",
         "El almacenamiento es local y no hay enlaces firmados ni lectura única."
       ]
     }

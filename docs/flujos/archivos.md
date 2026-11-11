@@ -220,9 +220,11 @@ categoría/producto (`ImageManager`).
 4. **Caché de públicos**: nginx cachea 1 h; los archivos públicos servidos por
    la API usan 24 h. Cambiar a restringido no invalida copias ya cacheadas en el
    navegador.
-5. **`OptionalAuthMiddleware`** solo valida firma/expiración; no consulta el
-   `JWTStore` ni `activo`. Un token vigente pero revocado puede leer archivos
-   restringidos hasta expirar.
+5. **`OptionalAuthMiddleware`** valida firma, expiración y, con
+   `JWT_STORE_ENABLED=true`, el `jti`. Un token revocado se trata como anónimo:
+   los archivos `publico` siguen sirviéndose y los `autenticado`/`propietario`
+   responden `401`. No recarga el usuario, así que no comprueba `activo` hasta
+   la renovación del token.
 6. **`user_id` sin FK**: al borrar un usuario, sus archivos quedan huérfanos.
 
 ## Limitaciones

@@ -2,12 +2,16 @@
 
 ## Resumen
 
-Dos CRUD relacionados, ambos bajo el permiso `shop`:
+Dos CRUD relacionados bajo el permiso `shop`:
 
 - **Categorías**: agrupan productos y tienen imágenes.
 - **Productos**: pertenecen a una categoría y tienen imágenes.
 
-El menú **Tienda** agrupa `Categorias` y `Productos`. En modo base de datos no
+El mismo menú **Tienda** incluye además **Ventas** bajo el permiso `ventas`
+(documentado en [reportes.md](./reportes.md)).
+
+El menú **Tienda** agrupa **Catálogo** (`Categorías`, `Productos`, permiso
+`shop`) y **Operaciones** (`Ventas`, permiso `ventas`). En modo base de datos no
 hay seed: ambas tablas arrancan vacías.
 
 ## Modelo
@@ -57,7 +61,8 @@ en [archivos.md](./archivos.md).
 
 ### Rutas
 
-Todas bajo `AuthMiddleware("shop")` (`back/api/router.go:81` y `:94`).
+Todas bajo `AuthMiddleware("shop")` (`back/api/router.go`). Las ventas viven en
+`/ventas` y usan el permiso `ventas` (ver [reportes.md](./reportes.md)).
 
 **Categorías**
 
@@ -115,7 +120,8 @@ Todas bajo `AuthMiddleware("shop")` (`back/api/router.go:81` y `:94`).
 - **GetByID**: incluye imágenes.
 - **Create**:
   - Exige `nombre`.
-  - Exige `categoria_id > 0` y que la categoría exista → si no, `400`.
+  - Exige `categoria_id > 0` y que la categoría exista → si no,
+    `422 invalid categoria_id`.
   - No valida precios/stock negativos en backend (sí lo hace el frontend).
 - **Update**: parcial; si llega `categoria_id`, valida que exista.
 - **Delete**: recolecta imágenes, elimina el producto, borra registros de
@@ -125,8 +131,9 @@ Todas bajo `AuthMiddleware("shop")` (`back/api/router.go:81` y `:94`).
 
 | Caso                                      | Respuesta                              |
 | ----------------------------------------- | -------------------------------------- |
-| Body inválido o falta `nombre`            | `400`                                  |
-| `categoria_id` inválido/inexistente       | `400 invalid categoria_id`             |
+| JSON inválido o `id` no numérico          | `400`                                  |
+| Falta `nombre` o validación de negocio    | `422 validation_error`                 |
+| `categoria_id` inválido/inexistente       | `422 invalid categoria_id`             |
 | Sin permiso `shop`                        | `403`                                  |
 | Categoría/producto inexistente            | `404`                                  |
 | Borrar categoría con productos sin cascade| `409`                                  |

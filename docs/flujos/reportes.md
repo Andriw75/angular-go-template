@@ -36,6 +36,10 @@ GET /reportes/buses?q=&tipo=&activo=&desde=&hasta=&modo=actual|generado&cantidad
 GET /reportes/buses/count?...
 GET /reportes/ventas?q=&serie=&estado=&desde=&hasta=
 GET /reportes/ventas/count?...
+GET /reportes/buses/pdf?...
+GET /reportes/buses/xlsx?...
+GET /reportes/ventas/{id}/pdf
+GET /reportes/ventas/{id}/xlsx
 ```
 
 `ReporteBuses` incluye `resumen`, `por_tipo` y `data`.
@@ -91,6 +95,19 @@ Implementación:
 - `ventas`: cliente, documento, dirección, fecha, moneda, subtotal, descuento, impuesto, total, estado, serie, correlativo, código.
 - `venta_items`: producto opcional, descripción, cantidad, precio unitario, descuento, impuesto %, subtotal, impuesto, total.
 - Estados: `borrador`, `emitido`, `anulado`.
+
+### Rutas
+
+| Método | Ruta | Acción |
+| --- | --- | --- |
+| `GET` | `/ventas` | Listado paginado |
+| `GET` | `/ventas/count` | Conteo con filtros |
+| `POST` | `/ventas` | Crear borrador |
+| `GET` | `/ventas/{id}` | Obtener una venta |
+| `PUT` | `/ventas/{id}` | Editar borrador |
+| `DELETE` | `/ventas/{id}` | Eliminar borrador |
+| `POST` | `/ventas/{id}/emitir` | Asignar correlativo y emitir |
+| `POST` | `/ventas/{id}/anular` | Anular una venta emitida |
 
 ### Reglas
 
@@ -152,6 +169,7 @@ POST /documentos/buses
 POST /documentos/ventas/{id}
 GET  /documentos/jobs/{jobID}
 GET  /documentos
+GET  /documentos/count?...
 GET  /documentos/{id}
 GET  /documentos/{id}/file?formato=pdf|xlsx
 POST /documentos/{id}/anular

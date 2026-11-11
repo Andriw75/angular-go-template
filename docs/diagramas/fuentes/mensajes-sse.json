@@ -3,7 +3,7 @@
   "diagram_type": "sequence",
   "meta": {
     "title": "Mensajes en vivo con SSE",
-    "subtitle": "Cómo un cambio llega a todos los dashboards conectados",
+    "subtitle": "Un solo stream global, canales filtrados por permisos y snapshot inicial",
     "locale": "es",
     "output": "front/public/flujos/mensajes-sse.html",
     "column_fit": "spread",
@@ -12,7 +12,7 @@
       "url": "https://github.com/Andriw75/angular-go-template",
       "provider": "github",
       "link_mode": "web",
-      "revision": "db02384130585abab33e03fed6a4e89cb46b9cfa"
+      "revision": "1968f4367530dd7c1bba53d1766f357415190cff"
     }
   },
   "participants": [
@@ -24,8 +24,9 @@
       "sublabel": "dashboard + SSE",
       "icon": "frontend",
       "sources": [
-        { "path": "front/src/app/services/mensajes-store.service.ts", "line": 15, "end_line": 58 },
-        { "path": "front/src/app/services/sse.service.ts", "line": 1, "end_line": 40 }
+        { "path": "front/src/app/services/mensajes-store.service.ts", "line": 15, "end_line": 70 },
+        { "path": "front/src/app/services/sse.service.ts", "line": 1, "end_line": 89 },
+        { "path": "front/src/app/services/sse-channels.ts", "line": 1, "end_line": 19 }
       ]
     },
     {
@@ -35,8 +36,8 @@
       "sublabel": "REST + SSEHub",
       "icon": "backend",
       "sources": [
-        { "path": "back/api/handlers/mensaje.go", "line": 25, "end_line": 63 },
-        { "path": "back/api/handlers/mensaje.go", "line": 94, "end_line": 176 }
+        { "path": "back/api/handlers/mensaje.go", "line": 24, "end_line": 31 },
+        { "path": "back/api/handlers/sse_handler.go", "line": 13, "end_line": 124 }
       ]
     },
     {
@@ -46,7 +47,7 @@
       "sublabel": "ActivosStore en memoria",
       "icon": "database",
       "sources": [
-        { "path": "back/infrastructure/cache/activos.go", "line": 19, "end_line": 30 }
+        { "path": "back/infrastructure/cache/activos.go", "line": 1, "end_line": 49 }
       ]
     },
     {
@@ -68,8 +69,8 @@
     }
   ],
   "segments": [
-    { "from": 150, "to": 320, "label": "Crear y notificar" },
-    { "from": 326, "to": 560, "label": "Conectar y reconectar" }
+    { "from": 150, "to": 330, "label": "Crear y notificar" },
+    { "from": 345, "to": 660, "label": "Conectar y filtrar" }
   ],
   "messages": [
     { "from": "usuario_a", "to": "app_a", "y": 160, "label": "crear mensaje", "variant": "default" },
@@ -87,14 +88,14 @@
       "from": "api",
       "to": "usuarios_bc",
       "y": 272,
-      "label": "evento create",
+      "label": "create",
       "variant": "dashed",
-      "note": "SSEHub.Broadcast a todos los conectados"
+      "note": "solo a clientes suscritos a mensajes_pendientes/activos"
     },
     {
       "from": "api",
       "to": "app_a",
-      "y": 330,
+      "y": 300,
       "label": "201 Created",
       "variant": "return",
       "note": "la respuesta no espera al SSE"
@@ -102,55 +103,87 @@
     {
       "from": "app_a",
       "to": "api",
-      "y": 390,
-      "label": "GET /mensajes_pendientes/events",
+      "y": 360,
+      "label": "GET /sse/events",
       "variant": "dashed",
       "note": "EventSource con cookie HttpOnly"
     },
-    { "from": "api", "to": "app_a", "y": 450, "label": "current + stream", "variant": "return" },
-    { "from": "api", "to": "usuarios_bc", "y": 480, "label": "update / delete", "variant": "dashed" },
     {
-      "from": "usuarios_bc",
-      "to": "api",
-      "y": 510,
-      "label": "reconexión cada 3 s",
+      "from": "api",
+      "to": "app_a",
+      "y": 420,
+      "label": "200 + current por canal permitido",
+      "variant": "return",
+      "note": "text/event-stream; el cliente se registra antes del snapshot"
+    },
+    {
+      "from": "api",
+      "to": "app_a",
+      "y": 490,
+      "label": "403 si no hay canales",
+      "variant": "security",
+      "note": "el handler calcula los canales desde claims.Permisos"
+    },
+    {
+      "from": "api",
+      "to": "usuarios_bc",
+      "y": 520,
+      "label": "update / delete",
       "variant": "dashed",
-      "note": "si se corta, recibe un snapshot current"
+      "note": "solo si el cliente está suscrito al canal"
+    },
+    {
+      "from": "app_a",
+      "to": "api",
+      "y": 560,
+      "label": "reconexión 3 s → 30 s",
+      "variant": "dashed",
+      "note": "backoff en SSEService; al reconectar recibe un snapshot current"
+    },
+    {
+      "from": "api",
+      "to": "app_a",
+      "y": 640,
+      "label": "current del canal de laboratorio",
+      "variant": "default",
+      "note": "laboratorio/tareas es solo-autenticado"
     }
   ],
   "activations": [
-    { "participant": "app_a", "from": 160, "to": 456, "type": "frontend" },
-    { "participant": "api", "from": 186, "to": 516, "type": "backend" },
+    { "participant": "app_a", "from": 160, "to": 650, "type": "frontend" },
+    { "participant": "api", "from": 186, "to": 650, "type": "backend" },
     { "participant": "db", "from": 210, "to": 250, "type": "database" },
-    { "participant": "cache", "from": 238, "to": 278, "type": "database" },
-    { "participant": "usuarios_bc", "from": 265, "to": 516, "type": "external" }
+    { "participant": "cache", "from": 238, "to": 280, "type": "database" },
+    { "participant": "usuarios_bc", "from": 265, "to": 600, "type": "external" }
   ],
   "cards": [
     {
       "dot": "cyan",
-      "title": "Qué transporta SSE",
+      "title": "Contrato del evento",
       "items": [
-        "Un solo contrato: SSEEvent { type, data }.",
-        "El type viaja dentro del JSON, no como campo event:.",
+        "Sobre único: { module, name, type, data }.",
+        "type: current | create | update | delete.",
+        "Todo viaja dentro del JSON, no como campo event:.",
         "El canal es unidireccional: servidor a cliente; las escrituras siguen siendo REST."
       ]
     },
     {
       "dot": "amber",
-      "title": "Dos patrones de actualización",
+      "title": "Un stream, varios canales",
       "items": [
-        "Mensajes activas: caché en memoria + broadcast a todos.",
-        "Buses, tienda, archivos y pasadas: consulta bajo demanda con paginación de servidor.",
-        "Los filtros de mensajes activas se resuelven en cliente."
+        "Solo existe GET /sse/events para toda la aplicación.",
+        "mensajes_pendientes/activos exige el permiso mensajes_pendientes.",
+        "laboratorio/tareas es solo-autenticado (Permission vacío).",
+        "El hub filtra por canal suscrito, no por identidad de usuario."
       ]
     },
     {
       "dot": "rose",
       "title": "Límites del diseño",
       "items": [
-        "El hub no conoce identidad: todos reciben todos los eventos.",
         "Buffer de 64; si un cliente se atrasa, pierde eventos y se resincroniza al reconectar.",
-        "Sin replay ni Last-Event-ID; el estado vive por proceso."
+        "Sin replay ni Last-Event-ID; el estado vive por proceso.",
+        "Multi-instancia requiere broker (Redis pub/sub) o sticky sessions."
       ]
     }
   ]

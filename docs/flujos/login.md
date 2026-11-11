@@ -24,7 +24,7 @@ Usuario            LoginComponent        AuthService             API Go
   |                     |                    |<-- 200 + Set-Cookie -|
   |                     |<-- UserResponse ---|                     |
   |                     |-- user.set(u)      |                     |
-  |                     |-- navigate(/dashboard)                   |
+  |                     |-- navigate(/dashboard o /change-password)|
   |                     |                    |                     |
   |          authGuard ve user != null y permite sin llamar a la API
 ```
@@ -42,10 +42,12 @@ Usuario            LoginComponent        AuthService             API Go
      - Si falla, responde `401 {"error":"invalid credentials"}`.
    - Genera el JWT con `JWTManager.Generate`.
    - Escribe la cookie y responde `200` con `UserResponse`
-     (`id`, `username`, `email`, `activo`, `permisos`); el hash nunca se expone.
+     (`id`, `username`, `email`, `activo`, `permisos`, `must_change_password`);
+     el hash nunca se expone.
 3. JWT (`back/infrastructure/auth/jwt.go`):
    - Firma `HS256` con `JWT_SECRET`.
-   - Claims: `user_id`, `username`, `email`, `activo`, `permisos` y `jti`.
+   - Claims: `user_id`, `username`, `email`, `activo`, `permisos`,
+     `must_change_password` y `jti`.
    - Expiración: `JWT_EXPIRATION_MINUTES` (15 por defecto).
    - Validación: solo `HS256`, `exp` obligatorio, `iat` verificado y tamaño
      máximo de 4 KiB (descarta `alg=none`, otras variantes HMAC y tokens
@@ -64,8 +66,11 @@ Usuario            LoginComponent        AuthService             API Go
    - Signals `username`, `password`, `error`, `isLoading`.
    - `handleSubmit` recorta espacios y valida que ambos campos existan.
    - Llama a `AuthService.login(user, pass)`.
-   - Éxito: `auth.user.set(u)` y navega a `/dashboard`.
+   - Éxito: `auth.user.set(u)` y navega a `/change-password` si
+     `must_change_password` es `true`; si no, a `/dashboard`.
    - Error: muestra `Usuario o contraseña incorrectos`.
+   - Si el backend responde `429 too_many_attempts`, el formulario muestra el
+     mismo error genérico; el bloqueo se gestiona en nginx y en Go.
 3. `AuthService` (`front/src/app/services/auth.service.ts`):
    - `login()` hace `POST ${API_URL}/auth/token` con `URLSearchParams` y
      `Content-Type: application/x-www-form-urlencoded`.
@@ -77,6 +82,8 @@ Usuario            LoginComponent        AuthService             API Go
      peticiones para que el navegador envíe la cookie.
    - `errorInterceptor`: ante `401` en endpoints protegidos (excepto
      `/auth/token` y `/auth/me`), limpia `auth.user` y redirige a `/login`.
+     También escucha `403` con código `password_change_required` y navega a
+     `/change-password`.
 
 ## Navegación en la SPA vs recarga completa
 
@@ -86,13 +93,15 @@ en memoria, no se llama a la API.
 
 ### Dentro de la SPA (sin recargar)
 
-- Después del login exitoso, `LoginComponent` hace `auth.user.set(u)` y
-  `router.navigate(['/dashboard'])`.
-- `authGuard` (protege `/dashboard`) ve `auth.user()` no nulo y devuelve
-  `of(true)` **sin llamar a `/auth/me`**. El dashboard se instancia directo.
+- Después del login exitoso, `LoginComponent` hace `auth.user.set(u)` y navega a
+  `/change-password` si `u.must_change_password` es `true`; si no, a
+  `/dashboard`.
+- `authGuard` (protege `/dashboard` y `/change-password`) ve `auth.user()` no
+  nulo y devuelve `of(true)` **sin llamar a `/auth/me`**. Si el flag está activo
+  y el destino no es `/change-password`, redirige allí.
 - Si el usuario ya logueado navega manualmente a `/login`, `loginGuard` ve el
-  signal y redirige a `/dashboard` **sin llamar a la API**. `LoginComponent`
-  ni siquiera llega a crearse.
+  signal y redirige a `/change-password` o `/dashboard` según el flag **sin
+  llamar a la API**. `LoginComponent` ni siquiera llega a crearse.
 
 ### Al refrescar (F5) o abrir en una pestaña nueva
 
@@ -100,20 +109,29 @@ en memoria, no se llama a la API.
 - El guard correspondiente encuentra `auth.user() === null` y llama a
   `GET /auth/me` para intentar restaurar la sesión desde la cookie HttpOnly.
 - Si la cookie es válida: repuebla `auth.user` y continúa (o redirige a
-  `/dashboard` si estaba en `/login`).
+  `/change-password`/`/dashboard` si estaba en `/login`).
 - Si falla: `authGuard` redirige a `/login`; `loginGuard` deja mostrar el login.
 
 ### Tabla de escenarios
 
-| Escenario                          | `auth.user()` | ¿Llama `/auth/me`? | Resultado                          |
-| ---------------------------------- | ------------- | ------------------ | ---------------------------------- |
-| Login exitoso → `/dashboard`       | asignado      | No                 | `authGuard` permite                |
-| Ya logueado → `/login`             | asignado      | No                 | `loginGuard` redirige a dashboard  |
-| F5 en `/dashboard`                 | `null`        | Sí                 | restaura sesión o redirige a login |
-| F5 en `/login` con cookie válida   | `null`        | Sí                 | restaura y redirige a dashboard    |
+| Escenario                          | `auth.user()` | ¿Llama `/auth/me`? | Resultado                                      |
+| ---------------------------------- | ------------- | ------------------ | ---------------------------------------------- |
+| Login exitoso sin flag             | asignado      | No                 | `authGuard` permite `/dashboard`               |
+| Login exitoso con `must_change`    | asignado      | No                 | redirige a `/change-password`                  |
+| Ya logueado → `/login`             | asignado      | No                 | `loginGuard` redirige a dashboard o cambio     |
+| F5 en `/dashboard`                 | `null`        | Sí                 | restaura sesión o redirige a login             |
+| F5 en `/login` con cookie válida   | `null`        | Sí                 | restaura y redirige a dashboard o cambio       |
 
 > `errorInterceptor` excluye `/auth/token` y `/auth/me` para no duplicar
 > redirecciones durante el login o la restauración de sesión.
+
+### Cambio obligatorio de contraseña
+
+Si el usuario nace con `must_change_password=true` (bootstrap, alta por admin o
+reset de contraseña), el login no termina en el dashboard: el frontend navega a
+`/change-password` y `AuthMiddleware` bloquea el resto de rutas con
+`403 password_change_required`. El detalle está en
+[cambio-password.md](./cambio-password.md).
 
 ## Renovación del token
 
@@ -143,14 +161,16 @@ En cada request autenticada, `AuthMiddleware`:
 
 ## Errores esperados
 
-| Caso                         | Respuesta                 |
-| ---------------------------- | ------------------------- |
-| Faltan usuario o contraseña  | `400`                     |
-| Credenciales inválidas       | `401 invalid credentials` |
-| Sin cookie en ruta protegida | `401 not authenticated`   |
-| Token inválido/expirado      | `401 invalid token`       |
-| Sesión revocada o jti ausente| `401 session_expired`     |
-| Sin permiso para la ruta     | `403 forbidden`           |
+| Caso                                   | Respuesta                            |
+| -------------------------------------- | ------------------------------------ |
+| Faltan usuario o contraseña            | `400`                                |
+| Credenciales inválidas                 | `401 invalid credentials`            |
+| Demasiados intentos de login           | `429 too_many_attempts` + `Retry-After` |
+| Sin cookie en ruta protegida           | `401 not authenticated`              |
+| Token inválido/expirado                | `401 invalid token`                  |
+| Sesión revocada o jti ausente          | `401 session_expired`                |
+| Sin permiso para la ruta               | `403 forbidden`                      |
+| Flag de cambio de contraseña activo    | `403 password_change_required`       |
 
 ## Archivos involucrados
 
@@ -164,6 +184,7 @@ En cada request autenticada, `AuthMiddleware`:
 | Backend  | `back/services/config.go`                               |
 | Frontend | `front/src/app/components/login/login.ts`               |
 | Frontend | `front/src/app/components/login/login.html`             |
+| Frontend | `front/src/app/components/change-password/change-password.ts` |
 | Frontend | `front/src/app/services/auth.service.ts`                |
 | Frontend | `front/src/app/guards/auth.guard.ts`                    |
 | Frontend | `front/src/app/guards/login.guard.ts`                   |
@@ -186,6 +207,8 @@ CORS_ORIGIN=http://localhost:4200
 
 ## Ver también
 
+- [Cambio obligatorio de contraseña](./cambio-password.md): flag
+  `must_change_password`, bloqueo y revocación.
 - [Logout y revocación](./logout.md): revocación del token y sincronización de
   permisos con sesión activa.
 - [Contador de sesión](./sesion-contador.md): tiempo restante y auto-logout.

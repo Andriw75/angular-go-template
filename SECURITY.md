@@ -77,6 +77,7 @@ NEW_PASSWORD='...' go run ./cmd/set_password -user USUARIO_ADMIN
 - Al crear un usuario o resetear su contraseña, se marca
   `must_change_password` para que la cambie en el primer login.
 - El cambio de contraseña revoca todos los tokens del usuario y limpia la cookie.
+  Flujo completo: [docs/flujos/cambio-password.md](docs/flujos/cambio-password.md).
 
 ---
 

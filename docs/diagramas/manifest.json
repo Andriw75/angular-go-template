@@ -1,0 +1,54 @@
+{
+  "generated_with": "archify",
+  "revision": "1968f4367530dd7c1bba53d1766f357415190cff",
+  "diagrams": {
+    "archivos": {
+      "spec_sha256": "52ac87ea79493a5f93a8af332e3c00b39c067512f7c5fb178046149d3f5b0c9a",
+      "artifact_sha256": "581db6b26289968b627faf08355e891b6038c50c53661e7629d04eb7ccd59e67"
+    },
+    "buses": {
+      "spec_sha256": "cfeb4c3299d27b5f8645336a6b90c7d80ecf74cd6a686113693da5cb8f9e3d5e",
+      "artifact_sha256": "30f6bf01080da07027fddcf016786378f98e23c923ac00b046711322d687fa05"
+    },
+    "cambio-password": {
+      "spec_sha256": "a41e9ef8e10b7b195be4f030855bd1089dd3f16fa2d4473e2db3fa8cb2f5128c",
+      "artifact_sha256": "3b5cf51cfd3c77a1162fa16d8979b36bc21cc9d331ce4d2cfc3a819d579aa7ef"
+    },
+    "documentos": {
+      "spec_sha256": "1c101949398585bc3f5da9c6653595307fad2d10e7e5cd743d8b38c4b748f3e2",
+      "artifact_sha256": "288e859673dc0b9c2a058734fa643c78122764415405cf54d15e073021c045cf"
+    },
+    "instalaciones-mapas": {
+      "spec_sha256": "758eaa8771f751e647bd24ee4c272b37197de3008ce487457e413516bdd49ef6",
+      "artifact_sha256": "22bf863e056ad76808a27cb60f71c26f318fc769d6bddd0def33ee485b587c96"
+    },
+    "login": {
+      "spec_sha256": "c682f222d217e0a696e8c225663621ff82cc500b850371c011ad044595cd0087",
+      "artifact_sha256": "0280fff91481c2477f34b0e0fd109bb5056ad013612f1ce1e721525247e54d8d"
+    },
+    "logout": {
+      "spec_sha256": "7733eda6fcc2d42683495a30ca9f828207b5dcc8d9bcac91f6b0c65b339692a1",
+      "artifact_sha256": "346f35d397cbf00783b282c59dcf6e239f9caa1baf660b18884b86e462da21ca"
+    },
+    "mensajes-sse": {
+      "spec_sha256": "d19ad609a95d2d6caf354dd0e8d29c9ed52e4e3ab6d870ef54b254c309b61a83",
+      "artifact_sha256": "d0bf00074a9cd593ca280e2e6ffd778cbe858cd3c66297ecdcb0be180ab2648d"
+    },
+    "reportes": {
+      "spec_sha256": "4d60226e5bdedbc81307d9ac324a436b0a5a61819a710ae5b2c7ca4d23bdb82d",
+      "artifact_sha256": "2f3b9367d3a4dd1b25161879624cee7aebe86da69fdac41d010b2962918884ce"
+    },
+    "sesion-contador": {
+      "spec_sha256": "720e2af9013bb3ffc4d3450dc72b5c04915c5adbf7ba5a816a0d49cd7d441f3d",
+      "artifact_sha256": "bd91fe4240a4ae5114e2cc1c6525d741685a6a2aca8538d878f580cd61d90449"
+    },
+    "tienda": {
+      "spec_sha256": "423d518c924b090ee974c50a84cd68794a7ca96c64c6ab833f988b5172575a72",
+      "artifact_sha256": "1ccfac46decc3c9e49732aae20f5867cd4a2eaf39bf00019000dc648c6315dc2"
+    },
+    "usuarios-permisos": {
+      "spec_sha256": "d216509891dbe29af85ccb0e2ab3af958454c2b64794daad691b5012faa877ab",
+      "artifact_sha256": "fedcc843b4d672cbf0fb31a1aaa5ea46bd9343549d1d06180cac2d58f6a0adcb"
+    }
+  }
+}

@@ -17,18 +17,21 @@ el catálogo de permisos.
 | Tabla              | Contenido                                                        |
 | ------------------ | ---------------------------------------------------------------- |
 | `permissions`      | Catálogo fijo: `id`, `nombre` (único), `descripcion`             |
-| `users`            | `id`, `username` (único), `email`, `password` (bcrypt), `activo` |
+| `users`            | `id`, `username` (único), `email`, `password` (bcrypt), `activo`, `must_change_password` |
 | `user_permissions` | N:M (`user_id`, `permission_id`), PK compuesta, FK con cascade   |
 
 Permisos sembrados (`back/infrastructure/database/db.go`):
 
-| Nombre                 | Descripción              |
-| ---------------------- | ------------------------ |
-| `buses`                | Acceso a buses           |
-| `usuarios`             | Gestión de usuarios      |
-| `mensajes_pendientes`  | Mensajes pendientes      |
-| `shop`                 | Gestión de tienda        |
-| `archivos`             | Gestión de archivos      |
+| Nombre                 | Descripción                    |
+| ---------------------- | ------------------------------ |
+| `buses`                | Acceso a buses                 |
+| `usuarios`             | Gestión de usuarios            |
+| `mensajes_pendientes`  | Mensajes pendientes            |
+| `shop`                 | Gestión de tienda              |
+| `archivos`             | Gestión de archivos            |
+| `ventas`               | Gestión de ventas              |
+| `reportes`             | Generación de reportes         |
+| `documentos`           | Gestión de documentos generados |
 
 El seed **no crea usuarios por defecto**. Si la tabla `users` está vacía, el
 primer administrador se crea solo cuando `BOOTSTRAP_ADMIN_PASSWORD` está
@@ -48,9 +51,9 @@ login. Los permisos se aseguran siempre con `ON CONFLICT (nombre) DO NOTHING`.
 | DELETE | `/users/{id}`  | `usuarios`        |
 | GET    | `/permisos`    | `usuarios`        |
 
-Todas se registran bajo `AuthMiddleware("usuarios")`
-(`back/api/router.go:45` y `back/api/router.go:54`). No existe CRUD de permisos:
-para agregar uno hay que modificar el seed y reiniciar.
+Todas se registran bajo `AuthMiddleware("usuarios")` en
+`back/api/router.go`. No existe CRUD de permisos: para agregar uno hay que
+modificar el seed y reiniciar.
 
 ### Handlers
 
@@ -59,18 +62,22 @@ para agregar uno hay que modificar el seed y reiniciar.
 - **List**: devuelve `[]UserResponse` sin contraseña.
 - **GetByID**: `404 user not found` si no existe.
 - **Create**: exige `username`, `email` y `password`; el resto es opcional.
-  Hashea la contraseña y asigna los permisos por nombre.
+  Aplica la política de contraseñas (12+ caracteres, no común, distinta al
+  username), hashea la contraseña, asigna los permisos por nombre y fuerza
+  `must_change_password=true`.
 - **Update**: actualización parcial con punteros (`username`, `email`,
-  `password`, `activo`, `permisos`). La contraseña solo se cambia si llega no
-  vacía.
+  `password`, `activo`, `permisos`, `must_change_password`). La contraseña solo
+  se cambia si llega no vacía; un reset de admin vuelve a activar
+  `must_change_password`.
   - Si el update incluye `permisos`, `activo` o una contraseña nueva, ejecuta
     `JWTStore.RemoveUserTokens(id)`. La siguiente petición del afectado recibe
     `401 session_expired` y debe volver a iniciar sesión (ver
-    [logout.md](./logout.md)).
-  - Un `id` inexistente termina en `500 failed to update user` (el store
-    devuelve `sql.ErrNoRows` y el handler lo trata como error interno).
+    [logout.md](./logout.md) y [cambio-password.md](./cambio-password.md)).
+  - Un `id` inexistente responde `404 not_found`; el store devuelve un error de
+    negocio y `writeError` lo traduce.
 - **Delete**: impide eliminarse a uno mismo (`claims.UserID == id` →
-  `403 cannot delete yourself`). El resto devuelve `404` si no existe.
+  `403 cannot delete yourself`). El resto devuelve `404` si no existe y revoca
+  los tokens del usuario eliminado.
 
 `back/api/handlers/permiso.go`:
 
@@ -80,18 +87,18 @@ para agregar uno hay que modificar el seed y reiniciar.
 
 `back/infrastructure/database/users.go`:
 
-- `Create` (`users.go:23`): inserta el usuario, hashea la contraseña y llama a
+- `Create`: inserta el usuario, hashea la contraseña y llama a
   `replacePermisos`.
-- `Update` (`users.go:62`): carga el usuario, aplica los campos enviados y
-  reemplaza permisos si `permisos` no es `nil`.
-- `replacePermisos` (`users.go:214`): borra las asignaciones previas e inserta
-  cada permiso con `INSERT ... SELECT id FROM permissions WHERE nombre = ?`.
-  Si un nombre no existe, la inserción afecta 0 filas y devuelve
-  `permiso no encontrado`.
-- `loadPermisos` (`users.go:194`): join `user_permissions` + `permissions`,
-  ordenado por nombre. Ese es el orden que termina en el JWT.
-- `IsValidPassword` (`users.go:152`): compara con bcrypt; lo usa el login.
-- `FindAll` (`users.go:132`): carga cada usuario y sus permisos.
+- `Update`: carga el usuario, aplica los campos enviados, activa
+  `must_change_password` si llega una contraseña nueva y reemplaza permisos si
+  `permisos` no es `nil`.
+- `replacePermisos`: borra las asignaciones previas e inserta cada permiso con
+  `INSERT ... SELECT id FROM permissions WHERE nombre = ?`. Si un nombre no
+  existe, la inserción afecta 0 filas y devuelve `permiso no encontrado`.
+- `loadPermisos`: join `user_permissions` + `permissions`, ordenado por nombre.
+  Ese es el orden que termina en el JWT.
+- `IsValidPassword`: compara con bcrypt; lo usa el login.
+- `FindAll`: carga cada usuario y sus permisos.
 
 ### Permisos en el JWT
 
@@ -121,10 +128,12 @@ Sin el permiso responde `403 forbidden`.
 `front/src/app/components/dashboard/usuarios/modal.ts`:
 
 - Carga el catálogo con `GET /permisos`.
-- **Crear**: envía `username`, `email`, `password`, `activo` y `permisos`.
+- **Crear**: envía `username`, `email`, `password`, `activo` y `permisos`. El
+  backend fuerza el cambio de contraseña en el primer acceso.
 - **Editar**: envía solo los campos que cambiaron (diff contra los originales).
   `permisos` solo se envía si el array cambió; `activo` solo si cambió; la
-  contraseña solo si se escribió.
+  contraseña solo si se escribió. Un reset de contraseña vuelve a activar el
+  cambio obligatorio.
 - `isSelf`: si el usuario editado es uno mismo, deshabilita los checkboxes de
   permisos y muestra un aviso. Es una restricción **de UI**; el backend no la
   impone, así que una llamada directa a `PUT /users/{id}` sí podría cambiarlos.
@@ -133,24 +142,28 @@ Sin el permiso responde `403 forbidden`.
 ### Sidebar y permisos
 
 `front/src/app/components/dashboard/sidebar/menu.config.ts` define
-`requiredPermission` por entrada. `SidebarComponent.filterMenu`
-(`sidebar.ts:49`) filtra el menú con `auth.user()?.permisos`.
+`requiredPermission` por entrada. `MenuService`
+(`front/src/app/services/menu.service.ts`) filtra recursivamente el menú con
+`auth.user()?.permisos`; el sidebar, el layout horizontal y la grilla comparten
+ese servicio.
 
-Importante: esto es solo **visibilidad de UI**. Las rutas hijas del dashboard no
-tienen guards por permiso (`app.routes.ts` solo aplica `authGuard` al padre). Un
-usuario sin permiso puede navegar directo a `/dashboard/usuarios`; el componente
-se instancia, pero `GET /users` responde `403` y se muestra un toast de error.
-La autorización real siempre está en el backend.
+Las rutas hijas del dashboard aplican `permissionGuard` con
+`route.data.permission` (`front/src/app/app.routes.ts`). Si falta el permiso, el
+guard redirige a `/dashboard` y muestra un toast. El sidebar además oculta la
+entrada. Aun así, la autorización real sigue estando en el backend (`403`).
 
 ## Permiso → módulo
 
-| Permiso               | Endpoints                                        | Menú          |
-| --------------------- | ------------------------------------------------ | ------------- |
-| `buses`               | `/buses`                                         | Buses         |
-| `usuarios`            | `/users`, `/permisos`                            | Usuarios      |
-| `mensajes_pendientes` | `/mensajes_pendientes`                           | Mensajes      |
-| `shop`                | `/categorias`, `/productos`                      | Tienda        |
-| `archivos`            | `/archivos` (subida, listado y administración)   | Archivos      |
+| Permiso               | Endpoints                                        | Menú                    |
+| --------------------- | ------------------------------------------------ | ----------------------- |
+| `buses`               | `/buses`                                         | Buses                   |
+| `usuarios`            | `/users`, `/permisos`                            | Usuarios                |
+| `mensajes_pendientes` | `/mensajes_pendientes`, `/sse/events` (canal)     | Mensajes                |
+| `shop`                | `/categorias`, `/productos`, imágenes            | Tienda → Catálogo       |
+| `archivos`            | `/archivos` (subida, listado y administración)   | Archivos                |
+| `ventas`              | `/ventas`, `/reportes/ventas*`                    | Tienda → Operaciones    |
+| `reportes`            | `/reportes/*`                                    | Reportes                |
+| `documentos`          | `/documentos/*`                                  | Reportes (historial)    |
 
 `/archivos/{filename}` no exige permiso: usa `OptionalAuthMiddleware` y valida
 la visibilidad del archivo.
@@ -159,7 +172,8 @@ la visibilidad del archivo.
 
 | Caso                                  | Respuesta                          |
 | ------------------------------------- | ---------------------------------- |
-| Body inválido o faltan campos          | `400`                              |
+| JSON inválido o `id` no numérico        | `400`                              |
+| Faltan campos o contraseña inválida    | `422 validation_error`             |
 | Sin sesión                             | `401 not authenticated`            |
 | Sin permiso `usuarios`                 | `403 forbidden`                    |
 | Intento de eliminarse a uno mismo      | `403 cannot delete yourself`       |
@@ -206,10 +220,15 @@ la visibilidad del archivo.
 | Frontend | `front/src/app/models/auth.ts`                              |
 | Frontend | `front/src/app/components/dashboard/sidebar/menu.config.ts` |
 | Frontend | `front/src/app/components/dashboard/sidebar/sidebar.ts`     |
+| Frontend | `front/src/app/services/menu.service.ts`                    |
+| Frontend | `front/src/app/guards/permission.guard.ts`                  |
+| Frontend | `front/src/app/app.routes.ts`                               |
 
 ## Ver también
 
 - [Login](./login.md): emisión del JWT y claims de permisos.
+- [Cambio obligatorio de contraseña](./cambio-password.md): alta, reset y
+  bloqueo por `must_change_password`.
 - [Logout y revocación](./logout.md): qué pasa cuando cambian los permisos de
   una sesión activa (revocación y re-login).
 - [Mensajes pendientes y SSE](./mensajes-sse.md): usa el permiso
