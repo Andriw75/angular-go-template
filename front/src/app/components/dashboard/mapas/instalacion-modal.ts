@@ -1,5 +1,6 @@
 import { Component, effect, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { BackdropCloseDirective } from '../../../common/modal/backdrop-close.directive';
 import {
   INSTALACION_ESTADOS,
   INSTALACION_TIPOS,
@@ -29,7 +30,7 @@ function randomSerial(): string {
   selector: 'app-instalacion-modal',
   templateUrl: './instalacion-modal.html',
   styleUrl: './instalacion-modal.css',
-  imports: [FormsModule],
+  imports: [FormsModule, BackdropCloseDirective],
 })
 export class InstalacionModalComponent {
   data = input<InstalacionModalData | null>(null);

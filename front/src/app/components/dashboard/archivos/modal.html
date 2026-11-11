@@ -1,4 +1,4 @@
-<div class="overlay" (click)="close()">
+<div class="overlay" appBackdropClose (appBackdropClose)="close()">
   <div class="modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <h2>Subir Archivos</h2>

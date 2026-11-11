@@ -1,4 +1,4 @@
-<div class="modal" (click)="cancel()">
+<div class="modal" appBackdropClose (appBackdropClose)="cancel()">
   <div class="modal-body" (click)="$event.stopPropagation()">
     <h3>{{ venta() ? 'Editar Venta' : 'Nueva Venta' }}</h3>
 

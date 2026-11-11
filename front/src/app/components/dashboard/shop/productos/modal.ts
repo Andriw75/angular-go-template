@@ -1,5 +1,6 @@
 import { Component, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { BackdropCloseDirective } from '../../../../common/modal/backdrop-close.directive';
 import { ProductosService } from '../../../../services/productos.service';
 import { CategoriasService } from '../../../../services/categorias.service';
 import { ToastService } from '../../../../services/toast.service';
@@ -11,7 +12,7 @@ import type { Categoria } from '../../../../models/categoria';
   selector: 'app-producto-modal',
   templateUrl: './modal.html',
   styleUrl: './modal.css',
-  imports: [FormsModule, ImageManagerComponent],
+  imports: [FormsModule, ImageManagerComponent, BackdropCloseDirective],
 })
 export class ProductoModalComponent {
   service = inject(ProductosService);

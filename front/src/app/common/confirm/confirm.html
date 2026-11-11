@@ -1,5 +1,5 @@
 @if (confirm.state().visible) {
-  <div class="overlay" (click)="confirm.cancel()">
+  <div class="overlay" appBackdropClose (appBackdropClose)="confirm.cancel()">
     <div class="dialog" (click)="$event.stopPropagation()">
       <h3>{{ confirm.state().title }}</h3>
       <p>{{ confirm.state().message }}</p>

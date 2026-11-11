@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { BackdropCloseDirective } from '../../../common/modal/backdrop-close.directive';
 import { UsersService, type UserInput, type UserUpdateInput } from '../../../services/users.service';
 import { ToastService } from '../../../services/toast.service';
 import { AuthService } from '../../../services/auth.service';
@@ -9,7 +10,7 @@ import type { UserResponse, Permission } from '../../../models/auth';
   selector: 'app-user-modal',
   templateUrl: './modal.html',
   styleUrl: './modal.css',
-  imports: [FormsModule],
+  imports: [FormsModule, BackdropCloseDirective],
 })
 export class UserModalComponent implements OnInit {
   private service = inject(UsersService);

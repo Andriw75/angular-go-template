@@ -1,6 +1,7 @@
 import { Component, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiErrorMessage } from '../../../common/api-error';
+import { BackdropCloseDirective } from '../../../common/modal/backdrop-close.directive';
 import { ArchivosService } from '../../../services/archivos.service';
 import { ToastService } from '../../../services/toast.service';
 import type { Visibilidad } from '../../../models/archivo';
@@ -16,7 +17,7 @@ const ALLOWED_EXTENSIONS = new Set([
   selector: 'app-archivo-modal',
   templateUrl: './modal.html',
   styleUrl: './modal.css',
-  imports: [FormsModule],
+  imports: [FormsModule, BackdropCloseDirective],
 })
 export class ArchivoModalComponent {
   private service = inject(ArchivosService);

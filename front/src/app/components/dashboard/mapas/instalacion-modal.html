@@ -1,4 +1,4 @@
-<div class="overlay" (click)="close.emit()">
+<div class="overlay" appBackdropClose (appBackdropClose)="close.emit()">
   <div class="modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <h2>{{ data()?.mode === 'edit' ? 'Editar Instalación' : 'Nueva Instalación' }}</h2>

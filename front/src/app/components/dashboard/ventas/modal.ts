@@ -1,6 +1,7 @@
 import { Component, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiErrorMessage } from '../../../common/api-error';
+import { BackdropCloseDirective } from '../../../common/modal/backdrop-close.directive';
 import { ProductosService } from '../../../services/productos.service';
 import { VentasService } from '../../../services/ventas.service';
 import type { Producto } from '../../../models/producto';
@@ -10,7 +11,7 @@ import type { Venta, VentaInput, VentaItemInput } from '../../../models/venta';
   selector: 'app-venta-modal',
   templateUrl: './modal.html',
   styleUrl: './modal.css',
-  imports: [FormsModule],
+  imports: [FormsModule, BackdropCloseDirective],
 })
 export class VentaModalComponent {
   private service = inject(VentasService);

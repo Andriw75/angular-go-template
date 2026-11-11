@@ -5,6 +5,10 @@ export const environment = {
   API_URL: 'http://localhost:5000/template/api',
   // API_URL: 'http://localhost:8080',
   MEDIA_URL: 'http://localhost:5000/template/public',
+  MODAL: {
+    // Si es false, hacer clic fuera del diálogo NO lo cierra.
+    closeOnBackdrop: false,
+  },
   SESSION: {
     COUNTDOWN_ENABLED: true,
     WARN_SECONDS: 60,

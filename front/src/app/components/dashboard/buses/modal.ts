@@ -1,5 +1,6 @@
 import { Component, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { BackdropCloseDirective } from '../../../common/modal/backdrop-close.directive';
 import { BusesService } from '../../../services/buses.service';
 import { ToastService } from '../../../services/toast.service';
 import type { Bus, BusInput } from '../../../models/bus';
@@ -8,7 +9,7 @@ import type { Bus, BusInput } from '../../../models/bus';
   selector: 'app-bus-modal',
   templateUrl: './modal.html',
   styleUrl: './modal.css',
-  imports: [FormsModule],
+  imports: [FormsModule, BackdropCloseDirective],
 })
 export class BusModalComponent {
   private service = inject(BusesService);
