@@ -75,7 +75,7 @@ func (h *ReporteHandler) busesReport(r *http.Request) outputs.ReporteBuses {
 	if mode == "generado" {
 		return h.svc.GeneratedBuses(count, filters)
 	}
-	return h.svc.Buses(filters)
+	return h.svc.Buses(r.Context(), filters)
 }
 
 func (h *ReporteHandler) Buses(w http.ResponseWriter, r *http.Request) {
@@ -88,15 +88,15 @@ func (h *ReporteHandler) BusesCount(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]int{"total": count})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]int64{"total": h.deps.BusStore.Count(parseBusReportFilters(r))})
+	writeJSON(w, http.StatusOK, map[string]int64{"total": h.deps.BusStore.Count(r.Context(), parseBusReportFilters(r))})
 }
 
 func (h *ReporteHandler) Ventas(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, h.svc.Ventas(parseVentaReportFilters(r)))
+	writeJSON(w, http.StatusOK, h.svc.Ventas(r.Context(), parseVentaReportFilters(r)))
 }
 
 func (h *ReporteHandler) VentasCount(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]int{"total": h.deps.VentaStore.Count(parseVentaReportFilters(r))})
+	writeJSON(w, http.StatusOK, map[string]int{"total": h.deps.VentaStore.Count(r.Context(), parseVentaReportFilters(r))})
 }
 
 func writeDownload(w http.ResponseWriter, data []byte, contentType, filename string) {
@@ -133,7 +133,7 @@ func (h *ReporteHandler) VentaPDF(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	venta, err := h.deps.VentaStore.FindByID(id)
+	venta, err := h.deps.VentaStore.FindByID(r.Context(), id)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "venta not found")
 		return
@@ -152,7 +152,7 @@ func (h *ReporteHandler) VentaXLSX(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	venta, err := h.deps.VentaStore.FindByID(id)
+	venta, err := h.deps.VentaStore.FindByID(r.Context(), id)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "venta not found")
 		return

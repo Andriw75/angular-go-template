@@ -18,7 +18,7 @@ func NewArchivoStore(db *DB) *ArchivoStore {
 
 const archivoColumns = `id, file_name, nombre, tipo, tamano, visibilidad, user_id, creado_en`
 
-func (s *ArchivoStore) Create(fileName, nombre, tipo string, tamano int64, visibilidad domain.Visibilidad, userID int64) (domain.Archivo, error) {
+func (s *ArchivoStore) Create(ctx context.Context, fileName, nombre, tipo string, tamano int64, visibilidad domain.Visibilidad, userID int64) (domain.Archivo, error) {
 	if visibilidad == "" {
 		visibilidad = domain.VisibilidadPublico
 	}
@@ -35,7 +35,7 @@ func (s *ArchivoStore) Create(fileName, nombre, tipo string, tamano int64, visib
 
 	q := s.db.rebind(`INSERT INTO archivos (file_name, nombre, tipo, tamano, visibilidad, user_id, creado_en)
 		VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`)
-	err := s.db.QueryRowContext(context.Background(), q,
+	err := s.db.QueryRowContext(ctx, q,
 		a.FileName, a.Nombre, a.Tipo, a.Tamano, string(a.Visibilidad), a.UserID, formatTime(a.CreadoEn),
 	).Scan(&a.ID)
 	if err != nil {
@@ -44,14 +44,14 @@ func (s *ArchivoStore) Create(fileName, nombre, tipo string, tamano int64, visib
 	return a, nil
 }
 
-func (s *ArchivoStore) FindByID(id int64) (*domain.Archivo, error) {
+func (s *ArchivoStore) FindByID(ctx context.Context, id int64) (*domain.Archivo, error) {
 	q := s.db.rebind(`SELECT ` + archivoColumns + ` FROM archivos WHERE id = ?`)
-	return scanArchivo(s.db.QueryRowContext(context.Background(), q, id))
+	return scanArchivo(s.db.QueryRowContext(ctx, q, id))
 }
 
-func (s *ArchivoStore) FindByFileName(fileName string) (*domain.Archivo, error) {
+func (s *ArchivoStore) FindByFileName(ctx context.Context, fileName string) (*domain.Archivo, error) {
 	q := s.db.rebind(`SELECT ` + archivoColumns + ` FROM archivos WHERE file_name = ?`)
-	return scanArchivo(s.db.QueryRowContext(context.Background(), q, fileName))
+	return scanArchivo(s.db.QueryRowContext(ctx, q, fileName))
 }
 
 func archivoWhere(q string) (string, []any) {
@@ -62,7 +62,7 @@ func archivoWhere(q string) (string, []any) {
 	return ` WHERE (LOWER(nombre) LIKE ? OR LOWER(file_name) LIKE ?)`, []any{like, like}
 }
 
-func (s *ArchivoStore) List(offset, limit int, q string) ([]domain.Archivo, bool, error) {
+func (s *ArchivoStore) List(ctx context.Context, offset, limit int, q string) ([]domain.Archivo, bool, error) {
 	if offset < 0 {
 		offset = 0
 	}
@@ -70,7 +70,6 @@ func (s *ArchivoStore) List(offset, limit int, q string) ([]domain.Archivo, bool
 		limit = 20
 	}
 
-	ctx := context.Background()
 	where, args := archivoWhere(q)
 
 	query := s.db.rebind(`SELECT ` + archivoColumns + ` FROM archivos` + where + ` ORDER BY creado_en DESC LIMIT ? OFFSET ?`)
@@ -98,18 +97,18 @@ func (s *ArchivoStore) List(offset, limit int, q string) ([]domain.Archivo, bool
 	return out, hasMore, nil
 }
 
-func (s *ArchivoStore) Count(q string) (int, error) {
+func (s *ArchivoStore) Count(ctx context.Context, q string) (int, error) {
 	where, args := archivoWhere(q)
 	var total int
-	if err := s.db.QueryRowContext(context.Background(), s.db.rebind(`SELECT COUNT(*) FROM archivos`+where), args...).Scan(&total); err != nil {
+	if err := s.db.QueryRowContext(ctx, s.db.rebind(`SELECT COUNT(*) FROM archivos`+where), args...).Scan(&total); err != nil {
 		return 0, err
 	}
 	return total, nil
 }
 
-func (s *ArchivoStore) UpdateVisibilidad(id int64, vis domain.Visibilidad) error {
+func (s *ArchivoStore) UpdateVisibilidad(ctx context.Context, id int64, vis domain.Visibilidad) error {
 	q := s.db.rebind(`UPDATE archivos SET visibilidad = ? WHERE id = ?`)
-	res, err := s.db.ExecContext(context.Background(), q, string(vis), id)
+	res, err := s.db.ExecContext(ctx, q, string(vis), id)
 	if err != nil {
 		return err
 	}
@@ -119,8 +118,8 @@ func (s *ArchivoStore) UpdateVisibilidad(id int64, vis domain.Visibilidad) error
 	return nil
 }
 
-func (s *ArchivoStore) Delete(id int64) error {
-	res, err := s.db.ExecContext(context.Background(), s.db.rebind(`DELETE FROM archivos WHERE id = ?`), id)
+func (s *ArchivoStore) Delete(ctx context.Context, id int64) error {
+	res, err := s.db.ExecContext(ctx, s.db.rebind(`DELETE FROM archivos WHERE id = ?`), id)
 	if err != nil {
 		return err
 	}

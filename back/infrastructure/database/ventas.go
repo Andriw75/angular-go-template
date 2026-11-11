@@ -108,13 +108,12 @@ func normalizeVenta(input inputs.VentaInput) (domain.Venta, error) {
 	}, nil
 }
 
-func (s *VentaStore) Create(input inputs.VentaInput, userID int64) (domain.Venta, error) {
+func (s *VentaStore) Create(ctx context.Context, input inputs.VentaInput, userID int64) (domain.Venta, error) {
 	venta, err := normalizeVenta(input)
 	if err != nil {
 		return domain.Venta{}, err
 	}
 
-	ctx := context.Background()
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.Venta{}, err
@@ -143,7 +142,7 @@ func (s *VentaStore) Create(input inputs.VentaInput, userID int64) (domain.Venta
 	if err := tx.Commit(); err != nil {
 		return domain.Venta{}, err
 	}
-	return s.getVenta(venta.ID)
+	return s.getVenta(ctx, venta.ID)
 }
 
 func (s *VentaStore) insertItems(ctx context.Context, tx *sql.Tx, ventaID int64, items []domain.VentaItem) error {
@@ -164,13 +163,12 @@ func (s *VentaStore) insertItems(ctx context.Context, tx *sql.Tx, ventaID int64,
 	return nil
 }
 
-func (s *VentaStore) Update(id int64, input inputs.VentaInput) (domain.Venta, error) {
+func (s *VentaStore) Update(ctx context.Context, id int64, input inputs.VentaInput) (domain.Venta, error) {
 	venta, err := normalizeVenta(input)
 	if err != nil {
 		return domain.Venta{}, err
 	}
 
-	ctx := context.Background()
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.Venta{}, err
@@ -205,11 +203,10 @@ func (s *VentaStore) Update(id int64, input inputs.VentaInput) (domain.Venta, er
 	if err := tx.Commit(); err != nil {
 		return domain.Venta{}, err
 	}
-	return s.getVenta(id)
+	return s.getVenta(ctx, id)
 }
 
-func (s *VentaStore) Delete(id int64) error {
-	ctx := context.Background()
+func (s *VentaStore) Delete(ctx context.Context, id int64) error {
 	var estado string
 	if err := s.db.QueryRowContext(ctx, s.db.rebind(`SELECT estado FROM ventas WHERE id = ?`), id).Scan(&estado); err != nil {
 		return err
@@ -227,8 +224,7 @@ func (s *VentaStore) Delete(id int64) error {
 	return nil
 }
 
-func (s *VentaStore) FindByID(id int64) (*domain.Venta, error) {
-	ctx := context.Background()
+func (s *VentaStore) FindByID(ctx context.Context, id int64) (*domain.Venta, error) {
 	q := s.db.rebind(`SELECT ` + ventaColumns + ` FROM ventas WHERE id = ?`)
 	venta, err := scanVenta(s.db.QueryRowContext(ctx, q, id))
 	if err != nil {
@@ -300,16 +296,16 @@ func ventaWhere(f store.VentaFilters) (string, []any) {
 	return " WHERE " + strings.Join(conds, " AND "), args
 }
 
-func (s *VentaStore) Count(filters store.VentaFilters) int {
+func (s *VentaStore) Count(ctx context.Context, filters store.VentaFilters) int {
 	where, args := ventaWhere(filters)
 	var total int
-	if err := s.db.QueryRowContext(context.Background(), s.db.rebind(`SELECT COUNT(*) FROM ventas`+where), args...).Scan(&total); err != nil {
+	if err := s.db.QueryRowContext(ctx, s.db.rebind(`SELECT COUNT(*) FROM ventas`+where), args...).Scan(&total); err != nil {
 		return 0
 	}
 	return total
 }
 
-func (s *VentaStore) List(offset, limit int, filters store.VentaFilters) ([]domain.Venta, bool, error) {
+func (s *VentaStore) List(ctx context.Context, offset, limit int, filters store.VentaFilters) ([]domain.Venta, bool, error) {
 	if offset < 0 {
 		offset = 0
 	}
@@ -317,7 +313,6 @@ func (s *VentaStore) List(offset, limit int, filters store.VentaFilters) ([]doma
 		limit = 20
 	}
 
-	ctx := context.Background()
 	where, args := ventaWhere(filters)
 
 	q := s.db.rebind(`SELECT ` + ventaColumns + ` FROM ventas` + where + ` ORDER BY id DESC LIMIT ? OFFSET ?`)
@@ -353,8 +348,7 @@ func (s *VentaStore) List(offset, limit int, filters store.VentaFilters) ([]doma
 	return ventas, hasMore, nil
 }
 
-func (s *VentaStore) Emit(id int64) (domain.Venta, error) {
-	ctx := context.Background()
+func (s *VentaStore) Emit(ctx context.Context, id int64) (domain.Venta, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.Venta{}, err
@@ -397,11 +391,10 @@ func (s *VentaStore) Emit(id int64) (domain.Venta, error) {
 	if err := tx.Commit(); err != nil {
 		return domain.Venta{}, err
 	}
-	return s.getVenta(id)
+	return s.getVenta(ctx, id)
 }
 
-func (s *VentaStore) Annul(id int64, motivo string, userID int64) (domain.Venta, error) {
-	ctx := context.Background()
+func (s *VentaStore) Annul(ctx context.Context, id int64, motivo string, userID int64) (domain.Venta, error) {
 	now := time.Now()
 	var res sql.Result
 	var err error
@@ -419,7 +412,7 @@ func (s *VentaStore) Annul(id int64, motivo string, userID int64) (domain.Venta,
 	if n, _ := res.RowsAffected(); n == 0 {
 		return domain.Venta{}, domain.Validation("solo se puede anular una venta emitida")
 	}
-	return s.getVenta(id)
+	return s.getVenta(ctx, id)
 }
 
 func scanVenta(sc rowScanner) (*domain.Venta, error) {
@@ -446,8 +439,8 @@ func scanVenta(sc rowScanner) (*domain.Venta, error) {
 	return &v, nil
 }
 
-func (s *VentaStore) getVenta(id int64) (domain.Venta, error) {
-	v, err := s.FindByID(id)
+func (s *VentaStore) getVenta(ctx context.Context, id int64) (domain.Venta, error) {
+	v, err := s.FindByID(ctx, id)
 	if err != nil {
 		return domain.Venta{}, err
 	}

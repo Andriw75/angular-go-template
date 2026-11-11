@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -55,8 +56,9 @@ func main() {
 
 	crypt := auth.NewCryptManager()
 	users := database.NewUserStore(db, crypt)
+	ctx := context.Background()
 
-	user, err := users.FindByUsername(*username)
+	user, err := users.FindByUsername(ctx, *username)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "usuario no encontrado:", err)
 		os.Exit(1)
@@ -67,7 +69,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "hash:", err)
 		os.Exit(1)
 	}
-	if err := users.UpdatePassword(user.ID, hash, false); err != nil {
+	if err := users.UpdatePassword(ctx, user.ID, hash, false); err != nil {
 		fmt.Fprintln(os.Stderr, "update:", err)
 		os.Exit(1)
 	}

@@ -130,7 +130,7 @@ func (h *ArchivoHandler) List(w http.ResponseWriter, r *http.Request) {
 		offset = 0
 	}
 
-	archivos, hasMore, err := h.deps.ArchivoStore.List(offset, limit, q)
+	archivos, hasMore, err := h.deps.ArchivoStore.List(r.Context(), offset, limit, q)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "error al listar archivos")
 		return
@@ -145,7 +145,7 @@ func (h *ArchivoHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ArchivoHandler) Count(w http.ResponseWriter, r *http.Request) {
-	total, err := h.deps.ArchivoStore.Count(r.URL.Query().Get("q"))
+	total, err := h.deps.ArchivoStore.Count(r.Context(), r.URL.Query().Get("q"))
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "error al contar archivos")
 		return
@@ -251,7 +251,7 @@ func (h *ArchivoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 			mimeType = "application/octet-stream"
 		}
 
-		archivo, err := h.deps.ArchivoStore.Create(name, cleanOriginalName(fh.Filename), mimeType, written, vis, userID)
+		archivo, err := h.deps.ArchivoStore.Create(r.Context(), name, cleanOriginalName(fh.Filename), mimeType, written, vis, userID)
 		if err != nil {
 			_ = os.Remove(filepath.Join(filesDir, name))
 			rollback()
@@ -272,7 +272,7 @@ func (h *ArchivoHandler) Serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	archivo, err := h.deps.ArchivoStore.FindByFileName(filename)
+	archivo, err := h.deps.ArchivoStore.FindByFileName(r.Context(), filename)
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -372,7 +372,7 @@ func (h *ArchivoHandler) UpdateVisibilidad(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	archivo, err := h.deps.ArchivoStore.FindByID(id)
+	archivo, err := h.deps.ArchivoStore.FindByID(r.Context(), id)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "archivo not found")
 		return
@@ -397,7 +397,7 @@ func (h *ArchivoHandler) UpdateVisibilidad(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	if err := h.deps.ArchivoStore.UpdateVisibilidad(id, body.Visibilidad); err != nil {
+	if err := h.deps.ArchivoStore.UpdateVisibilidad(r.Context(), id, body.Visibilidad); err != nil {
 		if oldPublic != newPublic {
 			_ = h.deps.Storage.MoveFile(dst, src, archivo.FileName)
 		}
@@ -405,7 +405,7 @@ func (h *ArchivoHandler) UpdateVisibilidad(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	updated, _ := h.deps.ArchivoStore.FindByID(id)
+	updated, _ := h.deps.ArchivoStore.FindByID(r.Context(), id)
 	writeJSON(w, http.StatusOK, outputs.ToArchivoResponse(updated))
 }
 
@@ -422,7 +422,7 @@ func (h *ArchivoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	archivo, err := h.deps.ArchivoStore.FindByID(id)
+	archivo, err := h.deps.ArchivoStore.FindByID(r.Context(), id)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "archivo not found")
 		return
@@ -433,7 +433,7 @@ func (h *ArchivoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.deps.ArchivoStore.Delete(id); err != nil {
+	if err := h.deps.ArchivoStore.Delete(r.Context(), id); err != nil {
 		writeError(w, r, err)
 		return
 	}

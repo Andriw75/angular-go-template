@@ -37,7 +37,7 @@ func parseCategoriaFilters(r *http.Request) store.CategoriaFilters {
 }
 
 func (h *CategoriaHandler) Count(w http.ResponseWriter, r *http.Request) {
-	count := h.deps.CategoriaStore.Count(parseCategoriaFilters(r))
+	count := h.deps.CategoriaStore.Count(r.Context(), parseCategoriaFilters(r))
 	writeJSON(w, http.StatusOK, count)
 }
 
@@ -49,10 +49,10 @@ func (h *CategoriaHandler) List(w http.ResponseWriter, r *http.Request) {
 		limit = 10
 	}
 
-	result := h.deps.CategoriaStore.List(offset, limit, parseCategoriaFilters(r))
+	result := h.deps.CategoriaStore.List(r.Context(), offset, limit, parseCategoriaFilters(r))
 	for i := range result.Data {
 		result.Data[i].Imagenes = outputs.ToImagenResponses(
-			h.deps.ImagenStore.ListByEntidad("categoria", result.Data[i].ID),
+			h.deps.ImagenStore.ListByEntidad(r.Context(), "categoria", result.Data[i].ID),
 			result.Data[i].Activo,
 		)
 	}
@@ -66,7 +66,7 @@ func (h *CategoriaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	categoria, err := h.deps.CategoriaStore.FindByID(id)
+	categoria, err := h.deps.CategoriaStore.FindByID(r.Context(), id)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -74,7 +74,7 @@ func (h *CategoriaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	resp := outputs.ToCategoriaResponse(categoria)
 	resp.Imagenes = outputs.ToImagenResponses(
-		h.deps.ImagenStore.ListByEntidad("categoria", resp.ID),
+		h.deps.ImagenStore.ListByEntidad(r.Context(), "categoria", resp.ID),
 		categoria.Activo,
 	)
 	writeJSON(w, http.StatusOK, resp)
@@ -86,7 +86,7 @@ func (h *CategoriaHandler) UploadImages(w http.ResponseWriter, r *http.Request) 
 		writeJSONError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	if _, err := h.deps.CategoriaStore.FindByID(id); err != nil {
+	if _, err := h.deps.CategoriaStore.FindByID(r.Context(), id); err != nil {
 		writeError(w, r, err)
 		return
 	}
@@ -99,11 +99,11 @@ func (h *CategoriaHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	if _, err := h.deps.CategoriaStore.FindByID(id); err != nil {
+	if _, err := h.deps.CategoriaStore.FindByID(r.Context(), id); err != nil {
 		writeError(w, r, err)
 		return
 	}
-	deleteImageForEntity(h.deps, "categoria", id, imagenID, w)
+	deleteImageForEntity(r.Context(), h.deps, "categoria", id, imagenID, w)
 }
 
 func (h *CategoriaHandler) ReorderImages(w http.ResponseWriter, r *http.Request) {
@@ -112,7 +112,7 @@ func (h *CategoriaHandler) ReorderImages(w http.ResponseWriter, r *http.Request)
 		writeJSONError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	if _, err := h.deps.CategoriaStore.FindByID(id); err != nil {
+	if _, err := h.deps.CategoriaStore.FindByID(r.Context(), id); err != nil {
 		writeError(w, r, err)
 		return
 	}
@@ -137,7 +137,7 @@ func (h *CategoriaHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Activo:      input.Activo,
 	}
 
-	created, err := h.deps.CategoriaStore.Create(categoria)
+	created, err := h.deps.CategoriaStore.Create(r.Context(), categoria)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -145,7 +145,7 @@ func (h *CategoriaHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	resp := outputs.ToCategoriaResponse(&created)
 	resp.Imagenes = outputs.ToImagenResponses(
-		h.deps.ImagenStore.ListByEntidad("categoria", resp.ID),
+		h.deps.ImagenStore.ListByEntidad(r.Context(), "categoria", resp.ID),
 		created.Activo,
 	)
 	writeJSON(w, http.StatusCreated, resp)
@@ -164,7 +164,7 @@ func (h *CategoriaHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := h.deps.CategoriaStore.FindByID(id)
+	existing, err := h.deps.CategoriaStore.FindByID(r.Context(), id)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -180,16 +180,16 @@ func (h *CategoriaHandler) Update(w http.ResponseWriter, r *http.Request) {
 		existing.Activo = *input.Activo
 	}
 
-	if err := h.deps.CategoriaStore.Update(id, *existing); err != nil {
+	if err := h.deps.CategoriaStore.Update(r.Context(), id, *existing); err != nil {
 		writeError(w, r, err)
 		return
 	}
 
-	EnsureCategoryImagesPlacement(h.deps, id)
+	EnsureCategoryImagesPlacement(r.Context(), h.deps, id)
 
 	resp := outputs.ToCategoriaResponse(existing)
 	resp.Imagenes = outputs.ToImagenResponses(
-		h.deps.ImagenStore.ListByEntidad("categoria", resp.ID),
+		h.deps.ImagenStore.ListByEntidad(r.Context(), "categoria", resp.ID),
 		existing.Activo,
 	)
 	writeJSON(w, http.StatusOK, resp)
@@ -202,14 +202,14 @@ func (h *CategoriaHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := h.deps.CategoriaStore.FindByID(id); err != nil {
+	if _, err := h.deps.CategoriaStore.FindByID(r.Context(), id); err != nil {
 		writeError(w, r, err)
 		return
 	}
 
 	cascade, _ := strconv.ParseBool(r.URL.Query().Get("cascade"))
 
-	products := h.deps.ProductoStore.ListByCategoria(id)
+	products := h.deps.ProductoStore.ListByCategoria(r.Context(), id)
 	if len(products) > 0 && !cascade {
 		writeError(w, r, domain.Conflict("conflict", "categoria has products, use cascade=true to delete them too"))
 		return
@@ -219,24 +219,24 @@ func (h *CategoriaHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	var filesToRemove []string
 	if cascade {
 		for _, p := range products {
-			for _, img := range h.deps.ImagenStore.ListByEntidad("producto", p.ID) {
+			for _, img := range h.deps.ImagenStore.ListByEntidad(r.Context(), "producto", p.ID) {
 				filesToRemove = append(filesToRemove, img.FileName)
 			}
 		}
 	}
-	for _, img := range h.deps.ImagenStore.ListByEntidad("categoria", id) {
+	for _, img := range h.deps.ImagenStore.ListByEntidad(r.Context(), "categoria", id) {
 		filesToRemove = append(filesToRemove, img.FileName)
 	}
 
 	// Bajas en el store (negocio) primero.
 	if cascade {
 		for _, p := range products {
-			h.deps.ImagenStore.DeleteByEntidad("producto", p.ID)
-			_ = h.deps.ProductoStore.Delete(p.ID)
+			h.deps.ImagenStore.DeleteByEntidad(r.Context(), "producto", p.ID)
+			_ = h.deps.ProductoStore.Delete(r.Context(), p.ID)
 		}
 	}
-	h.deps.ImagenStore.DeleteByEntidad("categoria", id)
-	if err := h.deps.CategoriaStore.Delete(id); err != nil {
+	h.deps.ImagenStore.DeleteByEntidad(r.Context(), "categoria", id)
+	if err := h.deps.CategoriaStore.Delete(r.Context(), id); err != nil {
 		writeError(w, r, err)
 		return
 	}

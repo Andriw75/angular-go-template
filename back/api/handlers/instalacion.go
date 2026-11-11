@@ -21,7 +21,7 @@ func NewInstalacionHandler(deps *Dependencies) *InstalacionHandler {
 }
 
 func (h *InstalacionHandler) List(w http.ResponseWriter, r *http.Request) {
-	items := h.deps.InstalacionStore.List()
+	items := h.deps.InstalacionStore.List(r.Context())
 	if items == nil {
 		items = []domain.Instalacion{}
 	}
@@ -83,7 +83,7 @@ func (h *InstalacionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Contacto:         input.Contacto,
 	}
 
-	created, err := h.deps.InstalacionStore.Create(inst)
+	created, err := h.deps.InstalacionStore.Create(r.Context(), inst)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -105,7 +105,7 @@ func (h *InstalacionHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := h.deps.InstalacionStore.FindByID(id)
+	existing, err := h.deps.InstalacionStore.FindByID(r.Context(), id)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -158,7 +158,7 @@ func (h *InstalacionHandler) Update(w http.ResponseWriter, r *http.Request) {
 		existing.UltimaConexion = *input.UltimaConexion
 	}
 
-	if err := h.deps.InstalacionStore.Update(id, *existing); err != nil {
+	if err := h.deps.InstalacionStore.Update(r.Context(), id, *existing); err != nil {
 		writeError(w, r, err)
 		return
 	}
@@ -173,7 +173,7 @@ func (h *InstalacionHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.deps.InstalacionStore.Delete(id); err != nil {
+	if err := h.deps.InstalacionStore.Delete(r.Context(), id); err != nil {
 		writeError(w, r, err)
 		return
 	}

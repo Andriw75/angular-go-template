@@ -18,9 +18,7 @@ func NewImagenStore(db *DB) *ImagenStore {
 
 const imagenColumns = `id, tipo, entidad_id, file_name, orden, creado_en`
 
-func (s *ImagenStore) Add(tipo string, entidadID int64, fileName string) (domain.Imagen, error) {
-	ctx := context.Background()
-
+func (s *ImagenStore) Add(ctx context.Context, tipo string, entidadID int64, fileName string) (domain.Imagen, error) {
 	var next int
 	qNext := s.db.rebind(`SELECT COALESCE(MAX(orden), 0) + 1 FROM imagenes WHERE tipo = ? AND entidad_id = ?`)
 	if err := s.db.QueryRowContext(ctx, qNext, tipo, entidadID).Scan(&next); err != nil {
@@ -43,8 +41,8 @@ func (s *ImagenStore) Add(tipo string, entidadID int64, fileName string) (domain
 	return img, nil
 }
 
-func (s *ImagenStore) ListAll() []domain.Imagen {
-	rows, err := s.db.QueryContext(context.Background(), `SELECT `+imagenColumns+` FROM imagenes ORDER BY id`)
+func (s *ImagenStore) ListAll(ctx context.Context) []domain.Imagen {
+	rows, err := s.db.QueryContext(ctx, `SELECT `+imagenColumns+` FROM imagenes ORDER BY id`)
 	if err != nil {
 		return nil
 	}
@@ -61,10 +59,10 @@ func (s *ImagenStore) ListAll() []domain.Imagen {
 	return out
 }
 
-func (s *ImagenStore) ListByEntidad(tipo string, entidadID int64) []domain.Imagen {
+func (s *ImagenStore) ListByEntidad(ctx context.Context, tipo string, entidadID int64) []domain.Imagen {
 	q := s.db.rebind(`SELECT ` + imagenColumns + ` FROM imagenes
 		WHERE tipo = ? AND entidad_id = ? ORDER BY orden, id`)
-	rows, err := s.db.QueryContext(context.Background(), q, tipo, entidadID)
+	rows, err := s.db.QueryContext(ctx, q, tipo, entidadID)
 	if err != nil {
 		return nil
 	}
@@ -81,8 +79,8 @@ func (s *ImagenStore) ListByEntidad(tipo string, entidadID int64) []domain.Image
 	return out
 }
 
-func (s *ImagenStore) Reorder(tipo string, entidadID int64, ids []int64) error {
-	existing := s.ListByEntidad(tipo, entidadID)
+func (s *ImagenStore) Reorder(ctx context.Context, tipo string, entidadID int64, ids []int64) error {
+	existing := s.ListByEntidad(ctx, tipo, entidadID)
 	if len(existing) != len(ids) {
 		return sql.ErrNoRows
 	}
@@ -92,7 +90,6 @@ func (s *ImagenStore) Reorder(tipo string, entidadID int64, ids []int64) error {
 		valid[img.ID] = true
 	}
 
-	ctx := context.Background()
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -111,18 +108,18 @@ func (s *ImagenStore) Reorder(tipo string, entidadID int64, ids []int64) error {
 	return tx.Commit()
 }
 
-func (s *ImagenStore) FindByID(id int64) (*domain.Imagen, error) {
+func (s *ImagenStore) FindByID(ctx context.Context, id int64) (*domain.Imagen, error) {
 	q := s.db.rebind(`SELECT ` + imagenColumns + ` FROM imagenes WHERE id = ?`)
-	return scanImagen(s.db.QueryRowContext(context.Background(), q, id))
+	return scanImagen(s.db.QueryRowContext(ctx, q, id))
 }
 
-func (s *ImagenStore) FindByFileName(fileName string) (*domain.Imagen, error) {
+func (s *ImagenStore) FindByFileName(ctx context.Context, fileName string) (*domain.Imagen, error) {
 	q := s.db.rebind(`SELECT ` + imagenColumns + ` FROM imagenes WHERE file_name = ?`)
-	return scanImagen(s.db.QueryRowContext(context.Background(), q, fileName))
+	return scanImagen(s.db.QueryRowContext(ctx, q, fileName))
 }
 
-func (s *ImagenStore) Delete(id int64) error {
-	res, err := s.db.ExecContext(context.Background(), s.db.rebind(`DELETE FROM imagenes WHERE id = ?`), id)
+func (s *ImagenStore) Delete(ctx context.Context, id int64) error {
+	res, err := s.db.ExecContext(ctx, s.db.rebind(`DELETE FROM imagenes WHERE id = ?`), id)
 	if err != nil {
 		return err
 	}
@@ -132,13 +129,13 @@ func (s *ImagenStore) Delete(id int64) error {
 	return nil
 }
 
-func (s *ImagenStore) DeleteByEntidad(tipo string, entidadID int64) []string {
-	existing := s.ListByEntidad(tipo, entidadID)
+func (s *ImagenStore) DeleteByEntidad(ctx context.Context, tipo string, entidadID int64) []string {
+	existing := s.ListByEntidad(ctx, tipo, entidadID)
 	files := make([]string, 0, len(existing))
 	for _, img := range existing {
 		files = append(files, img.FileName)
 	}
-	_, _ = s.db.ExecContext(context.Background(),
+	_, _ = s.db.ExecContext(ctx,
 		s.db.rebind(`DELETE FROM imagenes WHERE tipo = ? AND entidad_id = ?`), tipo, entidadID)
 	return files
 }

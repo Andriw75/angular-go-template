@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -19,6 +20,7 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	r.Use(middleware.RealIP)
 	r.Use(securityHeaders)
 	r.Use(limitBody)
+	r.Use(csrfProtection(deps.Config.CSRFCookieName))
 	r.Use(corsMiddleware(deps.Config.CORSOrigin))
 
 	authHandler := handlers.NewAuthHandler(deps)
@@ -39,7 +41,16 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok"}`))
+		if deps.PingDB != nil {
+			ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+			defer cancel()
+			if err := deps.PingDB(ctx); err != nil {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				w.Write([]byte(`{"status":"unavailable","database":"down"}`))
+				return
+			}
+		}
+		w.Write([]byte(`{"status":"ok","database":"ok"}`))
 	})
 
 	r.Route("/auth", func(r chi.Router) {

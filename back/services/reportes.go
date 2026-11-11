@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"math/rand"
@@ -25,8 +26,8 @@ func NewReporteService(buses store.BusStore, ventas store.VentaStore) *ReporteSe
 	return &ReporteService{buses: buses, ventas: ventas}
 }
 
-func (s *ReporteService) Buses(filters store.BusFilters) outputs.ReporteBuses {
-	result := s.buses.List(0, reportMaxRows, filters)
+func (s *ReporteService) Buses(ctx context.Context, filters store.BusFilters) outputs.ReporteBuses {
+	result := s.buses.List(ctx, 0, reportMaxRows, filters)
 	return buildBusesReport(result.Data, filters, "actual", 0)
 }
 
@@ -188,9 +189,9 @@ func buildBusesReport(data []outputs.BusResponse, filters store.BusFilters, modo
 	}
 }
 
-func (s *ReporteService) Ventas(filters store.VentaFilters) outputs.ReporteVentas {
-	ventas, _, _ := s.ventas.List(0, reportMaxRows, filters)
-	total := s.ventas.Count(filters)
+func (s *ReporteService) Ventas(ctx context.Context, filters store.VentaFilters) outputs.ReporteVentas {
+	ventas, _, _ := s.ventas.List(ctx, 0, reportMaxRows, filters)
+	total := s.ventas.Count(ctx, filters)
 
 	resumen := outputs.ReporteVentasResumen{Total: total}
 	clientes := map[string]struct{}{}

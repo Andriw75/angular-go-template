@@ -20,10 +20,10 @@ const instalacionColumns = `id, tipo, nombre, estado, lat, lng, direccion, zona,
 	descripcion, fabricante, modelo, instalador, proveedor, ultima_conexion, firmware, ip, mac,
 	resolucion, contenido, senal, bateria, potencia, contacto, creado_en, actualizado_en`
 
-func (s *InstalacionStore) List() []domain.Instalacion {
+func (s *InstalacionStore) List(ctx context.Context) []domain.Instalacion {
 	out := make([]domain.Instalacion, 0)
 
-	rows, err := s.db.QueryContext(context.Background(), `SELECT `+instalacionColumns+` FROM instalaciones ORDER BY id`)
+	rows, err := s.db.QueryContext(ctx, `SELECT `+instalacionColumns+` FROM instalaciones ORDER BY id`)
 	if err != nil {
 		return out
 	}
@@ -39,16 +39,16 @@ func (s *InstalacionStore) List() []domain.Instalacion {
 	return out
 }
 
-func (s *InstalacionStore) FindByID(id int64) (*domain.Instalacion, error) {
+func (s *InstalacionStore) FindByID(ctx context.Context, id int64) (*domain.Instalacion, error) {
 	q := s.db.rebind(`SELECT ` + instalacionColumns + ` FROM instalaciones WHERE id = ?`)
-	instalacion, err := scanInstalacion(s.db.QueryRowContext(context.Background(), q, id))
+	instalacion, err := scanInstalacion(s.db.QueryRowContext(ctx, q, id))
 	if err != nil {
 		return nil, translateDBError(err, "instalacion no encontrada")
 	}
 	return instalacion, nil
 }
 
-func (s *InstalacionStore) Create(i domain.Instalacion) (domain.Instalacion, error) {
+func (s *InstalacionStore) Create(ctx context.Context, i domain.Instalacion) (domain.Instalacion, error) {
 	now := time.Now()
 	i.CreadoEn = now
 	i.ActualizadoEn = now
@@ -59,7 +59,7 @@ func (s *InstalacionStore) Create(i domain.Instalacion) (domain.Instalacion, err
 		 ip, mac, resolucion, contenido, senal, bateria, potencia, contacto, creado_en, actualizado_en)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`)
 
-	err := s.db.QueryRowContext(context.Background(), q,
+	err := s.db.QueryRowContext(ctx, q,
 		i.Tipo, i.Nombre, i.Estado, i.Lat, i.Lng, i.Direccion, i.Zona, i.FechaInstalacion, i.Serial,
 		strPtr(i.Descripcion), strPtr(i.Fabricante), strPtr(i.Modelo), strPtr(i.Instalador),
 		strPtr(i.Proveedor), strPtr(i.UltimaConexion), strPtr(i.Firmware), strPtr(i.IP), strPtr(i.MAC),
@@ -72,32 +72,34 @@ func (s *InstalacionStore) Create(i domain.Instalacion) (domain.Instalacion, err
 	return i, nil
 }
 
-func (s *InstalacionStore) Update(id int64, i domain.Instalacion) error {
-	i.ActualizadoEn = time.Now()
+func (s *InstalacionStore) Update(ctx context.Context, id int64, i domain.Instalacion) error {
+	oldUpdated := i.ActualizadoEn
+	now := time.Now()
+	i.ActualizadoEn = now
 	q := s.db.rebind(`UPDATE instalaciones SET
 		tipo = ?, nombre = ?, estado = ?, lat = ?, lng = ?, direccion = ?, zona = ?, fecha_instalacion = ?, serial = ?,
 		descripcion = ?, fabricante = ?, modelo = ?, instalador = ?, proveedor = ?, ultima_conexion = ?, firmware = ?,
 		ip = ?, mac = ?, resolucion = ?, contenido = ?, senal = ?, bateria = ?, potencia = ?, contacto = ?, actualizado_en = ?
-		WHERE id = ?`)
+		WHERE id = ? AND actualizado_en = ?`)
 
-	res, err := s.db.ExecContext(context.Background(), q,
+	res, err := s.db.ExecContext(ctx, q,
 		i.Tipo, i.Nombre, i.Estado, i.Lat, i.Lng, i.Direccion, i.Zona, i.FechaInstalacion, i.Serial,
 		strPtr(i.Descripcion), strPtr(i.Fabricante), strPtr(i.Modelo), strPtr(i.Instalador),
 		strPtr(i.Proveedor), strPtr(i.UltimaConexion), strPtr(i.Firmware), strPtr(i.IP), strPtr(i.MAC),
 		strPtr(i.Resolucion), strPtr(i.Contenido), floatPtr(i.Senal), floatPtr(i.Bateria),
-		floatPtr(i.Potencia), strPtr(i.Contacto), formatTime(i.ActualizadoEn), id,
+		floatPtr(i.Potencia), strPtr(i.Contacto), formatTime(now), id, formatTime(oldUpdated),
 	)
 	if err != nil {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return domain.NotFound("instalacion no encontrada")
+		return domain.Conflict("conflict", "la instalacion fue modificada por otra sesión; recarga e intenta de nuevo")
 	}
 	return nil
 }
 
-func (s *InstalacionStore) Delete(id int64) error {
-	res, err := s.db.ExecContext(context.Background(), s.db.rebind(`DELETE FROM instalaciones WHERE id = ?`), id)
+func (s *InstalacionStore) Delete(ctx context.Context, id int64) error {
+	res, err := s.db.ExecContext(ctx, s.db.rebind(`DELETE FROM instalaciones WHERE id = ?`), id)
 	if err != nil {
 		return err
 	}

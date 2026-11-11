@@ -51,7 +51,7 @@ func (h *MensajeHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m, err := h.deps.MensajeStore.FindByID(id)
+	m, err := h.deps.MensajeStore.FindByID(r.Context(), id)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "not found")
 		return
@@ -72,7 +72,7 @@ func (h *MensajeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now()
-	created, err := h.deps.MensajeStore.Create(input, now)
+	created, err := h.deps.MensajeStore.Create(r.Context(), input, now)
 	if err != nil {
 		slog.Error("failed to create mensaje", "error", err)
 		writeJSONError(w, http.StatusInternalServerError, "failed to create mensaje")
@@ -106,7 +106,7 @@ func (h *MensajeHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now()
-	updated, err := h.deps.MensajeStore.Update(id, input, now, username)
+	updated, err := h.deps.MensajeStore.Update(r.Context(), id, input, now, username)
 	if err != nil {
 		slog.Error("failed to update mensaje", "error", err)
 		writeJSONError(w, http.StatusInternalServerError, "failed to update mensaje")
@@ -133,7 +133,7 @@ func (h *MensajeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.deps.MensajeStore.Delete(id); err != nil {
+	if err := h.deps.MensajeStore.Delete(r.Context(), id); err != nil {
 		writeJSONError(w, http.StatusNotFound, "not found")
 		return
 	}
@@ -151,7 +151,7 @@ func (h *MensajeHandler) ListPasadas(w http.ResponseWriter, r *http.Request) {
 		limit = 10
 	}
 
-	pasadas, hasMore := h.deps.MensajeStore.ListPasadas(offset, limit)
+	pasadas, hasMore := h.deps.MensajeStore.ListPasadas(r.Context(), offset, limit)
 	result := make([]outputs.MensajeResponse, 0, len(pasadas))
 	for i := range pasadas {
 		result = append(result, outputs.ToMensajeResponse(&pasadas[i]))
@@ -166,6 +166,6 @@ func (h *MensajeHandler) ListPasadas(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MensajeHandler) CountPasadas(w http.ResponseWriter, r *http.Request) {
-	count := h.deps.MensajeStore.CountPasadas()
+	count := h.deps.MensajeStore.CountPasadas(r.Context())
 	writeJSON(w, http.StatusOK, count)
 }

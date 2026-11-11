@@ -100,12 +100,12 @@ func normalizeBusesParams(p BusesDocumentParams) BusesDocumentParams {
 	return p
 }
 
-func (s *DocumentoService) busesReport(p BusesDocumentParams) outputs.ReporteBuses {
+func (s *DocumentoService) busesReport(ctx context.Context, p BusesDocumentParams) outputs.ReporteBuses {
 	filters := store.BusFilters{Q: p.Q, Tipo: p.Tipo, Activo: p.Activo, Desde: p.Desde, Hasta: p.Hasta}
 	if p.Modo == "generado" {
 		return s.reports.GeneratedBuses(p.Cantidad, filters)
 	}
-	return s.reports.Buses(filters)
+	return s.reports.Buses(ctx, filters)
 }
 
 func normalizeVentaParams(p VentaDocumentParams) VentaDocumentParams {
@@ -129,15 +129,15 @@ func (s *DocumentoService) GenerateBuses(ctx context.Context, p BusesDocumentPar
 		progress(10)
 	}
 
-	existing, err := s.store.FindByHash(tipo, hash)
+	existing, err := s.store.FindByHash(ctx, tipo, hash)
 	if err == nil && existing != nil {
 		if p.Politica == "inmutable" || existing.Politica == "inmutable" {
 			return *existing, true, nil
 		}
-		rep := s.busesReport(p)
+		rep := s.busesReport(ctx, p)
 		snapshot, _ := json.Marshal(rep)
 		var written []string
-		doc, gerr := s.store.AddVersion(existing.ID, string(snapshot), func(codigo string, version int) ([]domain.DocumentoArchivo, error) {
+		doc, gerr := s.store.AddVersion(ctx, existing.ID, string(snapshot), func(codigo string, version int) ([]domain.DocumentoArchivo, error) {
 			files, werr := s.writeBusesFiles(codigo, version, rep, p.Plantilla)
 			for _, f := range files {
 				written = append(written, f.FileName)
@@ -157,7 +157,7 @@ func (s *DocumentoService) GenerateBuses(ctx context.Context, p BusesDocumentPar
 	if progress != nil {
 		progress(30)
 	}
-	rep := s.busesReport(p)
+	rep := s.busesReport(ctx, p)
 	snapshot, _ := json.Marshal(rep)
 	if progress != nil {
 		progress(60)
@@ -170,7 +170,7 @@ func (s *DocumentoService) GenerateBuses(ctx context.Context, p BusesDocumentPar
 	}
 
 	var written []string
-	doc, err := s.store.CreateWithCorrelativo(input, func(codigo string) ([]domain.DocumentoArchivo, error) {
+	doc, err := s.store.CreateWithCorrelativo(ctx, input, func(codigo string) ([]domain.DocumentoArchivo, error) {
 		files, werr := s.writeBusesFiles(codigo, 1, rep, p.Plantilla)
 		for _, f := range files {
 			written = append(written, f.FileName)
@@ -179,7 +179,7 @@ func (s *DocumentoService) GenerateBuses(ctx context.Context, p BusesDocumentPar
 	})
 	if err != nil {
 		s.removeFiles(written)
-		if dup, derr := s.store.FindByHash(tipo, hash); derr == nil && dup != nil {
+		if dup, derr := s.store.FindByHash(ctx, tipo, hash); derr == nil && dup != nil {
 			return *dup, true, nil
 		}
 		return domain.Documento{}, false, err
@@ -192,7 +192,7 @@ func (s *DocumentoService) GenerateBuses(ctx context.Context, p BusesDocumentPar
 
 func (s *DocumentoService) GenerateVenta(ctx context.Context, p VentaDocumentParams, userID int64, progress func(int)) (domain.Documento, bool, error) {
 	p = normalizeVentaParams(p)
-	venta, err := s.ventas.FindByID(p.VentaID)
+	venta, err := s.ventas.FindByID(ctx, p.VentaID)
 	if err != nil {
 		return domain.Documento{}, false, err
 	}
@@ -211,7 +211,7 @@ func (s *DocumentoService) GenerateVenta(ctx context.Context, p VentaDocumentPar
 		progress(10)
 	}
 
-	existing, err := s.store.FindByHash(tipo, hash)
+	existing, err := s.store.FindByHash(ctx, tipo, hash)
 	if err == nil && existing != nil {
 		if p.Politica == "inmutable" || existing.Politica == "inmutable" {
 			return *existing, true, nil
@@ -219,7 +219,7 @@ func (s *DocumentoService) GenerateVenta(ctx context.Context, p VentaDocumentPar
 		ventaResp := outputs.ToVentaResponse(venta)
 		snapshot, _ := json.Marshal(ventaResp)
 		var written []string
-		doc, gerr := s.store.AddVersion(existing.ID, string(snapshot), func(codigo string, version int) ([]domain.DocumentoArchivo, error) {
+		doc, gerr := s.store.AddVersion(ctx, existing.ID, string(snapshot), func(codigo string, version int) ([]domain.DocumentoArchivo, error) {
 			files, werr := s.writeVentaFiles(codigo, version, ventaResp, p.Plantilla)
 			for _, f := range files {
 				written = append(written, f.FileName)
@@ -248,7 +248,7 @@ func (s *DocumentoService) GenerateVenta(ctx context.Context, p VentaDocumentPar
 		ParametrosHash: hash, ParametrosJSON: paramsJSON, SnapshotJSON: string(snapshot), UserID: userID,
 	}
 	var written []string
-	doc, err := s.store.CreateWithCorrelativo(input, func(codigo string) ([]domain.DocumentoArchivo, error) {
+	doc, err := s.store.CreateWithCorrelativo(ctx, input, func(codigo string) ([]domain.DocumentoArchivo, error) {
 		files, werr := s.writeVentaFiles(codigo, 1, ventaResp, p.Plantilla)
 		for _, f := range files {
 			written = append(written, f.FileName)
@@ -257,7 +257,7 @@ func (s *DocumentoService) GenerateVenta(ctx context.Context, p VentaDocumentPar
 	})
 	if err != nil {
 		s.removeFiles(written)
-		if dup, derr := s.store.FindByHash(tipo, hash); derr == nil && dup != nil {
+		if dup, derr := s.store.FindByHash(ctx, tipo, hash); derr == nil && dup != nil {
 			return *dup, true, nil
 		}
 		return domain.Documento{}, false, err

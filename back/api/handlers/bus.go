@@ -40,7 +40,7 @@ func parseBusFilters(r *http.Request) store.BusFilters {
 
 func (h *BusHandler) Count(w http.ResponseWriter, r *http.Request) {
 	filters := parseBusFilters(r)
-	count := h.deps.BusStore.Count(filters)
+	count := h.deps.BusStore.Count(r.Context(), filters)
 	writeJSON(w, http.StatusOK, count)
 }
 
@@ -52,7 +52,7 @@ func (h *BusHandler) List(w http.ResponseWriter, r *http.Request) {
 		limit = 10
 	}
 
-	result := h.deps.BusStore.List(offset, limit, parseBusFilters(r))
+	result := h.deps.BusStore.List(r.Context(), offset, limit, parseBusFilters(r))
 	writeJSON(w, http.StatusOK, result)
 }
 
@@ -63,7 +63,7 @@ func (h *BusHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bus, err := h.deps.BusStore.FindByID(id)
+	bus, err := h.deps.BusStore.FindByID(r.Context(), id)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -76,6 +76,11 @@ func (h *BusHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var input inputs.BusInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if strings.TrimSpace(input.Placa) == "" || strings.TrimSpace(input.Nombre) == "" {
+		writeError(w, r, domain.Validation("placa y nombre son obligatorios"))
 		return
 	}
 
@@ -112,7 +117,7 @@ func (h *BusHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Descripcion:         input.Descripcion,
 	}
 
-	created, err := h.deps.BusStore.Create(bus)
+	created, err := h.deps.BusStore.Create(r.Context(), bus)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -134,7 +139,7 @@ func (h *BusHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := h.deps.BusStore.FindByID(id)
+	existing, err := h.deps.BusStore.FindByID(r.Context(), id)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -198,7 +203,7 @@ func (h *BusHandler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := h.deps.BusStore.Update(id, *existing); err != nil {
+	if err := h.deps.BusStore.Update(r.Context(), id, *existing); err != nil {
 		writeError(w, r, err)
 		return
 	}
@@ -213,7 +218,7 @@ func (h *BusHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.deps.BusStore.Delete(id); err != nil {
+	if err := h.deps.BusStore.Delete(r.Context(), id); err != nil {
 		writeError(w, r, err)
 		return
 	}

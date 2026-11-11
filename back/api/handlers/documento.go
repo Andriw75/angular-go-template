@@ -42,7 +42,7 @@ func (h *DocumentoHandler) List(w http.ResponseWriter, r *http.Request) {
 		Serie:  q.Get("serie"),
 		Estado: q.Get("estado"),
 	}
-	docs, hasMore, err := h.deps.DocumentoStore.List(offset, limit, filters)
+	docs, hasMore, err := h.deps.DocumentoStore.List(r.Context(), offset, limit, filters)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "error al listar documentos")
 		return
@@ -67,7 +67,7 @@ func (h *DocumentoHandler) Count(w http.ResponseWriter, r *http.Request) {
 		Serie:  q.Get("serie"),
 		Estado: q.Get("estado"),
 	}
-	total, err := h.deps.DocumentoStore.Count(filters)
+	total, err := h.deps.DocumentoStore.Count(r.Context(), filters)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "error al contar documentos")
 		return
@@ -81,7 +81,7 @@ func (h *DocumentoHandler) Get(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	doc, err := h.deps.DocumentoStore.FindByID(id)
+	doc, err := h.deps.DocumentoStore.FindByID(r.Context(), id)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "documento not found")
 		return
@@ -95,7 +95,7 @@ func (h *DocumentoHandler) File(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	doc, err := h.deps.DocumentoStore.FindByID(id)
+	doc, err := h.deps.DocumentoStore.FindByID(r.Context(), id)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "documento not found")
 		return
@@ -151,7 +151,7 @@ func (h *DocumentoHandler) Annul(w http.ResponseWriter, r *http.Request) {
 	if claims != nil {
 		userID = claims.UserID
 	}
-	doc, err := h.deps.DocumentoStore.Annul(id, body.Motivo, userID)
+	doc, err := h.deps.DocumentoStore.Annul(r.Context(), id, body.Motivo, userID)
 	if err != nil {
 		writeError(w, r, err)
 		return

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -58,24 +59,24 @@ func validateImageContent(fh *multipart.FileHeader) error {
 
 // ImageIsPublic indica si la imagen debe servirse por nginx. Para productos
 // exige producto activo y categoría activa; para categorías, categoría activa.
-func ImageIsPublic(deps *Dependencies, tipo string, entidadID int64) (bool, error) {
+func ImageIsPublic(ctx context.Context, deps *Dependencies, tipo string, entidadID int64) (bool, error) {
 	switch tipo {
 	case "producto":
-		producto, err := deps.ProductoStore.FindByID(entidadID)
+		producto, err := deps.ProductoStore.FindByID(ctx, entidadID)
 		if err != nil {
 			return false, err
 		}
 		if !producto.Activo {
 			return false, nil
 		}
-		categoria, err := deps.CategoriaStore.FindByID(producto.CategoriaID)
+		categoria, err := deps.CategoriaStore.FindByID(ctx, producto.CategoriaID)
 		if err != nil {
 			return false, err
 		}
 		return categoria.Activo, nil
 
 	case "categoria":
-		categoria, err := deps.CategoriaStore.FindByID(entidadID)
+		categoria, err := deps.CategoriaStore.FindByID(ctx, entidadID)
 		if err != nil {
 			return false, err
 		}
@@ -95,13 +96,13 @@ func imageDirs(deps *Dependencies, public bool) (dir, other string) {
 
 // EnsureImagePlacement mueve las imágenes de una entidad a la carpeta que
 // corresponde según su estado actual (pública o privada).
-func EnsureImagePlacement(deps *Dependencies, tipo string, entidadID int64) {
-	public, err := ImageIsPublic(deps, tipo, entidadID)
+func EnsureImagePlacement(ctx context.Context, deps *Dependencies, tipo string, entidadID int64) {
+	public, err := ImageIsPublic(ctx, deps, tipo, entidadID)
 	if err != nil {
 		return
 	}
 	dir, other := imageDirs(deps, public)
-	for _, img := range deps.ImagenStore.ListByEntidad(tipo, entidadID) {
+	for _, img := range deps.ImagenStore.ListByEntidad(ctx, tipo, entidadID) {
 		if err := deps.Storage.MoveFileIfMissing(other, dir, img.FileName); err != nil {
 			slog.Warn("no se pudo mover imagen", "tipo", tipo, "entidad", entidadID, "file", img.FileName, "error", err)
 		}
@@ -110,18 +111,18 @@ func EnsureImagePlacement(deps *Dependencies, tipo string, entidadID int64) {
 
 // EnsureCategoryImagesPlacement mueve las imágenes de la categoría y de todos
 // sus productos, porque el estado de la categoría afecta a ambos.
-func EnsureCategoryImagesPlacement(deps *Dependencies, categoriaID int64) {
-	EnsureImagePlacement(deps, "categoria", categoriaID)
-	for _, producto := range deps.ProductoStore.ListByCategoria(categoriaID) {
-		EnsureImagePlacement(deps, "producto", producto.ID)
+func EnsureCategoryImagesPlacement(ctx context.Context, deps *Dependencies, categoriaID int64) {
+	EnsureImagePlacement(ctx, deps, "categoria", categoriaID)
+	for _, producto := range deps.ProductoStore.ListByCategoria(ctx, categoriaID) {
+		EnsureImagePlacement(ctx, deps, "producto", producto.ID)
 	}
 }
 
 // RemoveImageFiles borra los archivos físicos de una entidad de ambas carpetas
 // (pública y privada), para cubrir cualquier transición previa.
-func RemoveImageFiles(deps *Dependencies, tipo string, entidadID int64) {
+func RemoveImageFiles(ctx context.Context, deps *Dependencies, tipo string, entidadID int64) {
 	var filenames []string
-	for _, img := range deps.ImagenStore.ListByEntidad(tipo, entidadID) {
+	for _, img := range deps.ImagenStore.ListByEntidad(ctx, tipo, entidadID) {
 		filenames = append(filenames, img.FileName)
 	}
 	RemoveImageFileNames(deps, filenames)
@@ -134,6 +135,7 @@ func RemoveImageFileNames(deps *Dependencies, filenames []string) {
 }
 
 func uploadImagesForEntity(deps *Dependencies, tipo string, entidadID int64, w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize+(10<<20))
 	if err := r.ParseMultipartForm(16 << 20); err != nil {
 		writeJSONError(w, http.StatusBadRequest, "error al parsear formulario o archivo demasiado grande")
@@ -156,7 +158,7 @@ func uploadImagesForEntity(deps *Dependencies, tipo string, entidadID int64, w h
 		}
 	}
 
-	public, err := ImageIsPublic(deps, tipo, entidadID)
+	public, err := ImageIsPublic(ctx, deps, tipo, entidadID)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "entidad no encontrada")
 		return
@@ -173,15 +175,15 @@ func uploadImagesForEntity(deps *Dependencies, tipo string, entidadID int64, w h
 	var created []int64
 	rollback := func() {
 		for _, cid := range created {
-			if _, ferr := deps.ImagenStore.FindByID(cid); ferr == nil {
-				_ = deps.ImagenStore.Delete(cid)
+			if _, ferr := deps.ImagenStore.FindByID(ctx, cid); ferr == nil {
+				_ = deps.ImagenStore.Delete(ctx, cid)
 			}
 		}
 		deps.Storage.RemoveIn(dir, filenames...)
 	}
 
 	for _, fn := range filenames {
-		img, err := deps.ImagenStore.Add(tipo, entidadID, fn)
+		img, err := deps.ImagenStore.Add(ctx, tipo, entidadID, fn)
 		if err != nil {
 			rollback()
 			writeJSONError(w, http.StatusInternalServerError, "error al registrar imagen")
@@ -190,11 +192,11 @@ func uploadImagesForEntity(deps *Dependencies, tipo string, entidadID int64, w h
 		created = append(created, img.ID)
 	}
 
-	writeJSON(w, http.StatusCreated, outputs.ToImagenResponses(deps.ImagenStore.ListByEntidad(tipo, entidadID), public))
+	writeJSON(w, http.StatusCreated, outputs.ToImagenResponses(deps.ImagenStore.ListByEntidad(ctx, tipo, entidadID), public))
 }
 
-func deleteImageForEntity(deps *Dependencies, tipo string, entidadID, imagenID int64, w http.ResponseWriter) {
-	img, err := deps.ImagenStore.FindByID(imagenID)
+func deleteImageForEntity(ctx context.Context, deps *Dependencies, tipo string, entidadID, imagenID int64, w http.ResponseWriter) {
+	img, err := deps.ImagenStore.FindByID(ctx, imagenID)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "imagen not found")
 		return
@@ -205,7 +207,7 @@ func deleteImageForEntity(deps *Dependencies, tipo string, entidadID, imagenID i
 	}
 
 	// Primero la baja en el store; solo tras éxito se borran los archivos.
-	if err := deps.ImagenStore.Delete(imagenID); err != nil {
+	if err := deps.ImagenStore.Delete(ctx, imagenID); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to delete imagen")
 		return
 	}
@@ -228,6 +230,7 @@ func parseImagenParams(r *http.Request) (int64, int64, bool) {
 }
 
 func reorderImagesForEntity(deps *Dependencies, tipo string, entidadID int64, w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	var body struct {
 		IDs []int64 `json:"ids"`
 	}
@@ -235,16 +238,16 @@ func reorderImagesForEntity(deps *Dependencies, tipo string, entidadID int64, w 
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if err := deps.ImagenStore.Reorder(tipo, entidadID, body.IDs); err != nil {
+	if err := deps.ImagenStore.Reorder(ctx, tipo, entidadID, body.IDs); err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	public, err := ImageIsPublic(deps, tipo, entidadID)
+	public, err := ImageIsPublic(ctx, deps, tipo, entidadID)
 	if err != nil {
 		public = false
 	}
-	writeJSON(w, http.StatusOK, outputs.ToImagenResponses(deps.ImagenStore.ListByEntidad(tipo, entidadID), public))
+	writeJSON(w, http.StatusOK, outputs.ToImagenResponses(deps.ImagenStore.ListByEntidad(ctx, tipo, entidadID), public))
 }
 
 type ImagenHandler struct {
@@ -258,19 +261,20 @@ func NewImagenHandler(deps *Dependencies) *ImagenHandler {
 // Serve entrega imágenes restringidas. Las públicas las sirve nginx; si llega
 // una petición pública aquí, se responde desde la carpeta pública como respaldo.
 func (h *ImagenHandler) Serve(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	filename := chi.URLParam(r, "filename")
 	if !safeFileName(filename) {
 		http.NotFound(w, r)
 		return
 	}
 
-	img, err := h.deps.ImagenStore.FindByFileName(filename)
+	img, err := h.deps.ImagenStore.FindByFileName(ctx, filename)
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
 
-	public, err := ImageIsPublic(h.deps, img.Tipo, img.EntidadID)
+	public, err := ImageIsPublic(ctx, h.deps, img.Tipo, img.EntidadID)
 	if err != nil {
 		http.NotFound(w, r)
 		return

@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+
 	"back/infrastructure/auth"
 	"back/infrastructure/cache"
 	"back/infrastructure/storage"
@@ -12,8 +14,9 @@ type Dependencies struct {
 	Config           *services.Config
 	JWTManager       *auth.JWTManager
 	CryptManager     *auth.CryptManager
-	JWTStore         *auth.JWTStore
-	LoginLimiter     *auth.LoginLimiter
+	JWTStore         auth.TokenStore
+	LoginLimiter     auth.AttemptLimiter
+	PingDB           func(context.Context) error
 	UserStore        store.UserStore
 	PermisoStore     store.PermisoStore
 	BusStore         store.BusStore

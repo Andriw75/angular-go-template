@@ -24,6 +24,7 @@ type Config struct {
 	JWTRenewMin          int
 	CookieName           string
 	CookieSecure         bool
+	CSRFCookieName       string
 	CORSOrigin           string
 	JWTStoreEnabled      bool
 	JWTLoadUserOnRenew   bool
@@ -63,6 +64,7 @@ func LoadConfig() (*Config, error) {
 		JWTRenewMin:          getEnvInt("JWT_RENEW_MINUTES", 5),
 		CookieName:           getEnv("COOKIE_NAME", "access_token_go"),
 		CookieSecure:         getEnvBool("COOKIE_SECURE", false),
+		CSRFCookieName:       getEnv("CSRF_COOKIE_NAME", "csrf_token"),
 		CORSOrigin:           getEnv("CORS_ORIGIN", "http://localhost:4200"),
 		JWTStoreEnabled:      getEnvBool("JWT_STORE_ENABLED", true),
 		JWTLoadUserOnRenew:   getEnvBool("JWT_LOAD_USER_ON_RENEW", true),

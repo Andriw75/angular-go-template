@@ -6,6 +6,14 @@ import (
 	"time"
 )
 
+// AttemptLimiter abstrae el registro de intentos fallidos para permitir
+// implementaciones en memoria o distribuidas (por ejemplo Redis).
+type AttemptLimiter interface {
+	Allowed(key string) (bool, time.Duration)
+	Fail(key string)
+	Reset(key string)
+}
+
 // LoginLimiter hace rate limiting por combinación IP + usuario. nginx ya corta
 // floods por IP; esto frena ataques dirigidos a una cuenta concreta y
 // credential stuffing distribuido.

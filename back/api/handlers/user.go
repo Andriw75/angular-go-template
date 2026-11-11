@@ -22,7 +22,7 @@ func NewUserHandler(deps *Dependencies) *UserHandler {
 }
 
 func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
-	users := h.deps.UserStore.FindAll()
+	users := h.deps.UserStore.FindAll(r.Context())
 	result := make([]outputs.UserResponse, 0, len(users))
 	for _, u := range users {
 		result = append(result, outputs.ToUserResponse(&u))
@@ -37,7 +37,7 @@ func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.deps.UserStore.FindByID(id)
+	user, err := h.deps.UserStore.FindByID(r.Context(), id)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -65,7 +65,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	// inicial en el primer acceso.
 	input.MustChangePassword = true
 
-	created, err := h.deps.UserStore.Create(input)
+	created, err := h.deps.UserStore.Create(r.Context(), input)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -91,7 +91,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		username := ""
 		if input.Username != nil {
 			username = *input.Username
-		} else if existing, err := h.deps.UserStore.FindByID(id); err == nil {
+		} else if existing, err := h.deps.UserStore.FindByID(r.Context(), id); err == nil {
 			username = existing.Username
 		}
 		if err := services.ValidatePasswordForUser(username, *input.Password); err != nil {
@@ -100,7 +100,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := h.deps.UserStore.Update(id, input); err != nil {
+	if err := h.deps.UserStore.Update(r.Context(), id, input); err != nil {
 		writeError(w, r, err)
 		return
 	}
@@ -110,7 +110,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		h.deps.JWTStore.RemoveUserTokens(id)
 	}
 
-	updated, _ := h.deps.UserStore.FindByID(id)
+	updated, _ := h.deps.UserStore.FindByID(r.Context(), id)
 	writeJSON(w, http.StatusOK, outputs.ToUserResponse(updated))
 }
 
@@ -127,7 +127,7 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.deps.UserStore.Delete(id); err != nil {
+	if err := h.deps.UserStore.Delete(r.Context(), id); err != nil {
 		writeError(w, r, err)
 		return
 	}

@@ -11,6 +11,6 @@ func NewPermisoHandler(deps *Dependencies) *PermisoHandler {
 }
 
 func (h *PermisoHandler) List(w http.ResponseWriter, r *http.Request) {
-	permisos := h.deps.PermisoStore.FindAll()
+	permisos := h.deps.PermisoStore.FindAll(r.Context())
 	writeJSON(w, http.StatusOK, permisos)
 }

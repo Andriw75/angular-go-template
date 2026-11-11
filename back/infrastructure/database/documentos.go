@@ -27,8 +27,7 @@ const documentoArchivoColumns = `id, documento_id, formato, file_name, mime, tam
 
 const documentoEventoColumns = `id, documento_id, accion, detalle, user_id, creado_en`
 
-func (s *DocumentoStore) FindByHash(tipo, hash string) (*domain.Documento, error) {
-	ctx := context.Background()
+func (s *DocumentoStore) FindByHash(ctx context.Context, tipo, hash string) (*domain.Documento, error) {
 	q := s.db.rebind(`SELECT ` + documentoColumns + ` FROM documentos WHERE tipo = ? AND parametros_hash = ?`)
 	doc, err := scanDocumento(s.db.QueryRowContext(ctx, q, tipo, hash))
 	if err != nil {
@@ -40,8 +39,7 @@ func (s *DocumentoStore) FindByHash(tipo, hash string) (*domain.Documento, error
 	return doc, nil
 }
 
-func (s *DocumentoStore) FindByID(id int64) (*domain.Documento, error) {
-	ctx := context.Background()
+func (s *DocumentoStore) FindByID(ctx context.Context, id int64) (*domain.Documento, error) {
 	q := s.db.rebind(`SELECT ` + documentoColumns + ` FROM documentos WHERE id = ?`)
 	doc, err := scanDocumento(s.db.QueryRowContext(ctx, q, id))
 	if err != nil {
@@ -110,8 +108,7 @@ func (s *DocumentoStore) loadEventos(ctx context.Context, docID int64) ([]domain
 	return out, nil
 }
 
-func (s *DocumentoStore) CreateWithCorrelativo(input store.DocumentoCreateInput, build func(codigo string) ([]domain.DocumentoArchivo, error)) (domain.Documento, error) {
-	ctx := context.Background()
+func (s *DocumentoStore) CreateWithCorrelativo(ctx context.Context, input store.DocumentoCreateInput, build func(codigo string) ([]domain.DocumentoArchivo, error)) (domain.Documento, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.Documento{}, err
@@ -168,15 +165,14 @@ func (s *DocumentoStore) CreateWithCorrelativo(input store.DocumentoCreateInput,
 	if err := tx.Commit(); err != nil {
 		return domain.Documento{}, err
 	}
-	doc, err := s.FindByID(id)
+	doc, err := s.FindByID(ctx, id)
 	if err != nil {
 		return domain.Documento{}, err
 	}
 	return *doc, nil
 }
 
-func (s *DocumentoStore) AddVersion(id int64, snapshotJSON string, build func(codigo string, version int) ([]domain.DocumentoArchivo, error)) (domain.Documento, error) {
-	ctx := context.Background()
+func (s *DocumentoStore) AddVersion(ctx context.Context, id int64, snapshotJSON string, build func(codigo string, version int) ([]domain.DocumentoArchivo, error)) (domain.Documento, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.Documento{}, err
@@ -208,15 +204,14 @@ func (s *DocumentoStore) AddVersion(id int64, snapshotJSON string, build func(co
 	if err := tx.Commit(); err != nil {
 		return domain.Documento{}, err
 	}
-	doc, err := s.FindByID(id)
+	doc, err := s.FindByID(ctx, id)
 	if err != nil {
 		return domain.Documento{}, err
 	}
 	return *doc, nil
 }
 
-func (s *DocumentoStore) Annul(id int64, motivo string, userID int64) (domain.Documento, error) {
-	ctx := context.Background()
+func (s *DocumentoStore) Annul(ctx context.Context, id int64, motivo string, userID int64) (domain.Documento, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.Documento{}, err
@@ -239,7 +234,7 @@ func (s *DocumentoStore) Annul(id int64, motivo string, userID int64) (domain.Do
 	if err := tx.Commit(); err != nil {
 		return domain.Documento{}, err
 	}
-	doc, err := s.FindByID(id)
+	doc, err := s.FindByID(ctx, id)
 	if err != nil {
 		return domain.Documento{}, err
 	}
@@ -272,14 +267,13 @@ func documentoWhere(filters store.DocumentoFilters) (string, []any) {
 	return " WHERE " + strings.Join(conds, " AND "), args
 }
 
-func (s *DocumentoStore) List(offset, limit int, filters store.DocumentoFilters) ([]domain.Documento, bool, error) {
+func (s *DocumentoStore) List(ctx context.Context, offset, limit int, filters store.DocumentoFilters) ([]domain.Documento, bool, error) {
 	if offset < 0 {
 		offset = 0
 	}
 	if limit < 1 {
 		limit = 20
 	}
-	ctx := context.Background()
 	where, args := documentoWhere(filters)
 
 	q := s.db.rebind(`SELECT ` + documentoColumns + ` FROM documentos` + where + ` ORDER BY id DESC LIMIT ? OFFSET ?`)
@@ -313,10 +307,10 @@ func (s *DocumentoStore) List(offset, limit int, filters store.DocumentoFilters)
 	return out, hasMore, nil
 }
 
-func (s *DocumentoStore) Count(filters store.DocumentoFilters) (int, error) {
+func (s *DocumentoStore) Count(ctx context.Context, filters store.DocumentoFilters) (int, error) {
 	where, args := documentoWhere(filters)
 	var total int
-	if err := s.db.QueryRowContext(context.Background(), s.db.rebind(`SELECT COUNT(*) FROM documentos`+where), args...).Scan(&total); err != nil {
+	if err := s.db.QueryRowContext(ctx, s.db.rebind(`SELECT COUNT(*) FROM documentos`+where), args...).Scan(&total); err != nil {
 		return 0, err
 	}
 	return total, nil

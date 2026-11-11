@@ -20,7 +20,7 @@ func NewMensajeStore(db *DB) *MensajeStore {
 const mensajeColumns = `id, telefono, hora_solicitada, hora_desactivacion, usuario_acargo,
 	hora_usuario_asignado, estado, creado_en, actualizado_en`
 
-func (s *MensajeStore) Create(input inputs.MensajeInput, now time.Time) (domain.MensajePendiente, error) {
+func (s *MensajeStore) Create(ctx context.Context, input inputs.MensajeInput, now time.Time) (domain.MensajePendiente, error) {
 	horaDesac, err := time.Parse(time.RFC3339, input.HoraDesactivacion)
 	if err != nil {
 		horaDesac, _ = time.Parse("2006-01-02T15:04", input.HoraDesactivacion)
@@ -38,7 +38,7 @@ func (s *MensajeStore) Create(input inputs.MensajeInput, now time.Time) (domain.
 	q := s.db.rebind(`INSERT INTO mensajes_pendientes
 		(telefono, hora_solicitada, hora_desactivacion, usuario_acargo, hora_usuario_asignado, estado, creado_en, actualizado_en)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`)
-	err = s.db.QueryRowContext(context.Background(), q,
+	err = s.db.QueryRowContext(ctx, q,
 		m.Telefono, formatTime(m.HoraSolicitada), formatTime(m.HoraDesactivacion),
 		nil, nil, m.Estado, formatTime(now), formatTime(now),
 	).Scan(&m.ID)
@@ -48,8 +48,8 @@ func (s *MensajeStore) Create(input inputs.MensajeInput, now time.Time) (domain.
 	return m, nil
 }
 
-func (s *MensajeStore) Update(id int64, input inputs.MensajeUpdateInput, now time.Time, username string) (domain.MensajePendiente, error) {
-	existing, err := s.FindByID(id)
+func (s *MensajeStore) Update(ctx context.Context, id int64, input inputs.MensajeUpdateInput, now time.Time, username string) (domain.MensajePendiente, error) {
+	existing, err := s.FindByID(ctx, id)
 	if err != nil {
 		return domain.MensajePendiente{}, err
 	}
@@ -69,22 +69,27 @@ func (s *MensajeStore) Update(id int64, input inputs.MensajeUpdateInput, now tim
 		}
 	}
 
+	oldUpdated := existing.ActualizadoEn
 	existing.ActualizadoEn = now
 
 	q := s.db.rebind(`UPDATE mensajes_pendientes SET
 		hora_desactivacion = ?, usuario_acargo = ?, hora_usuario_asignado = ?, estado = ?, actualizado_en = ?
-		WHERE id = ?`)
-	if _, err := s.db.ExecContext(context.Background(), q,
+		WHERE id = ? AND actualizado_en = ?`)
+	res, err := s.db.ExecContext(ctx, q,
 		formatTime(existing.HoraDesactivacion), strPtr(existing.UsuarioAcargo),
-		formatTimePtr(existing.HoraUsuarioAsignado), existing.Estado, formatTime(now), id,
-	); err != nil {
+		formatTimePtr(existing.HoraUsuarioAsignado), existing.Estado, formatTime(now), id, formatTime(oldUpdated),
+	)
+	if err != nil {
 		return domain.MensajePendiente{}, err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return domain.MensajePendiente{}, domain.Conflict("conflict", "el mensaje fue modificado por otra sesión; recarga e intenta de nuevo")
 	}
 	return *existing, nil
 }
 
-func (s *MensajeStore) Delete(id int64) error {
-	res, err := s.db.ExecContext(context.Background(), s.db.rebind(`DELETE FROM mensajes_pendientes WHERE id = ?`), id)
+func (s *MensajeStore) Delete(ctx context.Context, id int64) error {
+	res, err := s.db.ExecContext(ctx, s.db.rebind(`DELETE FROM mensajes_pendientes WHERE id = ?`), id)
 	if err != nil {
 		return err
 	}
@@ -94,13 +99,13 @@ func (s *MensajeStore) Delete(id int64) error {
 	return nil
 }
 
-func (s *MensajeStore) FindByID(id int64) (*domain.MensajePendiente, error) {
+func (s *MensajeStore) FindByID(ctx context.Context, id int64) (*domain.MensajePendiente, error) {
 	q := s.db.rebind(`SELECT ` + mensajeColumns + ` FROM mensajes_pendientes WHERE id = ?`)
-	return scanMensaje(s.db.QueryRowContext(context.Background(), q, id))
+	return scanMensaje(s.db.QueryRowContext(ctx, q, id))
 }
 
-func (s *MensajeStore) FindAll() []domain.MensajePendiente {
-	rows, err := s.db.QueryContext(context.Background(), `SELECT `+mensajeColumns+` FROM mensajes_pendientes ORDER BY id`)
+func (s *MensajeStore) FindAll(ctx context.Context) []domain.MensajePendiente {
+	rows, err := s.db.QueryContext(ctx, `SELECT `+mensajeColumns+` FROM mensajes_pendientes ORDER BY id`)
 	if err != nil {
 		return nil
 	}
@@ -117,7 +122,7 @@ func (s *MensajeStore) FindAll() []domain.MensajePendiente {
 	return out
 }
 
-func (s *MensajeStore) ListPasadas(offset, limit int) ([]domain.MensajePendiente, bool) {
+func (s *MensajeStore) ListPasadas(ctx context.Context, offset, limit int) ([]domain.MensajePendiente, bool) {
 	if offset < 0 {
 		offset = 0
 	}
@@ -127,7 +132,7 @@ func (s *MensajeStore) ListPasadas(offset, limit int) ([]domain.MensajePendiente
 
 	q := s.db.rebind(`SELECT ` + mensajeColumns + ` FROM mensajes_pendientes
 		WHERE estado = 'finalizado' ORDER BY hora_solicitada DESC LIMIT ? OFFSET ?`)
-	rows, err := s.db.QueryContext(context.Background(), q, limit+1, offset)
+	rows, err := s.db.QueryContext(ctx, q, limit+1, offset)
 	if err != nil {
 		return []domain.MensajePendiente{}, false
 	}
@@ -149,9 +154,9 @@ func (s *MensajeStore) ListPasadas(offset, limit int) ([]domain.MensajePendiente
 	return out, hasMore
 }
 
-func (s *MensajeStore) CountPasadas() int {
+func (s *MensajeStore) CountPasadas(ctx context.Context) int {
 	var count int
-	if err := s.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM mensajes_pendientes WHERE estado = 'finalizado'`).Scan(&count); err != nil {
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM mensajes_pendientes WHERE estado = 'finalizado'`).Scan(&count); err != nil {
 		return 0
 	}
 	return count

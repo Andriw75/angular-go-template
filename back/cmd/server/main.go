@@ -73,6 +73,7 @@ func main() {
 		CryptManager:     cryptManager,
 		JWTStore:         jwtStore,
 		LoginLimiter:     loginLimiter,
+		PingDB:           db.PingContext,
 		UserStore:        database.NewUserStore(db, cryptManager),
 		PermisoStore:     database.NewPermisoStore(db),
 		BusStore:         database.NewBusStore(db),
@@ -145,7 +146,7 @@ func main() {
 }
 
 func seedActivos(ms store.MensajeStore, activos *cache.ActivosStore) {
-	for _, m := range ms.FindAll() {
+	for _, m := range ms.FindAll(context.Background()) {
 		if m.Estado != "finalizado" {
 			activos.Set(m)
 		}
@@ -155,8 +156,9 @@ func seedActivos(ms store.MensajeStore, activos *cache.ActivosStore) {
 // syncPlacement mueve archivos existentes a la carpeta que les corresponde
 // (pública para nginx, privada para la API) al arrancar.
 func syncPlacement(deps *handlers.Dependencies) {
-	for _, img := range deps.ImagenStore.ListAll() {
-		public, err := handlers.ImageIsPublic(deps, img.Tipo, img.EntidadID)
+	ctx := context.Background()
+	for _, img := range deps.ImagenStore.ListAll(ctx) {
+		public, err := handlers.ImageIsPublic(ctx, deps, img.Tipo, img.EntidadID)
 		if err != nil {
 			continue
 		}
@@ -169,7 +171,7 @@ func syncPlacement(deps *handlers.Dependencies) {
 		}
 	}
 
-	files, _, err := deps.ArchivoStore.List(0, 1000000, "")
+	files, _, err := deps.ArchivoStore.List(ctx, 0, 1000000, "")
 	if err != nil {
 		return
 	}

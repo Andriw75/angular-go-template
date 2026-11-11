@@ -38,16 +38,16 @@ func categoriaWhere(f store.CategoriaFilters) (string, []any) {
 	return " WHERE " + strings.Join(conds, " AND "), args
 }
 
-func (s *CategoriaStore) Count(filters store.CategoriaFilters) int64 {
+func (s *CategoriaStore) Count(ctx context.Context, filters store.CategoriaFilters) int64 {
 	where, args := categoriaWhere(filters)
 	var count int64
-	if err := s.db.QueryRowContext(context.Background(), s.db.rebind(`SELECT COUNT(*) FROM categorias`+where), args...).Scan(&count); err != nil {
+	if err := s.db.QueryRowContext(ctx, s.db.rebind(`SELECT COUNT(*) FROM categorias`+where), args...).Scan(&count); err != nil {
 		return 0
 	}
 	return count
 }
 
-func (s *CategoriaStore) List(offset, limit int, filters store.CategoriaFilters) outputs.PaginatedResponse[outputs.CategoriaResponse] {
+func (s *CategoriaStore) List(ctx context.Context, offset, limit int, filters store.CategoriaFilters) outputs.PaginatedResponse[outputs.CategoriaResponse] {
 	if offset < 0 {
 		offset = 0
 	}
@@ -59,7 +59,7 @@ func (s *CategoriaStore) List(offset, limit int, filters store.CategoriaFilters)
 	q := s.db.rebind(`SELECT ` + categoriaColumns + ` FROM categorias` + where + ` ORDER BY id LIMIT ? OFFSET ?`)
 	args = append(args, limit+1, offset)
 
-	rows, err := s.db.QueryContext(context.Background(), q, args...)
+	rows, err := s.db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return outputs.PaginatedResponse[outputs.CategoriaResponse]{Data: []outputs.CategoriaResponse{}, Limit: limit, Offset: offset}
 	}
@@ -87,23 +87,23 @@ func (s *CategoriaStore) List(offset, limit int, filters store.CategoriaFilters)
 	}
 }
 
-func (s *CategoriaStore) FindByID(id int64) (*domain.Categoria, error) {
+func (s *CategoriaStore) FindByID(ctx context.Context, id int64) (*domain.Categoria, error) {
 	q := s.db.rebind(`SELECT ` + categoriaColumns + ` FROM categorias WHERE id = ?`)
-	categoria, err := scanCategoria(s.db.QueryRowContext(context.Background(), q, id))
+	categoria, err := scanCategoria(s.db.QueryRowContext(ctx, q, id))
 	if err != nil {
 		return nil, translateDBError(err, "categoria no encontrada")
 	}
 	return categoria, nil
 }
 
-func (s *CategoriaStore) Create(c domain.Categoria) (domain.Categoria, error) {
+func (s *CategoriaStore) Create(ctx context.Context, c domain.Categoria) (domain.Categoria, error) {
 	now := time.Now()
 	c.CreadoEn = now
 	c.ActualizadoEn = now
 
 	q := s.db.rebind(`INSERT INTO categorias (nombre, descripcion, activo, creado_en, actualizado_en)
 		VALUES (?, ?, ?, ?, ?) RETURNING id`)
-	err := s.db.QueryRowContext(context.Background(), q,
+	err := s.db.QueryRowContext(ctx, q,
 		c.Nombre, c.Descripcion, boolInt(c.Activo), formatTime(now), formatTime(now),
 	).Scan(&c.ID)
 	if err != nil {
@@ -112,21 +112,23 @@ func (s *CategoriaStore) Create(c domain.Categoria) (domain.Categoria, error) {
 	return c, nil
 }
 
-func (s *CategoriaStore) Update(id int64, c domain.Categoria) error {
-	c.ActualizadoEn = time.Now()
-	q := s.db.rebind(`UPDATE categorias SET nombre = ?, descripcion = ?, activo = ?, actualizado_en = ? WHERE id = ?`)
-	res, err := s.db.ExecContext(context.Background(), q, c.Nombre, c.Descripcion, boolInt(c.Activo), formatTime(c.ActualizadoEn), id)
+func (s *CategoriaStore) Update(ctx context.Context, id int64, c domain.Categoria) error {
+	oldUpdated := c.ActualizadoEn
+	now := time.Now()
+	c.ActualizadoEn = now
+	q := s.db.rebind(`UPDATE categorias SET nombre = ?, descripcion = ?, activo = ?, actualizado_en = ? WHERE id = ? AND actualizado_en = ?`)
+	res, err := s.db.ExecContext(ctx, q, c.Nombre, c.Descripcion, boolInt(c.Activo), formatTime(now), id, formatTime(oldUpdated))
 	if err != nil {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return domain.NotFound("categoria no encontrada")
+		return domain.Conflict("conflict", "la categoria fue modificada por otra sesión; recarga e intenta de nuevo")
 	}
 	return nil
 }
 
-func (s *CategoriaStore) Delete(id int64) error {
-	res, err := s.db.ExecContext(context.Background(), s.db.rebind(`DELETE FROM categorias WHERE id = ?`), id)
+func (s *CategoriaStore) Delete(ctx context.Context, id int64) error {
+	res, err := s.db.ExecContext(ctx, s.db.rebind(`DELETE FROM categorias WHERE id = ?`), id)
 	if err != nil {
 		return err
 	}

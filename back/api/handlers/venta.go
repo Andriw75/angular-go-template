@@ -40,7 +40,7 @@ func (h *VentaHandler) List(w http.ResponseWriter, r *http.Request) {
 		limit = 20
 	}
 
-	ventas, hasMore, err := h.deps.VentaStore.List(offset, limit, parseVentaFilters(r))
+	ventas, hasMore, err := h.deps.VentaStore.List(r.Context(), offset, limit, parseVentaFilters(r))
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "error al listar ventas")
 		return
@@ -54,7 +54,7 @@ func (h *VentaHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *VentaHandler) Count(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, h.deps.VentaStore.Count(parseVentaFilters(r)))
+	writeJSON(w, http.StatusOK, h.deps.VentaStore.Count(r.Context(), parseVentaFilters(r)))
 }
 
 func (h *VentaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +63,7 @@ func (h *VentaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	venta, err := h.deps.VentaStore.FindByID(id)
+	venta, err := h.deps.VentaStore.FindByID(r.Context(), id)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -84,7 +84,7 @@ func (h *VentaHandler) Create(w http.ResponseWriter, r *http.Request) {
 		userID = claims.UserID
 	}
 
-	venta, err := h.deps.VentaStore.Create(input, userID)
+	venta, err := h.deps.VentaStore.Create(r.Context(), input, userID)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -103,7 +103,7 @@ func (h *VentaHandler) Update(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	venta, err := h.deps.VentaStore.Update(id, input)
+	venta, err := h.deps.VentaStore.Update(r.Context(), id, input)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -117,7 +117,7 @@ func (h *VentaHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	if err := h.deps.VentaStore.Delete(id); err != nil {
+	if err := h.deps.VentaStore.Delete(r.Context(), id); err != nil {
 		writeError(w, r, err)
 		return
 	}
@@ -130,7 +130,7 @@ func (h *VentaHandler) Emit(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	venta, err := h.deps.VentaStore.Emit(id)
+	venta, err := h.deps.VentaStore.Emit(r.Context(), id)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -155,7 +155,7 @@ func (h *VentaHandler) Annul(w http.ResponseWriter, r *http.Request) {
 		userID = claims.UserID
 	}
 
-	venta, err := h.deps.VentaStore.Annul(id, body.Motivo, userID)
+	venta, err := h.deps.VentaStore.Annul(r.Context(), id, body.Motivo, userID)
 	if err != nil {
 		writeError(w, r, err)
 		return

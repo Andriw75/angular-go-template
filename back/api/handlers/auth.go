@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -63,6 +64,52 @@ func (h *AuthHandler) clearSessionCookie(w http.ResponseWriter) {
 	})
 }
 
+// setCSRFCookie emite la cookie legible por JS que el cliente reenvía en la
+// cabecera X-CSRF-Token (patrón double-submit).
+func (h *AuthHandler) setCSRFCookie(w http.ResponseWriter) {
+	if h.deps.Config.CSRFCookieName == "" {
+		return
+	}
+	token, err := auth.NewRandomToken()
+	if err != nil {
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     h.deps.Config.CSRFCookieName,
+		Value:    token,
+		Path:     "/",
+		HttpOnly: false,
+		Secure:   h.deps.Config.CookieSecure,
+		SameSite: http.SameSiteStrictMode,
+	})
+}
+
+// ensureCSRFCookie emite la cookie CSRF si el cliente aún no la tiene, para no
+// romper sesiones que existían antes de este cambio.
+func (h *AuthHandler) ensureCSRFCookie(w http.ResponseWriter, r *http.Request) {
+	if h.deps.Config.CSRFCookieName == "" {
+		return
+	}
+	if _, err := r.Cookie(h.deps.Config.CSRFCookieName); err != nil {
+		h.setCSRFCookie(w)
+	}
+}
+
+func (h *AuthHandler) clearCSRFCookie(w http.ResponseWriter) {
+	if h.deps.Config.CSRFCookieName == "" {
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     h.deps.Config.CSRFCookieName,
+		Value:    "",
+		Path:     "/",
+		HttpOnly: false,
+		Secure:   h.deps.Config.CookieSecure,
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   -1,
+	})
+}
+
 var errInactiveUser = errors.New("usuario inactivo")
 
 // expireSession limpia la cookie y responde 401 cuando el jti ya no es válido.
@@ -73,13 +120,13 @@ func (h *AuthHandler) expireSession(w http.ResponseWriter) {
 
 // renewToken genera un token nuevo y rota su jti. Con JWTLoadUserOnRenew,
 // recarga permisos y estado desde la base y rechaza cuentas inactivas.
-func (h *AuthHandler) renewToken(claims *auth.Claims) (string, error) {
+func (h *AuthHandler) renewToken(ctx context.Context, claims *auth.Claims) (string, error) {
 	var (
 		token string
 		err   error
 	)
 	if h.deps.Config.JWTLoadUserOnRenew {
-		user, uerr := h.deps.UserStore.FindByID(claims.UserID)
+		user, uerr := h.deps.UserStore.FindByID(ctx, claims.UserID)
 		if uerr != nil {
 			return "", uerr
 		}
@@ -146,7 +193,7 @@ func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	user, ok := h.deps.UserStore.IsValidPassword(h.deps.CryptManager, username, password)
+	user, ok := h.deps.UserStore.IsValidPassword(r.Context(), h.deps.CryptManager, username, password)
 	if !ok {
 		if h.deps.LoginLimiter != nil {
 			h.deps.LoginLimiter.Fail(key)
@@ -166,6 +213,7 @@ func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.setSessionCookie(w, token)
+	h.setCSRFCookie(w)
 
 	claims, _ := h.deps.JWTManager.Validate(token)
 	h.setSessionHeaders(w, claims)
@@ -180,6 +228,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.clearSessionCookie(w)
+	h.clearCSRFCookie(w)
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "logged out"})
 }
@@ -222,7 +271,7 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.deps.UserStore.FindByID(claims.UserID)
+	user, err := h.deps.UserStore.FindByID(r.Context(), claims.UserID)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "user not found")
 		return
@@ -246,7 +295,7 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
-	if err := h.deps.UserStore.UpdatePassword(user.ID, hash, false); err != nil {
+	if err := h.deps.UserStore.UpdatePassword(r.Context(), user.ID, hash, false); err != nil {
 		slog.Error("failed to update password", "error", err)
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
@@ -286,7 +335,7 @@ func (h *AuthHandler) AuthMiddleware(requiredPermission ...string) func(http.Han
 			}
 
 			if h.deps.JWTManager.ShouldRenew(claims) {
-				newToken, err := h.renewToken(claims)
+				newToken, err := h.renewToken(r.Context(), claims)
 				if err != nil {
 					h.expireSession(w)
 					return
@@ -298,6 +347,7 @@ func (h *AuthHandler) AuthMiddleware(requiredPermission ...string) func(http.Han
 			}
 
 			h.setSessionHeaders(w, claims)
+			h.ensureCSRFCookie(w, r)
 
 			// Bloquea todo salvo las rutas de auth hasta que el usuario cambie
 			// la contraseña inicial.
@@ -343,6 +393,7 @@ func (h *AuthHandler) OptionalAuthMiddleware() func(http.Handler) http.Handler {
 			}
 
 			h.setSessionHeaders(w, claims)
+			h.ensureCSRFCookie(w, r)
 
 			ctx := WithClaims(r.Context(), claims)
 			next.ServeHTTP(w, r.WithContext(ctx))

@@ -15,8 +15,8 @@ func NewPermisoStore(db *DB) *PermisoStore {
 	return &PermisoStore{db: db}
 }
 
-func (s *PermisoStore) FindAll() []domain.Permission {
-	rows, err := s.db.QueryContext(context.Background(), `SELECT id, nombre, descripcion FROM permissions ORDER BY id`)
+func (s *PermisoStore) FindAll(ctx context.Context) []domain.Permission {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, nombre, descripcion FROM permissions ORDER BY id`)
 	if err != nil {
 		return nil
 	}
@@ -33,10 +33,10 @@ func (s *PermisoStore) FindAll() []domain.Permission {
 	return out
 }
 
-func (s *PermisoStore) FindByID(id int64) (*domain.Permission, error) {
+func (s *PermisoStore) FindByID(ctx context.Context, id int64) (*domain.Permission, error) {
 	q := s.db.rebind(`SELECT id, nombre, descripcion FROM permissions WHERE id = ?`)
 	var p domain.Permission
-	err := s.db.QueryRowContext(context.Background(), q, id).Scan(&p.ID, &p.Nombre, &p.Descripcion)
+	err := s.db.QueryRowContext(ctx, q, id).Scan(&p.ID, &p.Nombre, &p.Descripcion)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, err

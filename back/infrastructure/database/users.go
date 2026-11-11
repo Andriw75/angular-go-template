@@ -18,14 +18,13 @@ func NewUserStore(db *DB, crypt *auth.CryptManager) *UserStore {
 	return &UserStore{db: db, crypt: crypt}
 }
 
-func (s *UserStore) Create(input inputs.UserInput) (domain.User, error) {
+func (s *UserStore) Create(ctx context.Context, input inputs.UserInput) (domain.User, error) {
 	hash, err := s.crypt.Hash(input.Password)
 	if err != nil {
 		return domain.User{}, err
 	}
 
 	now := time.Now()
-	ctx := context.Background()
 	q := s.db.rebind(`INSERT INTO users (username, email, password, activo, must_change_password, creado_en, actualizado_en)
 		VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`)
 
@@ -50,9 +49,9 @@ func (s *UserStore) Create(input inputs.UserInput) (domain.User, error) {
 	}
 
 	return domain.User{
-		ID:            id,
-		Username:      input.Username,
-		Email:         input.Email,
+		ID:                 id,
+		Username:           input.Username,
+		Email:              input.Email,
 		Password:           hash,
 		Activo:             input.Activo,
 		Permisos:           permisos,
@@ -62,9 +61,8 @@ func (s *UserStore) Create(input inputs.UserInput) (domain.User, error) {
 	}, nil
 }
 
-func (s *UserStore) Update(id int64, input inputs.UserUpdateInput) error {
-	ctx := context.Background()
-	existing, err := s.FindByID(id)
+func (s *UserStore) Update(ctx context.Context, id int64, input inputs.UserUpdateInput) error {
+	existing, err := s.FindByID(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -90,12 +88,13 @@ func (s *UserStore) Update(id int64, input inputs.UserUpdateInput) error {
 		existing.MustChangePassword = *input.MustChangePassword
 	}
 
+	oldUpdated := existing.ActualizadoEn
 	existing.ActualizadoEn = time.Now()
 
-	q := s.db.rebind(`UPDATE users SET username = ?, email = ?, password = ?, activo = ?, must_change_password = ?, actualizado_en = ? WHERE id = ?`)
+	q := s.db.rebind(`UPDATE users SET username = ?, email = ?, password = ?, activo = ?, must_change_password = ?, actualizado_en = ? WHERE id = ? AND actualizado_en = ?`)
 	res, err := s.db.ExecContext(ctx, q,
 		existing.Username, existing.Email, existing.Password, boolInt(existing.Activo),
-		boolInt(existing.MustChangePassword), formatTime(existing.ActualizadoEn), id,
+		boolInt(existing.MustChangePassword), formatTime(existing.ActualizadoEn), id, formatTime(oldUpdated),
 	)
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -104,7 +103,7 @@ func (s *UserStore) Update(id int64, input inputs.UserUpdateInput) error {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return domain.NotFound("usuario no encontrado")
+		return domain.Conflict("conflict", "el usuario fue modificado por otra sesión; recarga e intenta de nuevo")
 	}
 
 	if input.Permisos != nil {
@@ -117,8 +116,7 @@ func (s *UserStore) Update(id int64, input inputs.UserUpdateInput) error {
 
 // UpdatePassword cambia el hash y el flag de cambio obligatorio. Se usa tanto
 // para el cambio de contraseña del propio usuario como para resets de admin.
-func (s *UserStore) UpdatePassword(id int64, hash string, mustChange bool) error {
-	ctx := context.Background()
+func (s *UserStore) UpdatePassword(ctx context.Context, id int64, hash string, mustChange bool) error {
 	q := s.db.rebind(`UPDATE users SET password = ?, must_change_password = ?, actualizado_en = ? WHERE id = ?`)
 	res, err := s.db.ExecContext(ctx, q, hash, boolInt(mustChange), formatTime(time.Now()), id)
 	if err != nil {
@@ -130,8 +128,7 @@ func (s *UserStore) UpdatePassword(id int64, hash string, mustChange bool) error
 	return nil
 }
 
-func (s *UserStore) Delete(id int64) error {
-	ctx := context.Background()
+func (s *UserStore) Delete(ctx context.Context, id int64) error {
 	q := s.db.rebind(`DELETE FROM users WHERE id = ?`)
 	res, err := s.db.ExecContext(ctx, q, id)
 	if err != nil {
@@ -143,8 +140,7 @@ func (s *UserStore) Delete(id int64) error {
 	return nil
 }
 
-func (s *UserStore) FindByUsername(username string) (*domain.User, error) {
-	ctx := context.Background()
+func (s *UserStore) FindByUsername(ctx context.Context, username string) (*domain.User, error) {
 	q := s.db.rebind(`SELECT id, username, email, password, activo, must_change_password, creado_en, actualizado_en FROM users WHERE username = ?`)
 	user, err := s.scanUser(ctx, q, username)
 	if err != nil {
@@ -153,8 +149,7 @@ func (s *UserStore) FindByUsername(username string) (*domain.User, error) {
 	return user, nil
 }
 
-func (s *UserStore) FindByID(id int64) (*domain.User, error) {
-	ctx := context.Background()
+func (s *UserStore) FindByID(ctx context.Context, id int64) (*domain.User, error) {
 	q := s.db.rebind(`SELECT id, username, email, password, activo, must_change_password, creado_en, actualizado_en FROM users WHERE id = ?`)
 	user, err := s.scanUser(ctx, q, id)
 	if err != nil {
@@ -163,8 +158,7 @@ func (s *UserStore) FindByID(id int64) (*domain.User, error) {
 	return user, nil
 }
 
-func (s *UserStore) FindAll() []domain.User {
-	ctx := context.Background()
+func (s *UserStore) FindAll(ctx context.Context) []domain.User {
 	rows, err := s.db.QueryContext(ctx, `SELECT id, username, email, password, activo, must_change_password, creado_en, actualizado_en FROM users ORDER BY id`)
 	if err != nil {
 		return nil
@@ -179,8 +173,8 @@ func (s *UserStore) FindAll() []domain.User {
 		}
 		users = append(users, *u)
 	}
-	// Cerrar rows antes de consultar permisos: SQLite usa una sola conexi�n y
-	// una consulta anidada dentro del bucle bloquear�a la conexi�n.
+	// Cerrar rows antes de consultar permisos: SQLite usa una sola conexión y
+	// una consulta anidada dentro del bucle bloquearía la conexión.
 	rows.Close()
 
 	for i := range users {
@@ -189,8 +183,8 @@ func (s *UserStore) FindAll() []domain.User {
 	return users
 }
 
-func (s *UserStore) IsValidPassword(crypt *auth.CryptManager, username, password string) (*domain.User, bool) {
-	user, err := s.FindByUsername(username)
+func (s *UserStore) IsValidPassword(ctx context.Context, crypt *auth.CryptManager, username, password string) (*domain.User, bool) {
+	user, err := s.FindByUsername(ctx, username)
 	if err != nil {
 		return nil, false
 	}

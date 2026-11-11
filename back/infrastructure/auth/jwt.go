@@ -13,11 +13,21 @@ import (
 // este límite evita amplificación de memoria con cabeceras manipuladas.
 const maxTokenBytes = 4 << 10
 
+// TokenStore abstrae el almacén de jti vigentes para permitir revocación por
+// token y por usuario con un backend intercambiable (memoria, Redis, etc.).
+type TokenStore interface {
+	Add(jti string, userID int64, expiresAt time.Time)
+	Rotate(oldJTI, newJTI string, userID int64, expiresAt time.Time)
+	Remove(jti string)
+	RemoveUserTokens(userID int64)
+	Exists(jti string) bool
+}
+
 type JWTManager struct {
 	secret     string
 	duration   time.Duration
 	renewAfter time.Duration
-	Store      *JWTStore
+	Store      TokenStore
 }
 
 type Claims struct {
@@ -48,6 +58,12 @@ func generateJTI() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
+}
+
+// NewRandomToken genera un token aleatorio seguro para el patrón double-submit
+// de CSRF.
+func NewRandomToken() (string, error) {
+	return generateJTI()
 }
 
 func (m *JWTManager) Generate(userID int64, username, email string, activo bool, permisos []string, mustChangePassword bool) (string, error) {

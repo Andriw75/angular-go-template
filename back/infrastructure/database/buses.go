@@ -54,16 +54,16 @@ func busWhere(f store.BusFilters) (string, []any) {
 	return " WHERE " + strings.Join(conds, " AND "), args
 }
 
-func (s *BusStore) Count(filters store.BusFilters) int64 {
+func (s *BusStore) Count(ctx context.Context, filters store.BusFilters) int64 {
 	where, args := busWhere(filters)
 	var count int64
-	if err := s.db.QueryRowContext(context.Background(), s.db.rebind(`SELECT COUNT(*) FROM buses`+where), args...).Scan(&count); err != nil {
+	if err := s.db.QueryRowContext(ctx, s.db.rebind(`SELECT COUNT(*) FROM buses`+where), args...).Scan(&count); err != nil {
 		return 0
 	}
 	return count
 }
 
-func (s *BusStore) List(offset, limit int, filters store.BusFilters) outputs.PaginatedResponse[outputs.BusResponse] {
+func (s *BusStore) List(ctx context.Context, offset, limit int, filters store.BusFilters) outputs.PaginatedResponse[outputs.BusResponse] {
 	if offset < 0 {
 		offset = 0
 	}
@@ -75,7 +75,7 @@ func (s *BusStore) List(offset, limit int, filters store.BusFilters) outputs.Pag
 	q := s.db.rebind(`SELECT ` + busColumns + ` FROM buses` + where + ` ORDER BY id LIMIT ? OFFSET ?`)
 	args = append(args, limit+1, offset)
 
-	rows, err := s.db.QueryContext(context.Background(), q, args...)
+	rows, err := s.db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return outputs.PaginatedResponse[outputs.BusResponse]{Data: []outputs.BusResponse{}, Limit: limit, Offset: offset}
 	}
@@ -103,16 +103,16 @@ func (s *BusStore) List(offset, limit int, filters store.BusFilters) outputs.Pag
 	}
 }
 
-func (s *BusStore) FindByID(id int64) (*domain.Bus, error) {
+func (s *BusStore) FindByID(ctx context.Context, id int64) (*domain.Bus, error) {
 	q := s.db.rebind(`SELECT ` + busColumns + ` FROM buses WHERE id = ?`)
-	bus, err := scanBus(s.db.QueryRowContext(context.Background(), q, id))
+	bus, err := scanBus(s.db.QueryRowContext(ctx, q, id))
 	if err != nil {
 		return nil, translateDBError(err, "bus no encontrado")
 	}
 	return bus, nil
 }
 
-func (s *BusStore) Create(b domain.Bus) (domain.Bus, error) {
+func (s *BusStore) Create(ctx context.Context, b domain.Bus) (domain.Bus, error) {
 	now := time.Now()
 	b.CreadoEn = now
 	b.ActualizadoEn = now
@@ -122,7 +122,7 @@ func (s *BusStore) Create(b domain.Bus) (domain.Bus, error) {
 		 ultimo_mantenimiento, precio, peso, color, descripcion, creado_en, actualizado_en)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`)
 
-	err := s.db.QueryRowContext(context.Background(), q,
+	err := s.db.QueryRowContext(ctx, q,
 		b.Placa, b.Nombre, b.Marca, b.Modelo, b.Anio, b.Capacidad, b.Tipo, boolInt(b.Activo),
 		b.FechaCompra.Format("2006-01-02"), formatTimePtr(b.UltimoMantenimiento), b.Precio, b.Peso,
 		b.Color, b.Descripcion, formatTime(now), formatTime(now),
@@ -133,30 +133,34 @@ func (s *BusStore) Create(b domain.Bus) (domain.Bus, error) {
 	return b, nil
 }
 
-func (s *BusStore) Update(id int64, b domain.Bus) error {
-	b.ActualizadoEn = time.Now()
+// Update aplica bloqueo optimista sobre actualizado_en: si otra sesión modificó
+// la fila desde que se leyó, no se pisa y se devuelve un conflicto.
+func (s *BusStore) Update(ctx context.Context, id int64, b domain.Bus) error {
+	oldUpdated := b.ActualizadoEn
+	now := time.Now()
+	b.ActualizadoEn = now
 	q := s.db.rebind(`UPDATE buses SET
 		placa = ?, nombre = ?, marca = ?, modelo = ?, anio = ?, capacidad = ?, tipo = ?, activo = ?,
 		fecha_compra = ?, ultimo_mantenimiento = ?, precio = ?, peso = ?, color = ?, descripcion = ?, actualizado_en = ?
-		WHERE id = ?`)
+		WHERE id = ? AND actualizado_en = ?`)
 
-	res, err := s.db.ExecContext(context.Background(), q,
+	res, err := s.db.ExecContext(ctx, q,
 		b.Placa, b.Nombre, b.Marca, b.Modelo, b.Anio, b.Capacidad, b.Tipo, boolInt(b.Activo),
 		b.FechaCompra.Format("2006-01-02"), formatTimePtr(b.UltimoMantenimiento), b.Precio, b.Peso,
-		b.Color, b.Descripcion, formatTime(b.ActualizadoEn), id,
+		b.Color, b.Descripcion, formatTime(now), id, formatTime(oldUpdated),
 	)
 	if err != nil {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return domain.NotFound("bus no encontrado")
+		return domain.Conflict("conflict", "el bus fue modificado por otra sesión; recarga e intenta de nuevo")
 	}
 	return nil
 }
 
-func (s *BusStore) Delete(id int64) error {
+func (s *BusStore) Delete(ctx context.Context, id int64) error {
 	q := s.db.rebind(`DELETE FROM buses WHERE id = ?`)
-	res, err := s.db.ExecContext(context.Background(), q, id)
+	res, err := s.db.ExecContext(ctx, q, id)
 	if err != nil {
 		return err
 	}
