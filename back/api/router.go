@@ -19,9 +19,9 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(securityHeaders)
+	r.Use(corsMiddleware(deps.Config.CORSOrigin))
 	r.Use(limitBody)
 	r.Use(csrfProtection(deps.Config.CSRFCookieName))
-	r.Use(corsMiddleware(deps.Config.CORSOrigin))
 
 	authHandler := handlers.NewAuthHandler(deps)
 	userHandler := handlers.NewUserHandler(deps)

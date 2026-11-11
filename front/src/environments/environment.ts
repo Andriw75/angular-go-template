@@ -3,6 +3,7 @@ import type { DashboardConfig } from '../app/models/dashboard';
 export const environment = {
   APP_NAME: 'Template',
   API_URL: 'http://localhost:5000/template/api',
+  // API_URL: 'http://localhost:8080',
   MEDIA_URL: 'http://localhost:5000/template/public',
   SESSION: {
     COUNTDOWN_ENABLED: true,
