@@ -95,7 +95,7 @@ function checkRoutesInDocs() {
     .map((p) => read(p))
     .join('\n');
   const routes = extractRoutes();
-  const allowedMissing = new Set(['/health']);
+  const allowedMissing = new Set();
   let missing = 0;
   for (const route of routes) {
     if (allowedMissing.has(route)) continue;

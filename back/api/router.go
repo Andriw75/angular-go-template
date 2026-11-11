@@ -1,8 +1,6 @@
 package api
 
 import (
-	"context"
-	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -38,20 +36,6 @@ func NewRouter(deps *handlers.Dependencies) chi.Router {
 	documentoHandler := handlers.NewDocumentoHandler(deps)
 	labHandler := handlers.NewLabHandler(deps)
 	sseHandler := handlers.NewSSEHandler(deps)
-
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if deps.PingDB != nil {
-			ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-			defer cancel()
-			if err := deps.PingDB(ctx); err != nil {
-				w.WriteHeader(http.StatusServiceUnavailable)
-				w.Write([]byte(`{"status":"unavailable","database":"down"}`))
-				return
-			}
-		}
-		w.Write([]byte(`{"status":"ok","database":"ok"}`))
-	})
 
 	r.Route("/auth", func(r chi.Router) {
 		r.Use(middleware.Timeout(30 * time.Second))

@@ -73,7 +73,6 @@ func main() {
 		CryptManager:     cryptManager,
 		JWTStore:         jwtStore,
 		LoginLimiter:     loginLimiter,
-		PingDB:           db.PingContext,
 		UserStore:        database.NewUserStore(db, cryptManager),
 		PermisoStore:     database.NewPermisoStore(db),
 		BusStore:         database.NewBusStore(db),

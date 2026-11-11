@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"context"
-
 	"back/infrastructure/auth"
 	"back/infrastructure/cache"
 	"back/infrastructure/storage"
@@ -16,7 +14,6 @@ type Dependencies struct {
 	CryptManager     *auth.CryptManager
 	JWTStore         auth.TokenStore
 	LoginLimiter     auth.AttemptLimiter
-	PingDB           func(context.Context) error
 	UserStore        store.UserStore
 	PermisoStore     store.PermisoStore
 	BusStore         store.BusStore
