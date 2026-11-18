@@ -182,12 +182,26 @@ Todas bajo `AuthMiddleware("shop")` (`back/api/router.go`). Las ventas viven en
 
 - Lista imágenes del servidor + pendientes de subir.
 - Marca imágenes para eliminar, permite reordenar por drag & drop.
+- Edición mínima con `image-editor.ts` (overlay sobre el modal), disponible en
+  cada tarjeta que no esté marcada para eliminar:
+  - Recorte arrastrando la caja o con coordenadas `X`/`Y`/`Ancho`/`Alto`.
+  - Zoom 1–4x (rueda o slider) y pan de la imagen.
+  - Rotación de 90° y proporciones Libre, 1:1, 4:3 y 16:9.
+  - Se ejecuta en el navegador y genera un `File` nuevo (máx. 1600 px de lado
+    mayor; conserva PNG/WebP y usa JPEG para el resto).
+  - Imagen pendiente: sustituye `file` y la vista previa en la misma tarjeta.
+  - Imagen en servidor: inserta una tarjeta `pending-upload` y marca la original
+    como `pending-delete` ("Por reemplazar"). Restaurar la original quita el
+    reemplazo.
+  - Los GIF no se editan para no perder la animación.
 - `applyImages()`:
-  1. Elimina las marcadas.
-  2. Sube las pendientes.
+  1. Sube las pendientes (incluye reemplazos editados).
+  2. Elimina las marcadas, solo si la subida anterior salió bien.
   3. Reordena con los ids definitivos.
   4. Refresca desde el servidor.
-- Usa `MEDIA_URL` si `img.publico` (nginx) y `API_URL` si es restringida.
+- Las imágenes ya subidas se leen con `fetch(API_URL + ruta)` para poder usar el
+  canvas sin contaminarlo; la vista previa sigue usando `MEDIA_URL` si
+  `img.publico` (nginx) y `API_URL` si es restringida.
 
 ## Limitaciones
 
@@ -207,6 +221,9 @@ Todas bajo `AuthMiddleware("shop")` (`back/api/router.go`). Las ventas viven en
 8. **Borrado irreversible**: el cascade elimina productos e imágenes sin
    papelera.
 9. **Count y list separados**: posible desfase ante cambios concurrentes.
+10. **Edición de imágenes**: los GIF no se editan y, al reemplazar una imagen ya
+    subida, cambia su id y su nombre de archivo (la original se elimina al
+    aplicar).
 
 ## Archivos involucrados
 
@@ -225,6 +242,8 @@ Todas bajo `AuthMiddleware("shop")` (`back/api/router.go`). Las ventas viven en
 | Frontend | `front/src/app/components/dashboard/shop/productos/list.ts`     |
 | Frontend | `front/src/app/components/dashboard/shop/productos/modal.ts`    |
 | Frontend | `front/src/app/common/image-manager/image-manager.ts`           |
+| Frontend | `front/src/app/common/image-manager/image-editor.ts`            |
+| Frontend | `front/src/app/common/image-manager/image-editor.utils.ts`      |
 | Frontend | `front/src/app/services/categorias.service.ts`                  |
 | Frontend | `front/src/app/services/productos.service.ts`                   |
 

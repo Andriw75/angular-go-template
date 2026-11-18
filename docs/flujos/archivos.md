@@ -200,12 +200,18 @@ La página **Archivos e imágenes** tiene dos pestañas:
   de la entidad, si la imagen es pública o restringida, y permite copiar el
   link, abrir o eliminar. Solo aparece con permiso `shop`.
 
-La subida y el reordenamiento de imágenes de una entidad siguen en el modal de
-categoría/producto (`ImageManager`).
+La subida, el reordenamiento y la edición mínima de imágenes de una entidad
+siguen en el modal de categoría/producto (`ImageManager`).
 
 ## Frontend
 
 - `ImageManager` usa `MEDIA_URL` si `img.publico`, y `API_URL` si no.
+- El editor de imágenes (`image-editor.ts`) recorta, hace zoom, rota y fija
+  proporciones en el navegador. Para las imágenes ya subidas carga los bytes con
+  `fetch(API_URL + ruta)` (con credenciales) y edita el `Blob`; así el canvas no
+  queda contaminado por servirse la imagen pública desde otro origen.
+- Al aplicar, el reemplazo se sube con un nombre nuevo y la imagen original se
+  elimina, por lo que la caché pública de 1 h no devuelve la versión anterior.
 - `ArchivosService.getURL(archivo)` elige la base con `archivo.publico`.
 - `ArchivosService.getImagenURL(imagen)` elige la base con `imagen.publico`.
 - La galería de la pestaña Imágenes usa `getImagenURL`.
@@ -245,6 +251,8 @@ categoría/producto (`ImageManager`).
 9. **Lista global de archivos**: cualquier usuario con `archivos` ve metadata de
    todos.
 10. **Sin override de admin**: solo el dueño cambia visibilidad o borra archivos.
+11. **Edición de imágenes**: se hace en el cliente antes de subir. Los GIF no se
+    editan y reemplazar una imagen ya subida cambia su id y nombre de archivo.
 
 ## Archivos involucrados
 
@@ -263,6 +271,8 @@ categoría/producto (`ImageManager`).
 | Backend  | `back/cmd/server/main.go`                                   |
 | Frontend | `front/src/app/services/archivos.service.ts`                |
 | Frontend | `front/src/app/common/image-manager/image-manager.ts`       |
+| Frontend | `front/src/app/common/image-manager/image-editor.ts`        |
+| Frontend | `front/src/app/common/image-manager/image-editor.utils.ts`  |
 | Frontend | `front/src/app/components/dashboard/archivos/list.ts`       |
 | Frontend | `front/src/app/components/dashboard/archivos/modal.ts`      |
 | Deploy   | `deploy/nginx.conf`                                         |
