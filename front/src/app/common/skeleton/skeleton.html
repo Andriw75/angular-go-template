@@ -1,0 +1,17 @@
+<div class="skeleton" role="status" aria-busy="true" [attr.aria-label]="label()">
+  <div class="skeleton-table" aria-hidden="true">
+    <div class="skeleton-row skeleton-row--head">
+      @for (column of columnItems(); track $index) {
+        <span class="skeleton-bar skeleton-bar--head"></span>
+      }
+    </div>
+    @for (row of rowItems(); track $index) {
+      <div class="skeleton-row">
+        @for (column of columnItems(); track $index) {
+          <span class="skeleton-bar" [style.width]="cellWidth($index)"></span>
+        }
+      </div>
+    }
+  </div>
+  <span class="skeleton-label">{{ label() }}</span>
+</div>

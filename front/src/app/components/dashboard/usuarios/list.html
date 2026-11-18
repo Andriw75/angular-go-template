@@ -4,7 +4,7 @@
 </div>
 
 @if (loading()) {
-  <div class="loading">Cargando...</div>
+  <app-skeleton [columns]="5" [rows]="5" label="Cargando usuarios..." />
 } @else {
   <div class="table-wrapper">
     <table class="table">

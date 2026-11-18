@@ -29,7 +29,7 @@
 </div>
 
 @if (loading()) {
-  <div class="loading">Cargando...</div>
+  <app-skeleton [columns]="11" [rows]="5" label="Cargando buses..." />
 } @else {
   <div class="table-wrapper">
     <table class="table">

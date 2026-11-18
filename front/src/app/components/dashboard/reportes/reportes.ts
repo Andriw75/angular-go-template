@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { apiErrorMessage } from '../../../common/api-error';
+import { SkeletonComponent } from '../../../common/skeleton/skeleton';
 import { ConfirmService } from '../../../services/confirm.service';
 import { ReportExportService } from '../../../services/report-export.service';
 import { ReportesService, type ReporteFilters } from '../../../services/reportes.service';
@@ -18,7 +19,7 @@ type Mode = 'report' | 'document';
   selector: 'app-reportes',
   templateUrl: './reportes.html',
   styleUrl: './reportes.css',
-  imports: [FormsModule],
+  imports: [FormsModule, SkeletonComponent],
 })
 export class ReportesComponent {
   private reportes = inject(ReportesService);

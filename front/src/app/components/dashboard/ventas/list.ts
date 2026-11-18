@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { apiErrorMessage } from '../../../common/api-error';
 import { PaginationComponent } from '../../../common/pagination/pagination';
+import { SkeletonComponent } from '../../../common/skeleton/skeleton';
 import { ConfirmService } from '../../../services/confirm.service';
 import { ToastService } from '../../../services/toast.service';
 import { VentasService } from '../../../services/ventas.service';
@@ -13,7 +14,7 @@ import type { Venta } from '../../../models/venta';
   selector: 'app-ventas-list',
   templateUrl: './list.html',
   styleUrl: './list.css',
-  imports: [VentaModalComponent, PaginationComponent, FormsModule],
+  imports: [VentaModalComponent, PaginationComponent, SkeletonComponent, FormsModule],
 })
 export class VentasListComponent {
   private service = inject(VentasService);

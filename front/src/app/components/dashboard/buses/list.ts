@@ -6,6 +6,7 @@ import { BusesService } from '../../../services/buses.service';
 import { ToastService } from '../../../services/toast.service';
 import { ConfirmService } from '../../../services/confirm.service';
 import { PaginationComponent } from '../../../common/pagination/pagination';
+import { SkeletonComponent } from '../../../common/skeleton/skeleton';
 import { BusModalComponent } from './modal';
 import type { Bus } from '../../../models/bus';
 
@@ -13,7 +14,7 @@ import type { Bus } from '../../../models/bus';
   selector: 'app-buses-list',
   templateUrl: './list.html',
   styleUrl: './list.css',
-  imports: [PaginationComponent, BusModalComponent, DecimalPipe, FormsModule],
+  imports: [PaginationComponent, SkeletonComponent, BusModalComponent, DecimalPipe, FormsModule],
 })
 export class BusesListComponent {
   private service = inject(BusesService);

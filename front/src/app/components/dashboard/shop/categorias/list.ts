@@ -6,6 +6,7 @@ import { ProductosService } from '../../../../services/productos.service';
 import { ToastService } from '../../../../services/toast.service';
 import { ConfirmService } from '../../../../services/confirm.service';
 import { PaginationComponent } from '../../../../common/pagination/pagination';
+import { SkeletonComponent } from '../../../../common/skeleton/skeleton';
 import { CategoriaModalComponent } from './modal';
 import type { Categoria } from '../../../../models/categoria';
 
@@ -13,7 +14,7 @@ import type { Categoria } from '../../../../models/categoria';
   selector: 'app-categorias-list',
   templateUrl: './list.html',
   styleUrl: './list.css',
-  imports: [PaginationComponent, CategoriaModalComponent, FormsModule],
+  imports: [PaginationComponent, SkeletonComponent, CategoriaModalComponent, FormsModule],
 })
 export class CategoriasListComponent {
   private service = inject(CategoriasService);

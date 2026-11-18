@@ -22,7 +22,7 @@
 </div>
 
 @if (loading()) {
-  <div class="loading">Cargando...</div>
+  <app-skeleton [columns]="6" [rows]="5" label="Cargando ventas..." />
 } @else {
   <div class="table-wrapper">
     <table class="table">

@@ -46,7 +46,7 @@
   </div>
 
   @if (loading()) {
-    <div class="loading">Cargando...</div>
+    <app-skeleton [columns]="6" [rows]="6" label="Cargando archivos..." />
   } @else {
     <div class="table-wrapper">
       <table class="table">

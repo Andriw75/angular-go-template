@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { apiErrorMessage } from '../../../common/api-error';
 import { PaginationComponent } from '../../../common/pagination/pagination';
+import { SkeletonComponent } from '../../../common/skeleton/skeleton';
 import { AuthService } from '../../../services/auth.service';
 import { CategoriasService } from '../../../services/categorias.service';
 import { ProductosService } from '../../../services/productos.service';
@@ -26,7 +27,7 @@ interface EntityImage {
   selector: 'app-archivos-list',
   templateUrl: './list.html',
   styleUrl: './list.css',
-  imports: [PaginationComponent, ArchivoModalComponent, FormsModule, DatePipe],
+  imports: [PaginationComponent, SkeletonComponent, ArchivoModalComponent, FormsModule, DatePipe],
 })
 export class ArchivosListComponent {
   service = inject(ArchivosService);

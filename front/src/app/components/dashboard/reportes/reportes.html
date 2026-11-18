@@ -144,7 +144,7 @@
 </div>
 
 @if (docsLoading()) {
-  <div class="loading">Cargando documentos...</div>
+  <app-skeleton [columns]="5" [rows]="4" label="Cargando documentos..." />
 } @else {
   <div class="table-wrapper">
     <table class="table docs-table">

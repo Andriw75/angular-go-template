@@ -3,6 +3,7 @@ import { UsersService } from '../../../services/users.service';
 import { ToastService } from '../../../services/toast.service';
 import { ConfirmService } from '../../../services/confirm.service';
 import { AuthService } from '../../../services/auth.service';
+import { SkeletonComponent } from '../../../common/skeleton/skeleton';
 import { UserModalComponent } from './modal';
 import type { UserResponse } from '../../../models/auth';
 
@@ -10,7 +11,7 @@ import type { UserResponse } from '../../../models/auth';
   selector: 'app-users-list',
   templateUrl: './list.html',
   styleUrl: './list.css',
-  imports: [UserModalComponent],
+  imports: [UserModalComponent, SkeletonComponent],
 })
 export class UsersListComponent {
   private service = inject(UsersService);
