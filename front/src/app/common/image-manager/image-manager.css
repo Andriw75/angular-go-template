@@ -67,7 +67,11 @@
   cursor: grab;
   background: var(--bg);
   box-shadow: var(--shadow);
-  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    border-color 0.12s ease,
+    opacity 0.12s ease;
 }
 
 .image-card:hover {
@@ -145,6 +149,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   background: rgba(15, 23, 42, 0.35);
   opacity: 0;
   transition: opacity 0.15s ease;
@@ -154,6 +159,7 @@
   opacity: 1;
 }
 
+.image-edit,
 .image-remove {
   width: 30px;
   height: 30px;
@@ -161,7 +167,6 @@
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.95);
   color: #1e293b;
-  font-size: 15px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
@@ -169,13 +174,44 @@
   align-items: center;
   justify-content: center;
   box-shadow: var(--shadow-lg);
-  transition: background 0.12s ease, color 0.12s ease, transform 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease,
+    transform 0.12s ease;
+}
+
+.image-edit {
+  font-size: 15px;
+}
+
+.image-remove {
+  font-size: 15px;
+}
+
+.image-edit:hover {
+  background: var(--primary);
+  color: #fff;
+  transform: scale(1.08);
 }
 
 .image-remove:hover {
   background: #ef4444;
   color: #fff;
   transform: scale(1.08);
+}
+
+.edit-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.95);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .dropzone {
@@ -190,7 +226,10 @@
   background: var(--bg);
   cursor: pointer;
   text-align: center;
-  transition: border-color 0.15s ease, background 0.15s ease, padding 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    padding 0.15s ease;
 }
 
 .dropzone:hover,

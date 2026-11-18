@@ -25,6 +25,9 @@
         >
           <img [src]="card.url" alt="imagen" />
           <span class="drag-handle" title="Arrastrar para reordenar">⋮⋮</span>
+          @if (editedKeys().has(card.key)) {
+            <span class="edit-badge" title="Imagen editada sin aplicar">Editada</span>
+          }
           <span
             class="image-status"
             [class.status--uploaded]="card.status === 'uploaded'"
@@ -34,10 +37,26 @@
             {{ statusLabel(card) }}
           </span>
           <div class="image-overlay">
+            @if (card.status !== 'pending-delete') {
+              <button
+                type="button"
+                class="image-edit"
+                title="Editar imagen (recorte, zoom, rotar)"
+                (click)="openEditor(card)"
+              >
+                ✎
+              </button>
+            }
             <button
               type="button"
               class="image-remove"
-              [title]="card.status === 'pending-delete' ? 'Restaurar' : card.status === 'uploaded' ? 'Marcar para eliminar' : 'Quitar'"
+              [title]="
+                card.status === 'pending-delete'
+                  ? 'Restaurar'
+                  : card.status === 'uploaded'
+                    ? 'Marcar para eliminar'
+                    : 'Quitar'
+              "
               (click)="removeOrRestore(card)"
             >
               {{ card.status === 'pending-delete' ? '↩' : '✕' }}
@@ -57,29 +76,70 @@
     (dragleave)="onZoneDragLeave()"
     (drop)="onZoneDrop($event)"
   >
-    <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" [disabled]="applying()" />
-    <svg class="dropzone-icon" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <input
+      type="file"
+      accept="image/*"
+      multiple
+      (change)="onFilesSelected($event)"
+      [disabled]="applying()"
+    />
+    <svg
+      class="dropzone-icon"
+      viewBox="0 0 24 24"
+      width="30"
+      height="30"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="17 8 12 3 7 8" />
       <line x1="12" y1="3" x2="12" y2="15" />
     </svg>
     <span class="dropzone-text">
-      {{ cards().length === 0 ? 'Arrastra imágenes aquí o haz clic para subirlas' : 'Arrastra más imágenes o haz clic para agregar' }}
+      {{
+        cards().length === 0
+          ? 'Arrastra imágenes aquí o haz clic para subirlas'
+          : 'Arrastra más imágenes o haz clic para agregar'
+      }}
     </span>
     <span class="dropzone-hint">JPG, PNG, WebP</span>
   </label>
 
   <div class="image-actions">
-    <span class="image-count">{{ cards().length }} {{ cards().length === 1 ? 'imagen' : 'imágenes' }}</span>
+    <span class="image-count"
+      >{{ cards().length }} {{ cards().length === 1 ? 'imagen' : 'imágenes' }}</span
+    >
     @if (hasPending || applying()) {
       <div class="image-actions--buttons">
-        <button type="button" class="btn btn--discard" [disabled]="applying()" (click)="discardChanges()">
+        <button
+          type="button"
+          class="btn btn--discard"
+          [disabled]="applying()"
+          (click)="discardChanges()"
+        >
           Descartar cambios
         </button>
-        <button type="button" class="btn btn--apply" [disabled]="applying() || !hasPending" (click)="applyImages()">
+        <button
+          type="button"
+          class="btn btn--apply"
+          [disabled]="applying() || !hasPending"
+          (click)="applyImages()"
+        >
           {{ applying() ? 'Aplicando...' : pendingSummary }}
         </button>
       </div>
     }
   </div>
 </div>
+
+@if (editor(); as activeEditor) {
+  <app-image-editor
+    [source]="activeEditor.source"
+    (applied)="onEditorApplied($event)"
+    (cancelled)="onEditorCancelled()"
+  />
+}

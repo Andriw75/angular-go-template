@@ -1,0 +1,169 @@
+<div class="editor-overlay" role="dialog" aria-modal="true" aria-label="Editar imagen">
+  <div class="editor" (keydown.enter)="$event.preventDefault()">
+    <div class="editor-header">
+      <div class="editor-heading">
+        <h3>Editar imagen</h3>
+        <p class="editor-subtitle">{{ source().fileName }}</p>
+      </div>
+      <button type="button" class="close-btn" title="Cerrar" [disabled]="busy()" (click)="cancel()">
+        &times;
+      </button>
+    </div>
+
+    <div class="editor-toolbar">
+      <div class="preset-group">
+        <span class="toolbar-label">Proporción</span>
+        @for (preset of presets; track preset) {
+          <button
+            type="button"
+            class="chip"
+            [class.chip--active]="isPresetActive(preset)"
+            [disabled]="!ready()"
+            (click)="setPreset(preset)"
+          >
+            {{ presetLabel(preset) }}
+          </button>
+        }
+      </div>
+
+      <label class="zoom-control">
+        <span class="toolbar-label">Zoom</span>
+        <input
+          type="range"
+          min="1"
+          max="4"
+          step="0.05"
+          [value]="zoom()"
+          [disabled]="!ready()"
+          (input)="onZoomInput($event)"
+        />
+        <span class="zoom-value">{{ zoomLabel() }}</span>
+      </label>
+
+      <div class="tool-buttons">
+        <button
+          type="button"
+          class="btn btn--ghost"
+          title="Rotar 90°"
+          [disabled]="!ready() || busy()"
+          (click)="rotate()"
+        >
+          ↻ Rotar
+        </button>
+        <button
+          type="button"
+          class="btn btn--ghost"
+          [disabled]="!ready() || busy()"
+          (click)="reset()"
+        >
+          Restablecer
+        </button>
+      </div>
+    </div>
+
+    <div
+      #stage
+      class="editor-stage"
+      [class.editor-stage--busy]="busy()"
+      (pointerdown)="onStagePointerDown($event)"
+      (pointermove)="onStagePointerMove($event)"
+      (pointerup)="onStagePointerUp($event)"
+      (pointercancel)="onStagePointerUp($event)"
+      (wheel)="onWheel($event)"
+    >
+      <canvas #canvas class="editor-canvas"></canvas>
+
+      @if (ready()) {
+        <div
+          class="crop"
+          [style.left.px]="displayCrop().left"
+          [style.top.px]="displayCrop().top"
+          [style.width.px]="displayCrop().width"
+          [style.height.px]="displayCrop().height"
+          (pointerdown)="onCropPointerDown($event)"
+        >
+          <div class="crop-grid"></div>
+          @for (handle of handles; track handle) {
+            <span
+              [class]="'handle handle--' + handle"
+              (pointerdown)="onHandlePointerDown($event, handle)"
+            ></span>
+          }
+          <span class="crop-size">{{ cropDisplay().width }} × {{ cropDisplay().height }}</span>
+        </div>
+      }
+
+      @if (loading()) {
+        <div class="stage-message">Cargando imagen…</div>
+      }
+      @if (error()) {
+        <div class="stage-message stage-message--error">{{ error() }}</div>
+      }
+    </div>
+
+    <div class="editor-coords">
+      <label class="coord">
+        <span>X</span>
+        <input
+          type="number"
+          min="0"
+          [value]="cropDisplay().x"
+          [disabled]="!ready()"
+          (change)="onCoordinateChange('x', $event)"
+        />
+      </label>
+      <label class="coord">
+        <span>Y</span>
+        <input
+          type="number"
+          min="0"
+          [value]="cropDisplay().y"
+          [disabled]="!ready()"
+          (change)="onCoordinateChange('y', $event)"
+        />
+      </label>
+      <label class="coord">
+        <span>Ancho</span>
+        <input
+          type="number"
+          min="1"
+          [value]="cropDisplay().width"
+          [disabled]="!ready()"
+          (change)="onCoordinateChange('width', $event)"
+        />
+      </label>
+      <label class="coord">
+        <span>Alto</span>
+        <input
+          type="number"
+          min="1"
+          [value]="cropDisplay().height"
+          [disabled]="!ready()"
+          (change)="onCoordinateChange('height', $event)"
+        />
+      </label>
+      <span class="coords-output">
+        Salida: {{ outputSize().width }} × {{ outputSize().height }} px · máx. {{ maxOutput() }} px
+      </span>
+    </div>
+
+    <div class="editor-footer">
+      <span class="editor-hint">
+        Arrastra el recorte · Rueda para zoom · Esc cancela · Enter aplica
+      </span>
+      <div class="editor-actions">
+        <button type="button" class="btn btn--cancel" [disabled]="busy()" (click)="cancel()">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn btn--apply"
+          [disabled]="!ready() || busy()"
+          (click)="apply()"
+        >
+          {{ busy() ? 'Procesando…' : 'Aplicar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
