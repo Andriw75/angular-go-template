@@ -1,0 +1,18 @@
+@if (barVisible()) {
+  <div class="route-bar" aria-hidden="true"></div>
+}
+
+@if (overlayVisible()) {
+  <div
+    class="route-overlay"
+    role="status"
+    aria-live="polite"
+    [attr.aria-label]="'Cargando ' + name"
+  >
+    <div class="route-overlay__card">
+      <img class="route-overlay__logo" src="branding/logo.png" alt="" width="150" height="40" />
+      <p class="route-overlay__text">Cargando {{ name }}</p>
+      <span class="route-overlay__track" aria-hidden="true"></span>
+    </div>
+  </div>
+}

@@ -1,0 +1,123 @@
+:host {
+  display: contents;
+}
+
+.route-bar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  z-index: 10000;
+  overflow: hidden;
+  background: rgba(30, 58, 95, 0.15);
+  pointer-events: none;
+}
+
+.route-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: linear-gradient(90deg, rgba(249, 115, 22, 0), #fb923c 55%, #f97316);
+  animation: route-bar-run 1s ease-in-out infinite;
+}
+
+.route-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(13, 28, 49, 0.55);
+  backdrop-filter: blur(3px);
+  animation: route-overlay-in 0.18s ease-out;
+}
+
+.route-overlay__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 26px 34px;
+  background: var(--bg-card, #fff);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg, 0 4px 12px rgba(0, 0, 0, 0.1));
+}
+
+.route-overlay__logo {
+  width: 150px;
+  max-width: 50vw;
+  height: auto;
+}
+
+.route-overlay__text {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748b);
+}
+
+.route-overlay__track {
+  position: relative;
+  width: 150px;
+  max-width: 50vw;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--border, #e2e8f0);
+  overflow: hidden;
+}
+
+.route-overlay__track::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 42%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(249, 115, 22, 0), #fb923c 45%, #f97316);
+  animation: route-track-run 1.15s ease-in-out infinite;
+}
+
+@keyframes route-bar-run {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(360%);
+  }
+}
+
+@keyframes route-track-run {
+  0% {
+    left: -45%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+@keyframes route-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-bar::after,
+  .route-overlay__track::after {
+    animation: none;
+  }
+  .route-overlay__track::after {
+    left: 0;
+    width: 100%;
+    opacity: 0.8;
+  }
+}
